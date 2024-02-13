@@ -1,0 +1,80 @@
+# Install or update using
+# conda env update --file SSMuLA.yml --prune
+
+name: SSMuLA
+channels:
+  - pytorch
+  - pyg
+  - pytorch3d
+  - conda-forge
+  - salilab
+  - defaults
+  - anaconda
+dependencies:
+  - python=3.10
+  - biopandas
+  - biopython
+  - bokeh
+  - cairosvg
+  - colorcet
+  - cudatoolkit=11.6
+  - dask                    # for faster large df handling
+  - dssp                    # optional for graphein, required for computing secondary structural features
+  - firefox=99.0
+  - flake8
+  - geckodriver
+  - hdf5
+  - holoviews
+  - ipykernel
+  - ipympl
+  - ipywidgets
+  - jinja2
+  - jupyterlab
+  - matplotlib
+  - multipledispatch        # required by graphein
+  - mypy
+  - networkx
+  - nodejs
+  - numba
+  - numpy
+  - openpyxl
+  - pandas
+  - panel
+  - pillow
+  - pip
+  - plotly                  # required by graphein
+  - pydantic                # required by graphein
+  - pyreadr                 # for reading R data files
+  - psutil
+  - pydantic                # required by graphein
+  - pyg>=2.0.3
+  - pytables
+  - python-wget             # required by graphein
+  - pytorch=1.12.1
+  - pyviz_comms
+  - pyyaml
+  - requests
+  - rpy2                    # for reading R data files
+  - scikit-learn            # might not be evcouplings compatible 
+  - scipy
+  - seaborn
+  - selenium
+  - tensorflow
+  - tqdm
+  - versioneer
+  - xarray                  # required by graphein
+
+  - pip:
+    - bioservices
+    - biovec
+    - fair-esm
+    - graphein
+    - iqplot==0.3.1
+    - ogb
+    - ordered-set
+    - outdated
+    - propy3
+    - pyfasta
+    - sequence-models
+    # - evcouplings==0.1.1 need to check if it is compatible with scikit-learn
+prefix: /disk2/fli/setup/miniconda3/
