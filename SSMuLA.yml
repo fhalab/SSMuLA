@@ -1,3 +1,4 @@
+# For the general environment:
 # Install or update using
 # conda env update --file SSMuLA.yml --prune
 

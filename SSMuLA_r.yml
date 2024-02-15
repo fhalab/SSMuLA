@@ -1,0 +1,16 @@
+# For r specific environment:
+# Install or update using
+# conda env update --file SSMuLA_r.yml --prune
+
+name: SSMuLA_r
+channels:
+  - conda-forge
+  - r
+  - bioconda
+dependencies:
+  - r-base=4.3.1     # Specify the R version
+  - r-ggplot2
+  - r-irkernel       # Install the R kernel for Jupyter Notebook
+  - r-lme4
+  - r-tidyverse
+  - bioconductor-biostrings
