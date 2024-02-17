@@ -4,6 +4,34 @@
 
 Code base for Site Saturation Mutagenesis Landscape Analysis
 
+### Datasets
+* The `data` folder is structured based on the landscape name, for each:
+    - `fasta`: the fasta file for the parent
+    - `fitness_landscape`: the csv file for the mutants and fitness values
+    - `processed`: processed fitness file
+#### Three-site
+* DHFR
+    * A dihydrofolate reductasae (DHFR) encoded by *E. coli folA* gene [Papkou *et al.*, Science (2023)](https://www.science.org/doi/full/10.1126/science.adh3860)
+    * 9 mucleotides at 3 amino aicd positions (A26-D27-L28)
+    * Almost 4^9 (262,144) DNA genotypes
+    * Map fitness to trimethoprim resistance
+    * Sixfold replicates
+* TrpB
+    * LibA
+    * LibB
+    * LibC
+    * LibD
+    * LibE
+    * LibF
+    * LibG
+    * LibH
+#### Four-site
+* GB1
+* TrpB
+
+### Zero-shot
+* 
+
 ## Prepare for installation
 
 If you don't already have twine installed run the following:
