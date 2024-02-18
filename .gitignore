@@ -3,6 +3,10 @@ data
 data/
 data/*
 
+KEJ
+KEJ/
+KEJ/*
+
 *.idea
 
 # Byte-compiled / optimized / DLL files

@@ -20,6 +20,7 @@ dependencies:
   - colorcet
   - cudatoolkit=11.6
   - dask                    # for faster large df handling
+  - datashader
   - dssp                    # optional for graphein, required for computing secondary structural features
   - firefox=99.0
   - flake8
@@ -68,6 +69,7 @@ dependencies:
   - pip:
     - bioservices
     - biovec
+    - blackcellmagic
     - fair-esm
     - graphein
     - iqplot==0.3.1
