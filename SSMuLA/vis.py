@@ -57,23 +57,23 @@ hv.renderer("bokeh").theme = theme
 HM_GREY = "#76777B"
 
 # blue, orange, green, yellow, purple, gray
-PRESENTATION_PALETTE_SATURATE6 = [
-    "#4bacc6",
-    "#f79646ff",
-    "#9bbb59",
-    "#f9be00",
-    "#8064a2",
-    "#666666",
-]
+PRESENTATION_PALETTE_SATURATE6 = {
+    "blue": "#4bacc6",
+    "orange": "#f79646ff",
+    "green": "#9bbb59",
+    "yellow": "#f9be00",
+    "purple": "#8064a2",
+    "gray": "#666666",
+}
 
 # blue, orange, green, yellow, gray
-PRESENTATION_PALETTE_SATURATE5 = [
-    "#4bacc6",
-    "#f79646ff",
-    "#9bbb59",
-    "#f9be00",
-    "#666666",
-]
+PRESENTATION_PALETTE_SATURATE5 = {
+    "blue": "#4bacc6",
+    "orange": "#f79646ff",
+    "green": "#9bbb59",
+    "yellow": "#f9be00",
+    "gray": "#666666",
+}
 
 PLOTEXTENTIONS = [".svg", ".png"]
 PLOTTYPES = [t[1:] for t in PLOTEXTENTIONS]
@@ -91,6 +91,8 @@ def save_bokeh_hv(
     bokehorhv: str = "hv",
     height: int = 400,
     width: int = 400,
+    dpi: int = 300,
+    scale: int = 1,
 ):
 
     """A function for exporting bokeh plots as svg"""
@@ -104,21 +106,21 @@ def save_bokeh_hv(
         # save as html legend
         hv.save(plot_obj, plot_noext + ".html")
 
-        # hv.save(plot_obj, plot_noext + ".png", fmt="png", dpi=300)
-        hv.save(plot_obj, plot_noext + ".png", backend='bokeh', fmt="png", dpi=300)
-
-        # hv.renderer('matplotlib').instance(dpi=300).save(plot_obj, plot_noext)
-
         plot_obj = hv.renderer("bokeh").instance(dpi=300).get_plot(plot_obj).state
     
     plot_obj.toolbar_location = None
     plot_obj.toolbar.logo = None
 
-   # export_png(plot_obj, filename=plot_noext + ".png", timeout=1200, height=height, width=width)
-    
     plot_obj.output_backend = "svg"
     export_svg(plot_obj, filename=plot_noext + ".svg", timeout=1200)
 
-
-
-    
+    svg2png(
+            # url=plotpath,
+            write_to=plot_noext + ".png",
+            # output_height=height*2,
+            # output_width=width*2,
+            dpi=dpi,
+            scale=2,
+            bytestring=open(plot_noext + ".svg").read().encode("utf-8"),
+            
+        )

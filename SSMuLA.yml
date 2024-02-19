@@ -22,7 +22,7 @@ dependencies:
   - dask                    # for faster large df handling
   - datashader
   - dssp                    # optional for graphein, required for computing secondary structural features
-  - firefox=99.0
+  - firefox
   - flake8
   - geckodriver
   - hdf5
