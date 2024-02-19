@@ -3,6 +3,10 @@ data
 data/
 data/*
 
+results
+results/
+results/*
+
 KEJ
 KEJ/
 KEJ/*

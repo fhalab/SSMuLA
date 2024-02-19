@@ -2,12 +2,16 @@
 This file contains variables specifically to each dataset
 """
 
+from __future__ import annotations
+
 from copy import deepcopy
+
+import pandas as pd
 
 DEFALT_SPLITS = ["single", "double", "multi"]
 
 ACTIVE_THRESH_DICT ={
-    "DHFR": None,
+    "DHFR": -0.5,
     "GB1" : 0.01,
     "TrpB4": None
 }
@@ -140,3 +144,39 @@ LIB_INFO_DICT = deepcopy({
 
 PARENT_COMBO_DICT = deepcopy({lib: "".join(list(dets["AAs"].values())) for lib, dets in LIB_INFO_DICT.items()})
 
+def calc_active_cutoff(
+    df: pd.DataFrame, fitness_cols: list = ["fitness"]
+) -> tuple[pd.DataFrame, list[float]]:
+
+    """
+    Calculate the cutoff for active mutants based on
+    1.96 standard deviations above the mean fitness of all stop-codon-containing sequences
+
+    Args:
+    - df, pd.DataFrame: input dataframe
+    - fitness_cols, list: fitness columns
+
+    Returns:
+    - pd.DataFrame: input dataframe with active column
+    - list[float]: cutoff value for each fitness column
+    """
+
+    fit_cutoffs = [None] * len(fitness_cols)
+
+    stop_df = df[df["AAs"].str.contains("\*")]
+
+    for i, c in enumerate(fitness_cols):
+        avg_stop = stop_df[c].mean()
+        std_stop = stop_df[c].std()
+        fit_cutoffs[i] = 1.96 * std_stop + avg_stop
+
+    # Generate a list of lambda functions
+    lambda_funcs = [
+        lambda row, c=c, fit_min=fit_min: row[c] > fit_min
+        for c, fit_min in zip(fitness_cols, fit_cutoffs)
+    ]
+
+    # Apply the lambda functions to the DataFrame
+    df["active"] = df.apply(lambda row: all(func(row) for func in lambda_funcs), axis=1)
+
+    return df, fit_cutoffs

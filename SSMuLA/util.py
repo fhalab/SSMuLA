@@ -22,6 +22,10 @@ def checkNgen_folder(folder_path: str) -> str:
     - folder_path: str, the folder path
     """
 
+    # if input path is file, get the folder path
+    if bool(os.path.splitext(folder_path)[1]):
+        folder_path = os.path.dirname(folder_path)
+
     split_list = os.path.normpath(folder_path).split("/")
     for p, _ in enumerate(split_list):
         subfolder_path = "/".join(split_list[: p + 1])

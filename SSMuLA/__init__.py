@@ -24,4 +24,4 @@ __author_email__ = 'fzl@caltech.edu'
 __license__ = 'GPL3'
 
 from SSMuLA.example import Example
-
+from SSMuLA.preprocess import ProcessDHFR

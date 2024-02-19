@@ -17,7 +17,8 @@ Code base for Site Saturation Mutagenesis Landscape Analysis
     * Almost 4^9 (262,144) DNA genotypes
     * Map fitness to trimethoprim resistance
     * Sixfold replicates
-     * PDB ID: 6XG5
+    * PDB ID: 6XG5
+    * Define active / functional mutations with a mixture Gaussian model to the fitness values using the `mixEM` function from the `mixtools` in R package, by setting the number of components (distributions) to k=3 and using the bell-shaped distribution’s 0.999 quantile as fitness cut-off value
 ##### TrpB
     * A thermostable β-subunit of tryptophan synthase [Johnston *et al.*, PNAS (2024)]
     * Synthesizes L-tryptophan from indol and L-serine

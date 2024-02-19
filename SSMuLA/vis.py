@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import os
 
+import pandas as pd
+
 from cairosvg import svg2png
 
 import bokeh
@@ -57,7 +59,7 @@ hv.renderer("bokeh").theme = theme
 HM_GREY = "#76777B"
 
 # blue, orange, green, yellow, purple, gray
-PRESENTATION_PALETTE_SATURATE6 = {
+PRESENTATION_PALETTE_SATURATE = {
     "blue": "#4bacc6",
     "orange": "#f79646ff",
     "green": "#9bbb59",
@@ -66,17 +68,11 @@ PRESENTATION_PALETTE_SATURATE6 = {
     "gray": "#666666",
 }
 
-# blue, orange, green, yellow, gray
-PRESENTATION_PALETTE_SATURATE5 = {
-    "blue": "#4bacc6",
-    "orange": "#f79646ff",
-    "green": "#9bbb59",
-    "yellow": "#f9be00",
-    "gray": "#666666",
-}
-
 PLOTEXTENTIONS = [".svg", ".png"]
 PLOTTYPES = [t[1:] for t in PLOTEXTENTIONS]
+
+CODON_AA_COLOER_DICT = {"codon": PRESENTATION_PALETTE_SATURATE["blue"], 
+                        "AA": PRESENTATION_PALETTE_SATURATE["orange"]}
 
 
 def render_hv(hv_plot) -> bokeh.plotting.Figure:
@@ -92,7 +88,7 @@ def save_bokeh_hv(
     height: int = 400,
     width: int = 400,
     dpi: int = 300,
-    scale: int = 1,
+    scale: int = 2,
 ):
 
     """A function for exporting bokeh plots as svg"""
@@ -120,7 +116,39 @@ def save_bokeh_hv(
             # output_height=height*2,
             # output_width=width*2,
             dpi=dpi,
-            scale=2,
+            scale=scale,
             bytestring=open(plot_noext + ".svg").read().encode("utf-8"),
             
+        )
+    
+def plot_fit_dist(fitness: pd.Series, codon_aa: str) -> hv.Distribution:
+        """
+        Plot the fitness distribution
+
+        Args:
+        - fitness: pd.Series: fitness values
+        - codon_aa: str: codon or amino acid
+        
+        Returns:
+        - hv.Distribution: plot of the fitness distribution
+        """
+
+        if codon_aa == "codon":
+            cap_codon_aa = codon_aa.capitalize()
+        else:
+            cap_codon_aa = codon_aa.upper()    
+        
+        return (
+            hv.Distribution(fitness, label=f"{cap_codon_aa}-level").opts(
+                width=400,
+                height=400,
+                color=CODON_AA_COLOER_DICT[codon_aa],
+                line_color=None,
+            )
+            * hv.Spikes([fitness.mean()], label=f"Mean {codon_aa} fitness").opts(
+                line_dash="dotted", line_color=CODON_AA_COLOER_DICT[codon_aa], line_width=1.6
+            )
+            * hv.Spikes([fitness.median()], label=f"Median {codon_aa} fitness").opts(
+                line_color=CODON_AA_COLOER_DICT[codon_aa], line_width=1.6
+            )
         )
