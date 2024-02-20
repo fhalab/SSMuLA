@@ -22,7 +22,7 @@ def checkNgen_folder(folder_path: str) -> str:
     - folder_path: str, the folder path
     """
 
-    # if input path is file, get the folder path
+    # if input path is file
     if bool(os.path.splitext(folder_path)[1]):
         folder_path = os.path.dirname(folder_path)
 

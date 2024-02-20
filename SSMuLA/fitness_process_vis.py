@@ -366,15 +366,20 @@ class PlotTrpB:
 
             print(f"Processing {lib} ...")
 
-            lib_df = pd.read_csv(lib)
-            lib_fit = lib_df["fitness"]
+            lib_class = ProcessData(lib)
+
+            lib_df = lib_class.input_df
+            lib_fit = lib_class.input_df["fitness"]
 
             wt_fit = lib_df[
                 lib_df["AAs"]
-                == "".join(list(LIB_INFO_DICT[get_file_name(lib)]["AAs"].values()))
+                == lib_class.parent_aa
             ]["fitness"].values[0]
 
             act_fit = lib_df[lib_df["active"] == True]["fitness"].min()
+
+            # TODO need to reprocess data
+            lib_df.to_csv(lib_class.output_csv, index=False)
 
             dist_list[i] = plot_fit_dist(
                 lib_fit, get_file_name(lib), colors[i], ignore_line_label=True
