@@ -22,7 +22,7 @@ def run_all_lib_de_simulations():
     # Run simulations for each library
     # for lib in glob("data/*/processed/*.csv"):
     
-    for lib in glob("data/*/processed/GB1.csv"):
+    for lib in glob("data/*/processed/DHFR.csv"):
 
         lib_name = get_file_name(lib)
         n_sites = len(LIB_INFO_DICT[lib_name]["positions"])

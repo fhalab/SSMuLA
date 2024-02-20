@@ -155,6 +155,15 @@ class ProcessDHFR(ProcessData):
         return overlay_dist
 
     @property
+    def df_exp_fit(self) -> pd.Series:
+        """Return the exp of the fitness"""
+
+        df_exp_fit = self.input_df.copy()
+        df_exp_fit["fitness"] = np.exp(df_exp_fit["fitness"])
+
+        return df_exp_fit
+    
+    @property
     def split_AA_cols(self) -> list:
         """Return the columns for the split amino acids"""
         return [f"AA{str(i)}" for i in self.lib_info["positions"].keys()]
@@ -164,7 +173,7 @@ class ProcessDHFR(ProcessData):
 
         """Return the input dataframe with amino acid translations"""
 
-        df = self.input_df.copy()
+        df = self.df_exp_fit.copy()
 
         # Translate the sequence to amino acids
         df["AAs"] = df["seq"].apply(lambda x: "".join(Seq(x).translate()))
@@ -209,7 +218,7 @@ class ProcessDHFR(ProcessData):
     @property
     def codon_fit(self) -> pd.Series:
         """Return the fitness of based on codon as a series"""
-        return self.input_df["fitness"]
+        return self.df_exp_fit["fitness"]
 
     @property
     def avg_aa_fit(self) -> pd.Series:
@@ -229,7 +238,7 @@ class ProcessDHFR(ProcessData):
     @property
     def parent_codon_fitness(self) -> float:
         """Return the parent codon fitness"""
-        return self.input_df[self.input_df["seq"] == self.parent_codon][
+        return self.df_exp_fit[self.df_exp_fit["seq"] == self.parent_codon][
             "fitness"
         ].values[0]
 

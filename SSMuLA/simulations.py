@@ -17,13 +17,38 @@ import tqdm
 from SSMuLA.aa_global import ALL_AAS, ALL_AA_STR
 from SSMuLA.util import checkNgen_folder
 
-def make_new_sequence(input_seq, new_AA, position):
+
+def make_new_sequence(input_seq: str, new_AA: str, position: int) -> str:
+
+    """
+    Make a new sequence by replacing the amino acid at a given position
+
+    Args:
+    - input_seq: str, the input sequence
+    - new_AA: str, the new amino acid to replace the old one
+    - position: int, the position to replace the amino acid
+
+    Returns:
+    - str, the new sequence
+    """
+
     seq_list = list(input_seq)
     seq_list[position] = new_AA
     return "".join(seq_list)
 
 
-def ecdf_transform(data):
+def ecdf_transform(data: pd.Series) -> pd.Series:
+    
+    """
+    Transform a series of fitness values into an empirical cumulative distribution function
+
+    Args:
+    - data: pd.Series, the fitness values
+
+    Returns:
+    - pd.Series, the ECDF
+    """
+
     return data.rank(method="first") / len(data)
 
 
