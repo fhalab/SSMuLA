@@ -1,7 +1,10 @@
 """Test the preprocess module."""
 
-from SSMuLA.preprocess import ProcessDHFR, ProcessGB1, ProcessTrpB
+from SSMuLA.fitness_process_vis import ProcessDHFR, ProcessGB1, PlotTrpB
 
 
-# ProcessDHFR()
-ProcessGB1()
+
+if __name__ == "__main__":
+    # ProcessDHFR()
+    ProcessGB1()
+    # PlotTrpB()

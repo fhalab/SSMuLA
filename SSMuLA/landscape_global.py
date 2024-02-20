@@ -13,7 +13,7 @@ DEFALT_SPLITS = ["single", "double", "multi"]
 ACTIVE_THRESH_DICT ={
     "DHFR": -0.5,
     "GB1" : 0.01,
-    "TrpB4": None
+    "TrpB": None
 }
 
 COMBO_COLS = ["AAs", "fitness", "active"]
