@@ -144,8 +144,271 @@ LIB_INFO_DICT = deepcopy({
 
 PARENT_COMBO_DICT = deepcopy({lib: "".join(list(dets["AAs"].values())) for lib, dets in LIB_INFO_DICT.items()})
 
-def calc_active_cutoff(
-    df: pd.DataFrame, fitness_cols: list = ["fitness"]
+
+# Dictionary encoding the ODs over time for libraries DEFGHI
+OD_DICT = {
+    'TrpB3A': {
+        'rep_1': {
+            0: 0.1,
+            18: 0.72,
+            20: 0.78,
+            24: 0.94,
+            44: 2.55
+        },
+        'rep_2': {
+            0: 0.1,
+            18: 0.75,
+            20: 0.83,
+            24: 1.01,
+            44: 2.70
+        },
+    },
+    'TrpB3B': {
+        'rep_1': {
+            0: 0.1,
+            18: 0.75,
+            20: 0.83,
+            24: 1.09,
+            44: 3.30
+        },
+        'rep_2': {
+            0: 0.1,
+            18: 0.84,
+            20: 0.98,
+            24: 1.50,
+            44: 3.85
+        },
+    },
+    'TrpB3C': {
+        'rep_1': {
+            0: 0.1,
+            18: 0.74,
+            20: 0.78,
+            24: 0.86,
+            44: 1.95
+        },
+        'rep_2': {
+            0: 0.1,
+            18: 0.76,
+            20: 0.84,
+            24: 0.92,
+            44: 4.15
+        },
+    },
+    'TrpB3D': {
+        'rep_1': {
+            0: 0.05,
+            12: 0.19,
+            16: 0.29,
+            20: 0.51,
+            24: 0.85,
+            36: 1.42
+        },
+        'rep_2': {
+            0: 0.05,
+            12: 0.18,
+            16: 0.28,
+            20: 0.49,
+            24: 0.97,
+            36: 1.81
+        }
+    },
+    'TrpB3E': {
+        'rep_1': {
+            0: 0.05,
+            12: 0.2,
+            16: 0.27,
+            20: 0.47,
+            24: 0.91,
+            36: 1.41
+        },
+        'rep_2': {
+            0: 0.05,
+            12: 0.2,
+            16: 0.26,
+            20: 0.44,
+            24: 0.94,
+            36: 1.54
+        }
+    },
+    'TrpB3F': {
+        'rep_1': {
+            0: 0.05,
+            12: 0.17,
+            16: 0.20,
+            20: 0.23,
+            24: 0.27,
+            36: 0.79
+        },
+        'rep_2': {
+            0: 0.05,
+            12: 0.17,
+            16: 0.20,
+            20: 0.24,
+            24: 0.27,
+            36: 0.79
+        }
+    },
+    'TrpB3G': {
+        'rep_1': {
+            0: 0.05,
+            12: 0.14,
+            16: 0.18,
+            20: 0.23,
+            24: 0.44,
+            36: 1.95
+        },
+        'rep_2': {
+            0: 0.05,
+            12: 0.14,
+            16: 0.18,
+            20: 0.23,
+            24: 0.44,
+            36: 1.95
+        }
+    },
+    'TrpB3H': {
+        'rep_1': {
+            0: 0.05,
+            12: 0.15,
+            16: 0.19,
+            20: 0.26,
+            24: 0.67,
+            36: 2.90
+        },
+        'rep_2': {
+            0: 0.05,
+            12: 0.14,
+            16: 0.18,
+            20: 0.26,
+            24: 0.58,
+            36: 1.85
+        }
+    },
+    'TrpB3I': {
+        'rep_1': {
+            0: 0.05,
+            12: 0.36,
+            16: 0.83,
+            20: 1.24,
+            24: 0.7,
+            36: 1.95
+        },
+        'rep_2': {
+            0: 0.05,
+            12: 0.39,
+            16: 0.87,
+            20: 1.36,
+            24: 2.1,
+            36: 2.25
+        }
+    },
+    'TrpB4': {
+        'rep_1': {
+            0: 0.025,
+            12: 0.19,
+            16: 0.51,
+            20: 1.26,
+            24: 1.50,
+            28: 1.675,
+            36: 1.75
+        },
+        'rep_2': {
+            0: 0.025,
+            12: 0.19,
+            16: 0.52,
+            20: 1.34,
+            24: 1.625,
+            28: 1.75,
+            36: 1.875
+
+        }
+    },
+}
+
+TIMEPOINT_DICT = {
+    'TrpB3A': {
+        'T0': 0,
+        'T1': 18,
+        'T2': 20,
+        'T3': 24,
+        'T4': 44
+    },
+    'TrpB3B': {
+        'T0': 0,
+        'T1': 18,
+        'T2': 20,
+        'T3': 24,
+        'T4': 44
+    },
+    'TrpB3C': {
+        'T0': 0,
+        'T1': 18,
+        'T2': 20,
+        'T3': 24,
+        'T4': 44
+    },
+    'TrpB3D': {
+        'T0': 0,
+        'T1': 12,
+        'T2': 16,
+        'T3': 20,
+        'T4': 24,
+        'T5': 36
+    },
+    'TrpB3E': {
+        'T0': 0,
+        'T1': 12,
+        'T2': 16,
+        'T3': 20,
+        'T4': 24,
+        'T5': 36
+    },
+    'TrpB3F': {
+        'T0': 0,
+        'T1': 12,
+        'T2': 16,
+        'T3': 20,
+        'T4': 24,
+        'T5': 36
+    },
+    'TrpB3G': {
+        'T0': 0,
+        'T1': 12,
+        'T2': 16,
+        'T3': 20,
+        'T4': 24,
+        'T5': 36
+    },
+    'TrpB3H': {
+        'T0': 0,
+        'T1': 12,
+        'T2': 16,
+        'T3': 20,
+        'T4': 24,
+        'T5': 36
+    },
+    'TrpB3I': {
+        'T0': 0,
+        'T1': 12,
+        'T2': 16,
+        'T3': 20,
+        'T4': 24,
+        'T5': 36
+    },
+    'TrpB4': {
+        'T0': 0,
+        'T1': 12,
+        'T2': 16,
+        'T3': 20,
+        'T4': 24,
+        'T5': 28,
+        'T6': 36
+    }
+}
+
+def append_active_cutoff(
+    df: pd.DataFrame, fitness_cols: list = ["fitness"], def_cutoff: float | None = None
 ) -> tuple[pd.DataFrame, list[float]]:
 
     """
@@ -160,15 +423,17 @@ def calc_active_cutoff(
     - pd.DataFrame: input dataframe with active column
     - list[float]: cutoff value for each fitness column
     """
+    if def_cutoff is None:
+        fit_cutoffs = [None] * len(fitness_cols)
 
-    fit_cutoffs = [None] * len(fitness_cols)
+        stop_df = df[df["AAs"].str.contains("\*")]
 
-    stop_df = df[df["AAs"].str.contains("\*")]
-
-    for i, c in enumerate(fitness_cols):
-        avg_stop = stop_df[c].mean()
-        std_stop = stop_df[c].std()
-        fit_cutoffs[i] = 1.96 * std_stop + avg_stop
+        for i, c in enumerate(fitness_cols):
+            avg_stop = stop_df[c].mean()
+            std_stop = stop_df[c].std()
+            fit_cutoffs[i] = 1.96 * std_stop + avg_stop
+    else:
+        fit_cutoffs = [def_cutoff] * len(fitness_cols)
 
     # Generate a list of lambda functions
     lambda_funcs = [

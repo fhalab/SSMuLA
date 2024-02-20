@@ -9,6 +9,7 @@ channels:
   - pytorch3d
   - conda-forge
   - salilab
+  - pyviz
   - defaults
   - anaconda
 dependencies:
@@ -42,6 +43,7 @@ dependencies:
   - openpyxl
   - pandas
   - panel
+  - param
   - pillow
   - pip
   - plotly                  # required by graphein

@@ -108,6 +108,7 @@ ALL_AAS_TLC = list(ALL_AAS_TLC_DICT.keys())
 
 # All canonical amino acids
 ALL_AAS = list(ALL_AAS_TLC_DICT.values())
+ALL_AA_STR = "".join(ALL_AAS)
 AA_NUMB = len(ALL_AAS)
 ALLOWED_AAS = set(ALL_AAS)
 

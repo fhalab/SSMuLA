@@ -1,6 +1,7 @@
 """Test the preprocess module."""
 
-from SSMuLA.preprocess import ProcessDHFR
+from SSMuLA.preprocess import ProcessDHFR, ProcessGB1, ProcessTrpB
 
 
-ProcessDHFR()
+# ProcessDHFR()
+ProcessGB1()
