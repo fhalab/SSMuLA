@@ -24,6 +24,8 @@ TrpB_PDB_START_AA_IND = 2
 
 TrpB_names = deepcopy([*["TrpB3" + string for string in [chr(ord("A") + i) for i in range(9)]], "TrpB4"])
 
+LIB_NAMES = deepcopy(["DHFR", "GB1", *TrpB_names])
+
 """
 TrpB3D_Johnston_2023_dict = {
     "mut_reg_seq": "TAA",  # seq

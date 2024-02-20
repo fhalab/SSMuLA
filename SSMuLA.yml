@@ -28,6 +28,7 @@ dependencies:
   - geckodriver
   - hdf5
   - holoviews
+  - hvplot
   - ipykernel
   - ipympl
   - ipywidgets
@@ -75,11 +76,13 @@ dependencies:
     - fair-esm
     - graphein
     - iqplot==0.3.1
+    - ninetysix             # Helps data processing and visualization
     - ogb
     - ordered-set
     - outdated
     - propy3
     - pyfasta
+    - pysam
     - sequence-models
     # - evcouplings==0.1.1 need to check if it is compatible with scikit-learn
 prefix: /disk2/fli/setup/miniconda3/

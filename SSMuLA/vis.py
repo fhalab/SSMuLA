@@ -6,6 +6,8 @@ import pandas as pd
 
 from cairosvg import svg2png
 
+import seaborn as sns
+
 import bokeh
 from bokeh.io import show, export_svg, export_png
 from bokeh.plotting import show
@@ -18,6 +20,7 @@ from holoviews import opts
 
 hv.extension("bokeh", "matplotlib")
 
+from SSMuLA.landscape_global import LIB_NAMES
 from SSMuLA.util import checkNgen_folder
 
 JSON_THEME = Theme(
@@ -76,6 +79,18 @@ CODON_AA_COLOER_DICT = {
     "AA": PRESENTATION_PALETTE_SATURATE["orange"],
 }
 
+LIB_COLORS = {
+    n: c
+    for (n, c) in zip(
+        LIB_NAMES,
+        [
+            PRESENTATION_PALETTE_SATURATE["orange"],
+            PRESENTATION_PALETTE_SATURATE["yellow"],
+        ]
+        + sns.color_palette("crest", 9).as_hex()
+        + [PRESENTATION_PALETTE_SATURATE["blue"]],
+    )
+}
 
 def render_hv(hv_plot) -> bokeh.plotting.Figure:
     """Render a holoviews plot as a bokeh plot"""
@@ -87,8 +102,6 @@ def save_bokeh_hv(
     plot_name: str,
     plot_path: str,
     bokehorhv: str = "hv",
-    height: int = 400,
-    width: int = 400,
     dpi: int = 300,
     scale: int = 2,
 ):
@@ -104,19 +117,18 @@ def save_bokeh_hv(
         # save as html legend
         hv.save(plot_obj, plot_noext + ".html")
 
-        plot_obj = hv.renderer("bokeh").instance(dpi=300).get_plot(plot_obj).state
+        # hv.save(plot_obj, plot_noext, mode="auto", fmt='svg', dpi=300, toolbar='disable')
+
+        plot_obj = hv.render(plot_obj, backend="bokeh")
 
     plot_obj.toolbar_location = None
     plot_obj.toolbar.logo = None
-
+    
     plot_obj.output_backend = "svg"
     export_svg(plot_obj, filename=plot_noext + ".svg", timeout=1200)
 
     svg2png(
-        # url=plotpath,
         write_to=plot_noext + ".png",
-        # output_height=height*2,
-        # output_width=width*2,
         dpi=dpi,
         scale=scale,
         bytestring=open(plot_noext + ".svg").read().encode("utf-8"),

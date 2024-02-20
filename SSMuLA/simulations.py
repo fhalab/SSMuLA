@@ -29,6 +29,25 @@ def ecdf_transform(data):
 
 def simulate_single_step_DE(data, seq_col, fitness_col, n_sites=4):
 
+    """
+    Simulate a single step directed evolution experiment
+
+    #### Inputs
+    - DataFrame of sequence and fitness (without stop codons!)
+        - sequence column name
+        - fitness column name
+    - zero-fitness cutoff
+    - number of samples to simulate
+
+    #### Outputs
+    - DataFrame
+        - start sequence
+        - end sequence
+        - start fitness
+        - end fitness
+        - optional: order of steps taken (order that positions were targeted)
+    """
+
     data = data.copy()
     data[seq_col] = data[seq_col].apply(lambda x: "".join(x.split("_")))
 
@@ -491,6 +510,7 @@ def print_characteristics(df):
 def run_all_de_simulations(
     df: pd.DataFrame, 
     lib_name: str,
+    save_dir: str = "results/simulations/DE",
     seq_col: str = "AAs", 
     fitness_col: str = "fitness",
     n_sites=4,
@@ -499,7 +519,7 @@ def run_all_de_simulations(
     n_jobs=256
 ):
     
-    save_dir = checkNgen_folder("results/simulations/DE")
+    save_dir = checkNgen_folder(save_dir)
     
     ######## Simulate a single step directed evolution walk ########
     print(f'Simulate a single step directed evolution walk')
@@ -511,7 +531,7 @@ def run_all_de_simulations(
     )
     print_characteristics(single_step_DE)
 
-    single_step_DE.to_csv(os.path.join(save_dir, f'{lib_name}_single_step_DE.csv'), index=False)
+    single_step_DE.to_csv(os.path.join(save_dir, f'{lib_name}-single_step_DE.csv'), index=False)
 
     ######## Simulate a simple SSM recombination ########
     print('\nSimulate a simple SSM recombination')
@@ -523,7 +543,7 @@ def run_all_de_simulations(
     )
     print_characteristics(SSM_recomb)
 
-    SSM_recomb.to_csv(os.path.join(save_dir, f'{lib_name}_simple_SSM.csv'), index=False)
+    SSM_recomb.to_csv(os.path.join(save_dir, f'{lib_name}-simple_SSM.csv'), index=False)
 
 
     ######## Simulate SSM predict top N ########
@@ -539,6 +559,6 @@ def run_all_de_simulations(
     )
     print_characteristics(SSM_pred96)
 
-    SSM_pred96.to_csv(os.path.join(save_dir, f'{lib_name}_SSM_pred96.csv'), index=False)
+    SSM_pred96.to_csv(os.path.join(save_dir, f'{lib_name}-SSM_pred96.csv'), index=False)
 
     return {'single step SSM':single_step_DE, 'SSM recomb':SSM_recomb, 'SSM predict top 96':SSM_pred96}

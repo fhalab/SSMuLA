@@ -11,6 +11,8 @@ from SSMuLA.landscape_global import LIB_INFO_DICT
 from SSMuLA.util import get_file_name
 
 
+# TODO TAKE OUT STOP CODONS
+
 # Run simulations for each library
 def run_all_lib_de_simulations():
     """
@@ -24,12 +26,15 @@ def run_all_lib_de_simulations():
         n_sites = len(LIB_INFO_DICT[lib_name]["positions"])
 
         print(f"Running simulations for {lib_name} over {n_sites}...")
+        
+        df = pd.read_csv(lib).copy()
 
         run_all_de_simulations(
-            df=pd.read_csv(lib), 
+            df=df[~df["AAs"].str.contains("\*")], 
             seq_col="AAs", 
             fitness_col="fitness",
             lib_name=lib_name,
+            save_dir = "results/simulations/DE-no-stop-codons",
             n_sites=n_sites, 
             N=96, 
             max_samples=None,
