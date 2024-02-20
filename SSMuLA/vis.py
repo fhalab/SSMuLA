@@ -88,7 +88,7 @@ LIB_COLORS = {
             PRESENTATION_PALETTE_SATURATE["yellow"],
         ]
         + sns.color_palette("crest", 9).as_hex()
-        + [PRESENTATION_PALETTE_SATURATE["blue"]],
+        + [PRESENTATION_PALETTE_SATURATE["gray"]],
     )
 }
 

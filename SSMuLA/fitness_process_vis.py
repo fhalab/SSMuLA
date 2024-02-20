@@ -259,6 +259,8 @@ class ProcessGB1(ProcessData):
             self.df_aa, ["fitness"], ACTIVE_THRESH_DICT[self.lib_name]
         )
 
+        self._df_active_append['fitness'] = self._df_active_append['fitness'] / self._df_active_append['fitness'].max()
+
         # save the appended dataframe
         self._df_active_append.to_csv(self.output_csv, index=False)
 
