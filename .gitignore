@@ -11,6 +11,10 @@ logs
 logs/
 logs/*
 
+triad
+triad/
+triad/*
+
 KEJ
 KEJ/
 KEJ/*

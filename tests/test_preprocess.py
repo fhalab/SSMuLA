@@ -5,7 +5,7 @@ import os
 
 from datetime import datetime
 
-from SSMuLA.fitness_process_vis import ProcessDHFR, ProcessGB1, PlotTrpB, sum_ks
+from SSMuLA.fitness_process_vis import ProcessDHFR, ProcessGB1, PlotTrpB
 from SSMuLA.util import checkNgen_folder
 
 
@@ -17,10 +17,9 @@ if __name__ == "__main__":
     f = open(os.path.join(log_folder, f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}.out"), 'w')
     sys.stdout = f
 
-    # for scale_fit in ["parent", "max"]:
-    #     ProcessDHFR(scale_fit=scale_fit)
-    #     ProcessGB1(scale_fit=scale_fit)
-    #     PlotTrpB(scale_fit=scale_fit)
-    sum_ks()
+    for scale_fit in ["parent", "max"]:
+        ProcessDHFR(scale_fit=scale_fit)
+        ProcessGB1(scale_fit=scale_fit)
+        PlotTrpB(scale_fit=scale_fit)
 
     f.close()

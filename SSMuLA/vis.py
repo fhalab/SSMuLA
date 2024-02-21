@@ -6,7 +6,6 @@ import pandas as pd
 
 from cairosvg import svg2png
 
-import matplotlib.pyplot as plt
 import seaborn as sns
 
 import bokeh
@@ -185,25 +184,3 @@ def plot_fit_dist(
             line_color=color, line_width=1.6
         )
     )
-
-
-def save_plt(fig, plot_title: str, path2folder: str):
-
-    """
-    A helper function for saving plt plots
-
-    Args:
-    - fig: plt.figure: the figure to save
-    - plot_title: str: the title of the plot
-    - path2folder: str: the path to the folder to save the plot
-    """
-
-    for ext in PLOTEXTENTIONS:
-        plot_title_no_space = plot_title.replace(" ", "_")
-        plt.savefig(
-            os.path.join(checkNgen_folder(path2folder), f"{plot_title_no_space}{ext}"),
-            bbox_inches="tight",
-            dpi=300
-        )
-    
-    plt.close()
