@@ -18,26 +18,24 @@ def run_all_lib_de_simulations():
     """
     Run all simulations for each library.
     """
+    for scale_type in ["scale2parent", "scale2max"]:
+        # Run simulations for each library
+        for lib in glob(f"data/*/{scale_type}/*.csv"):
 
-    # Run simulations for each library
-    # for lib in glob("data/*/processed/*.csv"):
-    
-    for lib in glob("data/*/processed/DHFR.csv"):
+            lib_name = get_file_name(lib)
+            n_sites = len(LIB_INFO_DICT[lib_name]["positions"])
 
-        lib_name = get_file_name(lib)
-        n_sites = len(LIB_INFO_DICT[lib_name]["positions"])
+            print(f"Running simulations for {lib_name} over {n_sites}...")
+            
+            df = pd.read_csv(lib).copy()
 
-        print(f"Running simulations for {lib_name} over {n_sites}...")
-        
-        df = pd.read_csv(lib).copy()
-
-        run_all_de_simulations(
-            df=df[~df["AAs"].str.contains("\*")], 
-            seq_col="AAs", 
-            fitness_col="fitness",
-            lib_name=lib_name,
-            save_dir = "results/simulations/DE-no-stop-codons",
-            n_sites=n_sites, 
-            N=96, 
-            max_samples=None,
-            n_jobs=256)
+            run_all_de_simulations(
+                df=df[~df["AAs"].str.contains("\*")], 
+                seq_col="AAs", 
+                fitness_col="fitness",
+                lib_name=lib_name,
+                save_dir=f"results/simulations/DE-no-stop-codons/{scale_type}",
+                n_sites=n_sites, 
+                N=96, 
+                max_samples=None,
+                n_jobs=256)

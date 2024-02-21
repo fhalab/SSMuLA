@@ -28,7 +28,7 @@ from SSMuLA.landscape_global import (
     LIB_INFO_DICT,
     append_active_cutoff,
 )
-from SSMuLA.vis import save_bokeh_hv, plot_fit_dist, PRESENTATION_PALETTE_SATURATE
+from SSMuLA.vis import save_bokeh_hv, plot_fit_dist, LIB_COLORS
 from SSMuLA.util import checkNgen_folder, get_file_name
 
 
@@ -37,14 +37,20 @@ class ProcessData:
     A parent class to process the data
     """
 
-    def __init__(self, input_csv: str) -> None:
+    def __init__(self, input_csv: str, scale_fit: str) -> None:
 
         """
         Args:
         - input_csv, str: path to the input csv file
+        - scale_fit, str: ways to scale the fitness
+            'parent' means the parent fitness = 1
+            'max' means max fitness = 1
         """
 
         self._input_csv = input_csv
+        self._scale_fit = scale_fit
+
+        print(f"Processing {self._input_csv} with {self._scale_fit}...")
 
     @property
     def input_df(self) -> pd.DataFrame:
@@ -53,11 +59,28 @@ class ProcessData:
 
     @property
     def output_csv(self) -> str:
+
         """Return the path to the output csv"""
-        output_csv = self._input_csv.replace("fitness_landscape", "processed")
+
+        if self._scale_fit == "parent":
+            replacewith = "scale2parent"
+        elif self._scale_fit == "max":
+            replacewith = "scale2max"
+        else:
+            replacewith = "processed"
+
+        output_csv = self._input_csv.replace("fitness_landscape", replacewith)
         # check if the folder exists
         checkNgen_folder(output_csv)
+
         return output_csv
+
+    @property
+    def dist_dir(self) -> str:
+        """Return the path to the distribution directory"""
+        return checkNgen_folder(
+            os.path.join("results", "fitness_distribution", self._scale_fit)
+        )
 
     @property
     def lib_name(self) -> dict:
@@ -85,30 +108,59 @@ class ProcessDHFR(ProcessData):
     Class to clean up the DHFR data
     """
 
-    def __init__(self, input_csv: str = "data/DHFR/fitness_landscape/DHFR.csv") -> None:
+    def __init__(
+        self,
+        input_csv: str = "data/DHFR/fitness_landscape/DHFR.csv",
+        scale_fit: str = "parent",
+    ) -> None:
 
         """
         Args:
         - input_csv, str: path to the input csv file
+        - scale_fit, str: ways to scale the fitness
         """
 
-        super().__init__(input_csv)
-
-        self._input_csv = input_csv
+        super().__init__(input_csv, scale_fit)
 
         # append the active cutoffs
-        self._df_avg_aa_append, self._avg_aa_active_cutoff = append_active_cutoff(
-            self.df_avg_aa, ["fitness"]
-        )
+        (
+            self._df_avg_aa_append_scaled,
+            self._avg_aa_active_cutoff_scaled,
+        ) = append_active_cutoff(self.df_avg_aa_scaled, ["fitness"])
 
+        print(f"Save processed df to {self.output_csv}...")
         # save the appended dataframe
-        self._df_avg_aa_append.to_csv(self.output_csv, index=False)
+        self._df_avg_aa_append_scaled.to_csv(self.output_csv, index=False)
 
-        self._ks, self._ks_p = ks_2samp(self.codon_fit, self.avg_aa_fit)
+        self._ks, self._ks_p = ks_2samp(self.codon_fit_scaled, self.avg_aa_fit_scaled)
         print(f"Kolmogorov-Smirnov Statistic: {self._ks}")
         print(f"P-value: {self._ks_p}")
 
+        print("Plotting the fitness distribution...")
         self._overlay_fit_dist()
+
+    def _scale_df(self, df: pd.DataFrame, codon_aa: str) -> pd.DataFrame:
+        """
+        Return the exp of the fitness
+
+        Args:
+        - df, pd.DataFrame: the input dataframe
+        - codon_aa, str: whether to scale the fitness to codon or amino acid
+        """
+
+        df = df.copy()
+
+        if self._scale_fit == "parent":
+            if codon_aa == "codon":
+                norm_factor = self.parent_codon_fitness
+            elif codon_aa == "AA":
+                norm_factor = self.parent_aa_fitness
+        elif self._scale_fit == "max":
+            norm_factor = df["fitness"].max()
+
+        df["fitness"] = df["fitness"] / norm_factor
+
+        return df
 
     def _overlay_fit_dist(self) -> hv.Distribution:
 
@@ -119,22 +171,30 @@ class ProcessDHFR(ProcessData):
         - hv.Distribution: plot of the fitness distribution
         """
 
+        print(
+            f"After scaling, the parent codone fitness is {self.parent_codon_fitness_scaled}..."
+        )
+        print(f"The parent aa fitness is {self.parent_aa_fitness_scaled}...")
+        print(
+            f"The avg_aa_active_cutoff_scaled is {self.avg_aa_active_cutoff_scaled}..."
+        )
+
         # Overlay the two plots
         overlay_dist = (
-            self.codon_fit_dist
-            * self.avg_aa_fit_dist
-            * hv.Spikes([self.parent_codon_fitness], label="Parent codon").opts(
+            self.codon_fit_dist_scaled
+            * self.avg_aa_fit_dist_scaled
+            * hv.Spikes([self.parent_codon_fitness_scaled], label="Parent codon").opts(
                 color="black", line_dash="dotted", line_width=1.6
             )
-            * hv.Spikes([self.parent_aa_fitness], label="Averaged parent AA").opts(
-                color="black", line_dash="dashed", line_width=1.6
-            )
-            * hv.Spikes([self.avg_aa_active_cutoff], label="Calculated active").opts(
-                color="gray", line_width=1.6
-            )
+            * hv.Spikes(
+                [self.parent_aa_fitness_scaled], label="Averaged parent AA"
+            ).opts(color="black", line_width=1.6)
             * hv.Spikes(
                 [ACTIVE_THRESH_DICT[self.lib_name]], label="Defined active"
-            ).opts(color="gray", line_dash="dashed", line_width=1.6)
+            ).opts(color="gray", line_dash="dotted", line_width=1.6)
+            * hv.Spikes(
+                [self.avg_aa_active_cutoff_scaled], label="Calculated active"
+            ).opts(color="gray", line_width=1.6)
         )
 
         # Customize the plot options
@@ -148,21 +208,52 @@ class ProcessDHFR(ProcessData):
         save_bokeh_hv(
             overlay_dist,
             plot_name=f"{self.lib_name} fitness distribution",
-            plot_path="results/fitness_distribution",
+            plot_path=self.dist_dir,
             bokehorhv="hv",
         )
 
         return overlay_dist
 
     @property
-    def df_exp_fit(self) -> pd.Series:
+    def exp_df(self) -> pd.DataFrame:
         """Return the exp of the fitness"""
+        df = self.input_df.copy()
+        df["fitness"] = np.exp(df["fitness"])
+        return df
 
-        df_exp_fit = self.input_df.copy()
-        df_exp_fit["fitness"] = np.exp(df_exp_fit["fitness"])
+    @property
+    def codon_fit(self) -> pd.Series:
+        """Return the fitness of based on codon as a series"""
+        return self.exp_df["fitness"]
 
-        return df_exp_fit
-    
+    @property
+    def codon_df_scaled(self) -> pd.DataFrame:
+        """Return the scaled dataframe"""
+        print(f"codon_df_scaled {self.parent_codon_fitness} before scale...")
+        return self._scale_df(self.exp_df, "codon")
+
+    @property
+    def codon_fit_scaled(self) -> pd.Series:
+        """Return the fitness of based on codon as a series"""
+        return self.codon_df_scaled["fitness"]
+
+    @property
+    def codon_fit_dist_scaled(self) -> hv.Distribution:
+        """Return the fitness distribution based on codon"""
+        return plot_fit_dist(self.codon_fit_scaled, "codon")
+
+    @property
+    def parent_codon_fitness(self) -> float:
+        """Return the parent codon fitness"""
+        return self.exp_df[self.exp_df["seq"] == self.parent_codon]["fitness"].values[0]
+
+    @property
+    def parent_codon_fitness_scaled(self) -> float:
+        """Return the parent codon fitness after scale"""
+        return self.codon_df_scaled[self.codon_df_scaled["seq"] == self.parent_codon][
+            "fitness"
+        ].values[0]
+
     @property
     def split_AA_cols(self) -> list:
         """Return the columns for the split amino acids"""
@@ -173,7 +264,7 @@ class ProcessDHFR(ProcessData):
 
         """Return the input dataframe with amino acid translations"""
 
-        df = self.df_exp_fit.copy()
+        df = self.exp_df.copy()
 
         # Translate the sequence to amino acids
         df["AAs"] = df["seq"].apply(lambda x: "".join(Seq(x).translate()))
@@ -206,41 +297,30 @@ class ProcessDHFR(ProcessData):
         return df[["AAs", *self.split_AA_cols, "fitness"]].copy()
 
     @property
-    def df_avg_aa_append(self) -> pd.DataFrame:
+    def df_avg_aa_scaled(self) -> pd.DataFrame:
+        """Return the scaled average amino acid dataframe"""
+        print(f"df_avg_aa_scaled {self.parent_aa_fitness} before scale...")
+        return self._scale_df(self.df_avg_aa, "AA")
+
+    @property
+    def df_avg_aa_append_scaled(self) -> pd.DataFrame:
         """Return the average fitness of each amino acid with the active cutoff appended"""
-        return self._df_avg_aa_append
+        return self._df_avg_aa_append_scaled
 
     @property
-    def avg_aa_active_cutoff(self) -> float:
+    def avg_aa_active_cutoff_scaled(self) -> float:
         """Return the active cutoff for the average amino acid"""
-        return self._avg_aa_active_cutoff
+        return self._avg_aa_active_cutoff_scaled
 
     @property
-    def codon_fit(self) -> pd.Series:
+    def avg_aa_fit_scaled(self) -> pd.Series:
         """Return the fitness of based on codon as a series"""
-        return self.df_exp_fit["fitness"]
+        return self.df_avg_aa_scaled["fitness"]
 
     @property
-    def avg_aa_fit(self) -> pd.Series:
-        """Return the fitness of based on codon as a series"""
-        return self.df_avg_aa["fitness"]
-
-    @property
-    def codon_fit_dist(self) -> hv.Distribution:
-        """Return the fitness distribution based on codon"""
-        return plot_fit_dist(self.codon_fit, "codon")
-
-    @property
-    def avg_aa_fit_dist(self) -> hv.Distribution:
+    def avg_aa_fit_dist_scaled(self) -> hv.Distribution:
         """Return the fitness distribution based on average amino acid"""
-        return plot_fit_dist(self.avg_aa_fit, "AA")
-
-    @property
-    def parent_codon_fitness(self) -> float:
-        """Return the parent codon fitness"""
-        return self.df_exp_fit[self.df_exp_fit["seq"] == self.parent_codon][
-            "fitness"
-        ].values[0]
+        return plot_fit_dist(self.avg_aa_fit_scaled, "AA")
 
     @property
     def parent_aa_fitness(self) -> float:
@@ -249,60 +329,97 @@ class ProcessDHFR(ProcessData):
             "fitness"
         ].values[0]
 
+    @property
+    def parent_aa_fitness_scaled(self) -> float:
+        """Return the parent aa fitness after scale"""
+        return self.df_avg_aa_scaled[self.df_avg_aa_scaled["AAs"] == self.parent_aa][
+            "fitness"
+        ].values[0]
+
 
 class ProcessGB1(ProcessData):
+
     """
     Class to clean up the GB1 data
     """
 
-    def __init__(self, input_csv: str = "data/GB1/fitness_landscape/GB1.csv") -> None:
+    def __init__(
+        self,
+        input_csv: str = "data/GB1/fitness_landscape/GB1.csv",
+        scale_fit: str = "parent",
+    ) -> None:
+
         """
         Args:
         - input_csv, str: path to the input csv file
+        - scale_fit, str: ways to scale the fitness
         """
 
-        super().__init__(input_csv)
+        super().__init__(input_csv, scale_fit)
 
         # append the active cutoffs
-        self._df_active_append, _ = append_active_cutoff(
-            self.df_aa, ["fitness"], ACTIVE_THRESH_DICT[self.lib_name]
+        self._df_active_append_scaled, _ = append_active_cutoff(
+            self.df_aa_scaled, ["fitness"], self.active_thresh_scaled
         )
 
-        self._df_active_append['fitness'] = self._df_active_append['fitness'] / self._df_active_append['fitness'].max()
-
         # save the appended dataframe
-        self._df_active_append.to_csv(self.output_csv, index=False)
+        self._df_active_append_scaled.to_csv(self.output_csv, index=False)
 
         self._fit_dist = (
-            plot_fit_dist(self._df_active_append["fitness"], label="GB1")
-            * hv.Spikes([ACTIVE_THRESH_DICT[self.lib_name]], label="Active").opts(
+            plot_fit_dist(self._df_active_append_scaled["fitness"], label="GB1")
+            * hv.Spikes([self.active_thresh_scaled], label="Active").opts(
                 color="gray", line_width=1.6
             )
-            * hv.Spikes([self.parent_aa_fitness], label="Parent AA").opts(
+            * hv.Spikes([self.parent_aa_fitness_scaled], label="Parent AA").opts(
                 color="black", line_width=1.6
             )
         ).opts(
             legend_position="top_right",
             title=f"{self.lib_name} fitness distribution",
-            xlabel="Fitness"
+            xlabel="Fitness",
         )
 
         # Save the plot with the legend
         save_bokeh_hv(
             plot_obj=self._fit_dist,
             plot_name=f"{self.lib_name} fitness distribution",
-            plot_path="results/fitness_distribution",
+            plot_path=self.dist_dir,
             bokehorhv="hv",
         )
 
     @property
-    def df_aa(self) -> pd.DataFrame:
+    def max_fit(self) -> float:
+        """Return the max fitness"""
+        return self.input_df["Fitness"].max()
 
-        """Return the input dataframe with amino acid translations
-        and split into individual amino acids"""
+    @property
+    def df_scale_fit(self) -> pd.DataFrame:
+
+        """Scale fitness"""
+
+        df = self.input_df.copy()
+
+        if self._scale_fit == "max":
+            df["Fitness"] = df["Fitness"] / self.max_fit
+
+        return df
+
+    @property
+    def active_thresh_scaled(self) -> float:
+        """Return the active threshold"""
+        act_fit = ACTIVE_THRESH_DICT[self.lib_name]
+        if self._scale_fit == "max":
+            return act_fit / self.max_fit
+        else:
+            return act_fit
+
+    @property
+    def df_aa_scaled(self) -> pd.DataFrame:
+
+        """Return the input dataframe renamed"""
 
         return (
-            self.input_df.copy()
+            self.df_scale_fit.copy()
             .rename(columns={"Variants": "AAs", "Fitness": "fitness"})[
                 ["AAs", "fitness"]
             ]
@@ -310,12 +427,12 @@ class ProcessGB1(ProcessData):
         )
 
     @property
-    def df_split_aa(self) -> pd.DataFrame:
+    def df_split_aa_scaled(self) -> pd.DataFrame:
 
         """Return the input dataframe with amino acid translations
         and split into individual amino acids"""
 
-        df = self.df_aa.copy()
+        df = self.df_aa_scaled.copy()
 
         # Split combo into individual amino acids
         df[self.split_AA_cols] = df["AAs"].apply(lambda x: pd.Series(list(x)))
@@ -328,9 +445,67 @@ class ProcessGB1(ProcessData):
         return self.df_aa[self.df_aa["AAs"] == self.parent_aa]["fitness"].values[0]
 
     @property
-    def df_active_append(self) -> pd.DataFrame:
+    def parent_aa_fitness_scaled(self) -> float:
+        """Return the parent aa fitness"""
+        return self.df_aa_scaled[self.df_aa_scaled["AAs"] == self.parent_aa][
+            "fitness"
+        ].values[0]
+
+    @property
+    def df_active_append_scaled(self) -> pd.DataFrame:
         """Return the active appended dataframe"""
-        return self._df_active_append
+        return self._df_active_append_scaled
+
+
+class ProcessTrpB(ProcessData):
+
+    """
+    Class to clean up the TrpB data
+    """
+
+    def __init__(self, input_csv: str, scale_fit: str = "parent") -> None:
+
+        """
+        Args:
+        - input_csv, str: path to the input csv file
+        - scale_fit, str: ways to scale the fitness
+        """
+
+        super().__init__(input_csv, scale_fit)
+
+        # save scaled df
+        self.df_scale_fit.to_csv(self.output_csv, index=False)
+
+    @property
+    def parent_aa_fitness(self) -> float:
+        """Return the parent aa fitness"""
+        return self.input_df[self.input_df["AAs"] == self.parent_aa]["fitness"].values[
+            0
+        ]
+
+    @property
+    def df_scale_fit(self) -> pd.DataFrame:
+
+        """Scale fitness"""
+
+        df = self.input_df.copy()
+
+        if self._scale_fit == "parent":
+            df["fitness"] = df["fitness"] / self.parent_aa_fitness
+
+        return df
+
+    @property
+    def scaled_fitness(self) -> pd.Series:
+        """Return the scaled fitness"""
+        return self.df_scale_fit["fitness"]
+
+    @property
+    def parent_aa_fitness_scaled(self) -> float:
+        """Return the parent aa fitness"""
+        return self.df_scale_fit[self.df_scale_fit["AAs"] == self.parent_aa][
+            "fitness"
+        ].values[0]
 
 
 class PlotTrpB:
@@ -340,16 +515,21 @@ class PlotTrpB:
     """
 
     def __init__(
-        self, folder: str = "data/TrpB/fitness_landscape", codon_aa: str = "AA"
+        self,
+        folder: str = "data/TrpB/fitness_landscape",
+        scale_fit: str = "parent",
+        codon_aa: str = "AA",
     ) -> None:
 
         """
         Args:
         - folder, str: path to the folder containing the fitness landscapes
-
+        - scale_fit, str: ways to scale the fitness
+        - codon_aa, str: whether to scale the fitness to codon or amino acid
         """
 
         self._folder = os.path.normpath(folder)
+        self._scale_fit = scale_fit
         self._codon_aa = codon_aa
 
         (
@@ -365,47 +545,71 @@ class PlotTrpB:
         Plot the fitness distribution
         """
 
-        colors = sns.color_palette("crest", self.trpb3_lib_numb).as_hex() + [
-            PRESENTATION_PALETTE_SATURATE["orange"]
-        ]
-
         dist_list = [None] * len(self.lib_aa_list)
         ks_list = [0] * self.trpb3_lib_numb
         ks_p_list = [0] * self.trpb3_lib_numb
 
-        for i, lib in enumerate(self.lib_aa_list):
+        # get 4 site lib
+        print(f"Processing {self.trpb4_aa_csv}...")
+
+        trpb4_class = ProcessTrpB(self.trpb4_aa_csv, scale_fit=self._scale_fit)
+        trpb4_name = trpb4_class.lib_name
+
+        trpb4_df = trpb4_class.df_scale_fit
+        trpb4_fit = trpb4_class.scaled_fitness
+
+        dist_dir = trpb4_class.dist_dir
+
+        print(
+            "Plotting {} fitness distribution wtih {} {}...".format(
+                trpb4_name, trpb4_class.parent_aa, trpb4_class.parent_aa_fitness_scaled
+            )
+        )
+
+        dist_list[-1] = (
+            plot_fit_dist(
+                trpb4_fit, trpb4_name, LIB_COLORS[trpb4_name], ignore_line_label=True
+            )
+            * hv.Spikes([trpb4_class.parent_aa_fitness_scaled]).opts(
+                color="black", line_width=1.6
+            )
+            * hv.Spikes([trpb4_df[trpb4_df["active"] == True]["fitness"].min()]).opts(
+                color="gray", line_width=1.6
+            )
+        )
+
+        for i, lib in enumerate(self.trpb3_aa_csv):
 
             print(f"Processing {lib} ...")
 
-            lib_class = ProcessData(lib)
+            lib_class = ProcessTrpB(lib, scale_fit=self._scale_fit)
+            lib_name = lib_class.lib_name
 
-            lib_df = lib_class.input_df
-            lib_fit = lib_class.input_df["fitness"]
+            lib_df = lib_class.df_scale_fit
+            lib_fit = lib_class.scaled_fitness
 
-            wt_fit = lib_df[
-                lib_df["AAs"]
-                == lib_class.parent_aa
-            ]["fitness"].values[0]
-
-            act_fit = lib_df[lib_df["active"] == True]["fitness"].min()
-
-            # TODO need to reprocess data
-            lib_df.to_csv(lib_class.output_csv, index=False)
-
-            dist_list[i] = plot_fit_dist(
-                lib_fit, get_file_name(lib), colors[i], ignore_line_label=True
-            ) * hv.Spikes([wt_fit]).opts(
-                color="black", line_width=1.6
-            ) * hv.Spikes([act_fit]).opts(
-                color="gray", line_width=1.6
+            print(
+                "Plotting {} fitness distribution wtih {} {}...".format(
+                    lib_name, lib_class.parent_aa, lib_class.parent_aa_fitness_scaled
+                )
             )
 
-            if i < self.trpb3_lib_numb:
+            dist_list[i] = (
+                plot_fit_dist(
+                    lib_fit, lib_name, LIB_COLORS[lib_name], ignore_line_label=True
+                )
+                * hv.Spikes([lib_class.parent_aa_fitness_scaled]).opts(
+                    color="black", line_width=1.6
+                )
+                * hv.Spikes([lib_df[lib_df["active"] == True]["fitness"].min()]).opts(
+                    color="gray", line_width=1.6
+                )
+            )
 
-                ks_list[i], ks_p_list[i] = ks_2samp(lib_fit, self.trpb4_fitness)
+            ks_list[i], ks_p_list[i] = ks_2samp(lib_fit, trpb4_fit)
 
-                print(f"Kolmogorov-Smirnov Statistic: {ks_list[i]}")
-                print(f"P-value: {ks_p_list[i]}")
+            print(f"Kolmogorov-Smirnov Statistic: {ks_list[i]}")
+            print(f"P-value: {ks_p_list[i]}")
 
         # Overlay all plots
         overlay_dist = reduce(lambda x, y: x * y, dist_list)
@@ -420,7 +624,7 @@ class PlotTrpB:
         save_bokeh_hv(
             plot_obj=overlay_dist,
             plot_name="TrpB fitness distribution",
-            plot_path="results/fitness_distribution",
+            plot_path=dist_dir,
             bokehorhv="hv",
         )
 
@@ -460,16 +664,6 @@ class PlotTrpB:
     def trpb4_aa_csv(self) -> str:
         """Return the TrpB4 csv path"""
         return self._folder + "/TrpB4.csv"
-
-    @property
-    def trpb4_aa_df(self) -> pd.DataFrame:
-        """Return the TrpB4 dataframe"""
-        return pd.read_csv(self.trpb4_aa_csv)
-
-    @property
-    def trpb4_fitness(self) -> pd.Series:
-        """Return the TrpB4 fitness"""
-        return self.trpb4_aa_df["fitness"]
 
     @property
     def overlay_dist(self) -> hv.Distribution:
