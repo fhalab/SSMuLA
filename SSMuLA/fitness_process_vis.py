@@ -18,6 +18,7 @@ from scipy.stats import ks_2samp
 
 from Bio.Seq import Seq
 
+import matplotlib.pyplot as plt
 import seaborn as sns
 import holoviews as hv
 
@@ -26,9 +27,10 @@ hv.extension("bokeh")
 from SSMuLA.landscape_global import (
     ACTIVE_THRESH_DICT,
     LIB_INFO_DICT,
+    LIB_NAMES,
     append_active_cutoff,
 )
-from SSMuLA.vis import save_bokeh_hv, plot_fit_dist, LIB_COLORS
+from SSMuLA.vis import LIB_COLORS, save_bokeh_hv, plot_fit_dist, save_plt
 from SSMuLA.util import checkNgen_folder, get_file_name
 
 
@@ -128,6 +130,18 @@ class ProcessDHFR(ProcessData):
             self._avg_aa_active_cutoff_scaled,
         ) = append_active_cutoff(self.df_avg_aa_scaled, ["fitness"])
 
+        print(
+            "Parent codon scaled from {} to {}".format(
+                self.parent_codon_fitness, self.parent_codon_fitness_scaled
+            )
+        )
+        print(
+            "Parent aa scaled from {} to {}".format(
+                self.parent_aa_fitness, self.parent_aa_fitness_scaled
+            )
+        )
+        print("The scaled active cutoff is {}".format(self.avg_aa_active_cutoff_scaled))
+
         print(f"Save processed df to {self.output_csv}...")
         # save the appended dataframe
         self._df_avg_aa_append_scaled.to_csv(self.output_csv, index=False)
@@ -170,14 +184,6 @@ class ProcessDHFR(ProcessData):
         Returns:
         - hv.Distribution: plot of the fitness distribution
         """
-
-        print(
-            f"After scaling, the parent codone fitness is {self.parent_codon_fitness_scaled}..."
-        )
-        print(f"The parent aa fitness is {self.parent_aa_fitness_scaled}...")
-        print(
-            f"The avg_aa_active_cutoff_scaled is {self.avg_aa_active_cutoff_scaled}..."
-        )
 
         # Overlay the two plots
         overlay_dist = (
@@ -229,7 +235,6 @@ class ProcessDHFR(ProcessData):
     @property
     def codon_df_scaled(self) -> pd.DataFrame:
         """Return the scaled dataframe"""
-        print(f"codon_df_scaled {self.parent_codon_fitness} before scale...")
         return self._scale_df(self.exp_df, "codon")
 
     @property
@@ -299,7 +304,6 @@ class ProcessDHFR(ProcessData):
     @property
     def df_avg_aa_scaled(self) -> pd.DataFrame:
         """Return the scaled average amino acid dataframe"""
-        print(f"df_avg_aa_scaled {self.parent_aa_fitness} before scale...")
         return self._scale_df(self.df_avg_aa, "AA")
 
     @property
@@ -365,6 +369,13 @@ class ProcessGB1(ProcessData):
         # save the appended dataframe
         self._df_active_append_scaled.to_csv(self.output_csv, index=False)
 
+        print(
+            "Parent aa scaled from {} to {}".format(
+                self.parent_aa_fitness, self.parent_aa_fitness_scaled
+            )
+        )
+        print("The scaled active cutoff is {}".format(self.active_thresh_scaled))
+
         self._fit_dist = (
             plot_fit_dist(self._df_active_append_scaled["fitness"], label="GB1")
             * hv.Spikes([self.active_thresh_scaled], label="Active").opts(
@@ -387,20 +398,34 @@ class ProcessGB1(ProcessData):
             bokehorhv="hv",
         )
 
+    
+    @property
+    def df_aa(self) -> pd.DataFrame:
+
+        """Return the input dataframe renamed"""
+
+        return (
+            self.input_df.copy()
+            .rename(columns={"Variants": "AAs", "Fitness": "fitness"})[
+                ["AAs", "fitness"]
+            ]
+            .copy()
+        )
+    
     @property
     def max_fit(self) -> float:
         """Return the max fitness"""
-        return self.input_df["Fitness"].max()
+        return self.df_aa["fitness"].max()
 
     @property
-    def df_scale_fit(self) -> pd.DataFrame:
+    def df_aa_scaled(self) -> pd.DataFrame:
 
         """Scale fitness"""
 
-        df = self.input_df.copy()
+        df = self.df_aa.copy()
 
         if self._scale_fit == "max":
-            df["Fitness"] = df["Fitness"] / self.max_fit
+            df["fitness"] = df["fitness"] / self.max_fit
 
         return df
 
@@ -412,19 +437,6 @@ class ProcessGB1(ProcessData):
             return act_fit / self.max_fit
         else:
             return act_fit
-
-    @property
-    def df_aa_scaled(self) -> pd.DataFrame:
-
-        """Return the input dataframe renamed"""
-
-        return (
-            self.df_scale_fit.copy()
-            .rename(columns={"Variants": "AAs", "Fitness": "fitness"})[
-                ["AAs", "fitness"]
-            ]
-            .copy()
-        )
 
     @property
     def df_split_aa_scaled(self) -> pd.DataFrame:
@@ -472,6 +484,12 @@ class ProcessTrpB(ProcessData):
         """
 
         super().__init__(input_csv, scale_fit)
+
+        print(
+            "Parent aa scaled from {} to {}".format(
+                self.parent_aa_fitness, self.parent_aa_fitness_scaled
+            )
+        )
 
         # save scaled df
         self.df_scale_fit.to_csv(self.output_csv, index=False)
@@ -684,3 +702,105 @@ class PlotTrpB:
     def ks_p_list(self) -> list:
         """Return the list of KS p-values"""
         return self._ks_p_list
+    
+
+def sum_ks(
+    input_folder: str = "data", 
+    output_folder: str = "results/fitness_distribution"
+) -> dict:
+    """
+    Return the summary statistics from different ways of processing data
+
+    Args:
+    - input_folder, str: path to the input folder
+    - output_folder, str: path to the output folder
+    """
+
+    process_types = {
+        "fitness_landscape": "preprocessed",
+        "processed": "exp_log",
+        "scale2max": "scaled_to_max",
+        "scale2parent": "scaled_to_parent",
+    }
+
+    output_dict = {}
+
+    # init output dataframe with row and column index be library names
+    # so then when loop over the nested for loop,
+    # ks calculation can be done for each library against another
+    # and then the results will be in the corresponding cell given row and column index
+    for data_folder, process_type in process_types.items():
+
+        print(f"Processing {process_type} data...")
+
+        output_dict[process_type] = {}
+
+        ks_df = pd.DataFrame(columns=LIB_NAMES, index=LIB_NAMES).astype(float)
+        ks_df_p = pd.DataFrame(columns=LIB_NAMES, index=LIB_NAMES).astype(float)
+
+        for lib in LIB_NAMES:
+
+            if "TrpB" in lib:
+                protein = "TrpB"
+            else:
+                protein = lib
+
+            df = pd.read_csv(
+                os.path.join(input_folder, protein, data_folder, lib + ".csv")
+            )
+
+            if "fitness" in df.columns:
+                fit = "fitness"
+            elif "Fitness" in df.columns:
+                fit = "Fitness"
+
+            for lib2 in LIB_NAMES:
+
+                if "TrpB" in lib2:
+                    protein2 = "TrpB"
+                else:
+                    protein2 = lib2
+
+                df2 = pd.read_csv(
+                    os.path.join(input_folder, protein2, data_folder, lib2 + ".csv")
+                )
+
+                if "fitness" in df2.columns:
+                    fit2 = "fitness"
+                elif "Fitness" in df2.columns:
+                    fit2 = "Fitness"
+
+                ks, ks_p = ks_2samp(df[fit], df2[fit2])
+
+                ks_df.loc[lib, lib2] = ks
+                ks_df_p.loc[lib, lib2] = ks_p
+
+        for df, name in zip(
+            [ks_df, ks_df_p],
+            [
+                "Kolmogorov-Smirnov statistic",
+                "Kolmogorov-Smirnov p-value",
+            ],
+        ):
+            # plot and save heatmap
+            plt.figure(figsize=(8, 6))
+            hm = sns.heatmap(df, cmap="viridis", cbar=True)
+            title = f"{name} for {process_type}"
+
+            # Set axis labels and title
+            plt.title(title)
+
+            save_plt(
+                hm,
+                plot_title=name,
+                path2folder=checkNgen_folder(
+                    os.path.join(output_folder, "ks_plot", process_type)
+                ),
+            )
+            csv_folder = checkNgen_folder(os.path.join(output_folder, "ks_csv", process_type))
+            df.to_csv(os.path.join(csv_folder, name + ".csv"))
+    
+        output_dict[process_type]["ks"] = ks_df
+        output_dict[process_type]["ks_p"] = ks_df_p
+
+    return output_dict
