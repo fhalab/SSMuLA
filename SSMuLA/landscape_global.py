@@ -27,60 +27,6 @@ TrpB_names = deepcopy([*["TrpB3" + string for string in [chr(ord("A") + i) for i
 
 LIB_NAMES = deepcopy(["DHFR", "GB1", *TrpB_names])
 
-"""
-TrpB3D_Johnston_2023_dict = {
-    "mut_reg_seq": "TAA",  # seq
-    0: "T117", # position of T
-    1: "A118", # position of A
-    2: "A119", # position of A
-    # {117: "T", 118: "A", 119: "A"}
-}
-
-TrpB3G_Johnston_2023_dict = {
-    "mut_reg_seq": "VSY",  # seq
-    0: "V227", # position of V
-    1: "S228", # position of S
-    2: "Y301", # position of Y
-    # {227: "V", 228: "S", 301: "Y"}
-}
-
-TrpB3H_Johnston_2023_dict = {
-    "mut_reg_seq": "SGS",  # seq
-    0: "S228", # position of S
-    1: "G230", # position of G
-    2: "S231", # position of S
-    # {228: "S", 231: "S"}, # should be 228, 230, and 231
-}
-
-TrpB3I_Johnston_2023_dict = {
-    "mut_reg_seq": "YVF",  # seq
-    0: "Y182", # position of Y
-    1: "V183", # position of V
-    2: "F184", # position of F
-    # {182: "Y", 183: "V", 184: "F"}
-}
-
-TrpB4_Johnston_2023_dict= {
-    "mut_reg_seq": "VFVS",  # seq
-    0: "V183", # position of V
-    1: "F184", # position of F
-    2: "V227", # position of V
-    3: "S228", # position of S
-    #(V183, F184, V227, S228)
-}
-
-
-GB1_dict = {
-    "mut_reg_seq": "VDGV",  # seq
-    0: "V39", # position of V
-    1: "D40", # position of D
-    2: "G41", # position of G
-    3: "V54", # position of V
-    # V39, D40, G41 and V54
-}
-
-
-"""
 # Dictionary with positions for mutation, parent codons, and parent amino acids
 LIB_INFO_DICT = deepcopy({
     "DHFR": {

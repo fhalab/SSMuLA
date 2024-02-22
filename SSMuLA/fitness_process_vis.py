@@ -28,7 +28,7 @@ from SSMuLA.landscape_global import (
     LIB_INFO_DICT,
     append_active_cutoff,
 )
-from SSMuLA.vis import save_bokeh_hv, plot_fit_dist, LIB_COLORS
+from SSMuLA.vis import save_bokeh_hv, plot_fit_dist, LIB_COLORS, LIB_COLORS_CODON
 from SSMuLA.util import checkNgen_folder, get_file_name
 
 
@@ -51,6 +51,42 @@ class ProcessData:
         self._scale_fit = scale_fit
 
         print(f"Processing {self._input_csv} with {self._scale_fit}...")
+
+    def _convert_muts(self, muts: str) -> str:
+
+        """
+        Convert the variants sequence
+        to the form of parentaa1loc1mutaa1:parentaa2loc2mutaa2
+        for mut number count d2m and s2m
+        """
+
+        mut_seq = ""
+        mut_num = 0
+
+        for i, (mut, wt) in enumerate(
+            zip(muts, self.parent_aa)
+        ):
+            if mut != wt:
+                mut_num += 1
+                if mut_num != 1:
+                    mut_seq += ":" + LIB_INFO_DICT[self.lib_name]["AAs"][i + 1] + mut
+                else:
+                    mut_seq += LIB_INFO_DICT[self.lib_name]["AAs"][i + 1] + mut
+        return mut_seq
+
+    def _append_mut(self, df: pd.DataFrame) -> pd.DataFrame:
+
+        """
+        Apply the convert_muts function to the dataframe
+        """
+
+        df_appended = df.copy()
+        df_appended.loc[:, "muts"] = df_appended.apply(
+            lambda x: self._convert_muts(x["AAs"]),
+            axis=1,
+        )
+
+        return df_appended.replace("", "WT")
 
     @property
     def input_df(self) -> pd.DataFrame:
@@ -130,7 +166,9 @@ class ProcessDHFR(ProcessData):
 
         print(f"Save processed df to {self.output_csv}...")
         # save the appended dataframe
-        self._df_avg_aa_append_scaled.to_csv(self.output_csv, index=False)
+        self._append_mut(self._df_avg_aa_append_scaled).to_csv(
+            self.output_csv, index=False
+        )
 
         self._ks, self._ks_p = ks_2samp(self.codon_fit_scaled, self.avg_aa_fit_scaled)
         print(f"Kolmogorov-Smirnov Statistic: {self._ks}")
@@ -240,7 +278,11 @@ class ProcessDHFR(ProcessData):
     @property
     def codon_fit_dist_scaled(self) -> hv.Distribution:
         """Return the fitness distribution based on codon"""
-        return plot_fit_dist(self.codon_fit_scaled, "codon")
+        return plot_fit_dist(
+            self.codon_fit_scaled,
+            color=LIB_COLORS_CODON[self.lib_name],
+            label="codon",
+        )
 
     @property
     def parent_codon_fitness(self) -> float:
@@ -320,7 +362,9 @@ class ProcessDHFR(ProcessData):
     @property
     def avg_aa_fit_dist_scaled(self) -> hv.Distribution:
         """Return the fitness distribution based on average amino acid"""
-        return plot_fit_dist(self.avg_aa_fit_scaled, "AA")
+        return plot_fit_dist(
+            self.avg_aa_fit_scaled, color=LIB_COLORS[self.lib_name], label="AA"
+        )
 
     @property
     def parent_aa_fitness(self) -> float:
@@ -363,10 +407,16 @@ class ProcessGB1(ProcessData):
         )
 
         # save the appended dataframe
-        self._df_active_append_scaled.to_csv(self.output_csv, index=False)
+        self._append_mut(self._df_active_append_scaled).to_csv(
+            self.output_csv, index=False
+        )
 
         self._fit_dist = (
-            plot_fit_dist(self._df_active_append_scaled["fitness"], label="GB1")
+            plot_fit_dist(
+                self._df_active_append_scaled["fitness"],
+                color=LIB_COLORS[self.lib_name],
+                label="GB1",
+            )
             * hv.Spikes([self.active_thresh_scaled], label="Active").opts(
                 color="gray", line_width=1.6
             )
@@ -474,7 +524,7 @@ class ProcessTrpB(ProcessData):
         super().__init__(input_csv, scale_fit)
 
         # save scaled df
-        self.df_scale_fit.to_csv(self.output_csv, index=False)
+        self._append_mut(self.df_scale_fit).to_csv(self.output_csv, index=False)
 
     @property
     def parent_aa_fitness(self) -> float:

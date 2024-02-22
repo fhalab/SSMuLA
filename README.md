@@ -43,21 +43,32 @@ Code base for Site Saturation Mutagenesis Landscape Analysis
 * PDB ID: 2GI9
 
 ### Preprocessing
-* Processed: Rename columns to be `AAs`, `AA1`, `AA2`, `AA3`, `AA4`, `fitness`, `active`
-* 
+* Processed with `fitness_process_vis`
+* Rename columns to be `AAs`, `AA1`, `AA2`, `AA3`, `AA4`, `fitness`, add `active` if not already there and add `muts` columns
+* Scale to parents or max
+
+### Simulations
+#### DE
+* Run `de_simulations` and visualise with `plot_de_simulations`
+#### MLDE
 
 ### Zero-shot
 #### Triad
+* Prep mutation file in `.mut` format such as `A_1A+A_2A+A_3A+A_4A` with `TriadGenMutFile` class in `SSMuLA.triad_prepost` 
+* With `triad-2.1.3` local command line
+* Prepare structure with `2prep_structures.sh`
+* Ran `3getfixed.sh`
+* Parse results with `ParseTriadResults` class in `SSMuLA.triad_prepost` 
 #### ESM
+* 
 #### EVMutation
 * All EVMutation predictions run with [EVcouplings](https://v2.evcouplings.org/)
 * All settings remain default
-* Model parameters are downloaded and renamed
+* Model parameters in the `.model` files are downloaded and renamed
 * Use the recommneded results and full results can be obtained from the links
-
+- [DHFR](https://v2.evcouplings.org/results/057bbf069e4b43789bd87bd22b9982ab)
 - [GB1](https://v2.evcouplings.org/results/c12744e78f4744ee8102d8021c243398)
 - [TrpB](https://v2.evcouplings.org/results/db0701748dce4dfe8f27ac5a535391bf)
-
 
 ## Prepare for installation
 

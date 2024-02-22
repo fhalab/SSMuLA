@@ -8,6 +8,7 @@ from Bio import SeqIO
 
 from SSMuLA.landscape_global import LIB_INFO_DICT
 
+
 class DataProcessor:
     def __init__(self):
         pass
@@ -21,43 +22,8 @@ class DataProcessor:
             data = pd.read_csv(df)
         
         # append mut
-        return self._append_mut(data)
+        return data
     
-
-    def _convert_muts(self, muts: str) -> str:
-
-        """
-        Convert the variants sequence
-        to the form of parentaa1loc1mutaa1:parentaa2loc2mutaa2
-        """
-
-        mut_seq = ""
-        mut_num = 0
-
-        for i, (mut, wt) in enumerate(
-            zip(muts, LIB_INFO_DICT["AAs"].values())
-        ):
-            if mut != wt:
-                mut_num += 1
-                if mut_num != 1:
-                    mut_seq += ":" + LIB_INFO_DICT["AAs"][i+1] + mut
-                else:
-                    mut_seq += LIB_INFO_DICT["AAs"][i+1] + mut
-        return mut_seq
-    
-    def _append_mut(self, df: pd.DataFrame) -> pd.DataFrame:
-
-        """
-        Apply the convert_muts function to the dataframe
-        """
-
-        df_appended = df.copy()
-        df_appended.loc[:, "muts"] = df_appended.apply(
-            lambda x: self._convert_muts(x["fitness"]),
-            axis=1,
-        )
-
-        return df_appended.replace("", "WT")
 
     def get_Seq(self, path):
         return SeqIO.read(path, "fasta").seq
@@ -242,3 +208,91 @@ class DataProcessor:
         if _pos:
             data = self.store_pos_list(data)
         return data
+
+
+
+EV_META = {
+    "DHFR": {
+        "recommended": {
+            "bitscore": 0.7,
+            "sequences": 16042,
+            "seqs_per_l": 103.5,
+            "quality": 10,
+        },
+        "other_1": {
+            "bitscore": 0.1,
+            "sequences": 59494,
+            "seqs_per_l": 491.7,
+            "quality": 10,
+        },
+        "other_2": {
+            "bitscore": 0.3,
+            "sequences": 17758,
+            "seqs_per_l": 114.6,
+            "quality": 10,
+        },
+        "other_3": {
+            "bitscore": 0.5,
+            "sequences": 17132,
+            "seqs_per_l": 111.2,
+            "quality": 10,
+        },
+    },
+
+    "GB1": {
+        "recommended": {
+            "bitscore": 0.3,
+            "sequences": 4358,
+            "seqs_per_l": 128.2,
+            "quality": 8,
+        },
+        "other_1": {
+            "bitscore": 0.1,
+            "sequences": 22512,
+            "seqs_per_l": 750.4,
+            "quality": 8,
+        },
+        "chosen": {
+            "bitscore": 0.5,
+            "sequences": 29,
+            "seqs_per_l": 0.5,
+            "quality": 3,
+        },
+        "other_3": {
+            "bitscore": 0.7,
+            "sequences": 27,
+            "seqs_per_l": 0.5,
+            "quality": 3,
+        },
+    },
+
+    "TrpB": {
+        "recommended": {
+            "bitscore": 0.1,
+            "sequences": 73656,
+            "seqs_per_l": 256.6,
+            "quality": 10,
+        },
+        "chosen": {
+            "bitscore": 0.3,
+            "sequences": 5816,
+            "seqs_per_l": 15.4,
+            "quality": 10,
+        },
+        "other_2": {
+            "bitscore": 0.5,
+            "sequences": 5566,
+            "seqs_per_l": 14.8,
+            "quality": 10,
+        },
+        "other_3": {
+            "bitscore": 0.7,
+            "sequences": 4476,
+            "seqs_per_l": 11.8,
+            "quality": 10,
+        },
+    },
+
+}
+
+# 

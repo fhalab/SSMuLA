@@ -68,16 +68,12 @@ PRESENTATION_PALETTE_SATURATE = {
     "green": "#9bbb59",
     "yellow": "#f9be00",
     "purple": "#8064a2",
+    "brown": "#6e4a2eff",
     "gray": "#666666",
 }
 
 PLOTEXTENTIONS = [".svg", ".png"]
 PLOTTYPES = [t[1:] for t in PLOTEXTENTIONS]
-
-CODON_AA_COLOER_DICT = {
-    "codon": PRESENTATION_PALETTE_SATURATE["blue"],
-    "AA": PRESENTATION_PALETTE_SATURATE["orange"],
-}
 
 LIB_COLORS = {
     n: c
@@ -91,6 +87,8 @@ LIB_COLORS = {
         + [PRESENTATION_PALETTE_SATURATE["gray"]],
     )
 }
+
+LIB_COLORS_CODON = {"DHFR": PRESENTATION_PALETTE_SATURATE["brown"]}
 
 def render_hv(hv_plot) -> bokeh.plotting.Figure:
     """Render a holoviews plot as a bokeh plot"""
@@ -153,10 +151,8 @@ def plot_fit_dist(
 
     if label == "codon":
         cap_label = f"{label.capitalize()}-level"
-        color = CODON_AA_COLOER_DICT[label]
     elif label == "AA":
         cap_label = f"{label.upper()}-level"
-        color = CODON_AA_COLOER_DICT[label]
     else:
         cap_label = label
 
