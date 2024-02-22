@@ -426,6 +426,7 @@ def append_active_cutoff(
     - pd.DataFrame: input dataframe with active column
     - list[float]: cutoff value for each fitness column
     """
+    
     if def_cutoff is None:
         fit_cutoffs = [None] * len(fitness_cols)
 

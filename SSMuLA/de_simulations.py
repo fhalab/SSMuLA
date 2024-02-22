@@ -38,7 +38,7 @@ def make_new_sequence(input_seq: str, new_AA: str, position: int) -> str:
 
 
 def ecdf_transform(data: pd.Series) -> pd.Series:
-    
+
     """
     Transform a series of fitness values into an empirical cumulative distribution function
 
@@ -197,8 +197,8 @@ def simulate_simple_SSM_recomb_DE(data, seq_col, fitness_col, n_sites=4):
         best_seq = start_seq
         best_fitness = start_fitness
 
-        # check if the recombined sequence is better than 
-        # the starting sequence as well as all of the SSM variants. 
+        # check if the recombined sequence is better than
+        # the starting sequence as well as all of the SSM variants.
         # Return the best one of these.
         if recomb_fitness > best_fitness:
             best_seq = recomb_seq
@@ -527,55 +527,60 @@ def simulate_iterative_SM(data, seq_col, fitness_col, n_sites=4):
 
 
 def print_characteristics(df):
-    
-    print('mean:',np.mean(df['final_fitness'].values))
-    print('median:',np.median(df['final_fitness'].values))
-    print('fraction reaching max:', sum(df['final_fitness'].values == 1) / len(df['final_fitness'].values))
+
+    print("mean:", np.mean(df["final_fitness"].values))
+    print("median:", np.median(df["final_fitness"].values))
+    print(
+        "fraction reaching max:",
+        sum(df["final_fitness"].values == 1) / len(df["final_fitness"].values),
+    )
+
 
 def run_all_de_simulations(
-    df: pd.DataFrame, 
+    df: pd.DataFrame,
     lib_name: str,
     save_dir: str = "results/simulations/DE",
-    seq_col: str = "AAs", 
+    seq_col: str = "AAs",
     fitness_col: str = "fitness",
     n_sites=4,
-    N=96, 
+    N=96,
     max_samples=None,
-    n_jobs=256
+    n_jobs=256,
 ):
-    
+
     save_dir = checkNgen_folder(save_dir)
-    
+
     ######## Simulate a single step directed evolution walk ########
-    print(f'Simulate a single step directed evolution walk')
+    print(f"Simulate a single step directed evolution walk")
     fitness_array, single_step_DE = simulate_single_step_DE(
-        data=df, 
-        seq_col=seq_col, 
+        data=df,
+        seq_col=seq_col,
         fitness_col=fitness_col,
         n_sites=n_sites,
     )
     print_characteristics(single_step_DE)
 
-    single_step_DE.to_csv(os.path.join(save_dir, f'{lib_name}-single_step_DE.csv'), index=False)
+    single_step_DE.to_csv(
+        os.path.join(save_dir, f"{lib_name}-single_step_DE.csv"), index=False
+    )
 
     ######## Simulate a simple SSM recombination ########
-    print('\nSimulate a simple SSM recombination')
+    print("\nSimulate a simple SSM recombination")
     SSM_recomb = simulate_simple_SSM_recomb_DE(
-        data=df, 
-        seq_col=seq_col, 
-        fitness_col=fitness_col, 
+        data=df,
+        seq_col=seq_col,
+        fitness_col=fitness_col,
         n_sites=n_sites,
     )
     print_characteristics(SSM_recomb)
 
-    SSM_recomb.to_csv(os.path.join(save_dir, f'{lib_name}-simple_SSM.csv'), index=False)
-
+    SSM_recomb.to_csv(os.path.join(save_dir, f"{lib_name}-SSM_recomb.csv"), index=False)
 
     ######## Simulate SSM predict top N ########
-    print(f'\nSimulate SSM predict top {N}')
+    print(f"\nSimulate SSM predict top {N}")
     SSM_pred96 = sample_SSM_test_top_N(
-        data=df, 
-        seq_col=seq_col, 
+        data=df,
+        seq_col=seq_col,
         fitness_col=fitness_col,
         n_sites=n_sites,
         N=N,
@@ -584,6 +589,10 @@ def run_all_de_simulations(
     )
     print_characteristics(SSM_pred96)
 
-    SSM_pred96.to_csv(os.path.join(save_dir, f'{lib_name}-SSM_pred96.csv'), index=False)
+    SSM_pred96.to_csv(os.path.join(save_dir, f"{lib_name}-SSM_top{N}.csv"), index=False)
 
-    return {'single step SSM':single_step_DE, 'SSM recomb':SSM_recomb, 'SSM predict top 96':SSM_pred96}
+    return {
+        "single step SSM": single_step_DE,
+        "SSM recomb": SSM_recomb,
+        "SSM predict top 96": SSM_pred96,
+    }
