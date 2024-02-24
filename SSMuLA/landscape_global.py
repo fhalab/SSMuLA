@@ -91,6 +91,15 @@ LIB_INFO_DICT = deepcopy({
     }
 })
 
+
+LIB_POS_0_IDX = deepcopy({
+    lib: {
+        str(int(pos_number) - 1): pos_loc
+        for pos_number, pos_loc in dets["positions"].items()
+    }
+    for lib, dets in LIB_INFO_DICT.items()
+})
+
 PARENT_COMBO_DICT = deepcopy({lib: "".join(list(dets["AAs"].values())) for lib, dets in LIB_INFO_DICT.items()})
 
 
