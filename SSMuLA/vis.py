@@ -10,6 +10,7 @@ import seaborn as sns
 
 import bokeh
 from bokeh.io import show, export_svg, export_png
+from bokeh.models import NumeralTickFormatter
 from bokeh.plotting import show
 from bokeh.themes.theme import Theme
 
@@ -89,6 +90,26 @@ LIB_COLORS = {
 }
 
 LIB_COLORS_CODON = {"DHFR": PRESENTATION_PALETTE_SATURATE["brown"]}
+
+# define plot hooks
+def one_decimal_x(plot,element):
+    plot.handles['plot'].xaxis[0].formatter = NumeralTickFormatter(format="0.0")
+
+def one_decimal_y(plot,element):
+    plot.handles['plot'].yaxis[0].formatter = NumeralTickFormatter(format="0.0")
+
+def fixmargins(plot,element):
+    plot.handles['plot'].min_border_right=30
+    plot.handles['plot'].min_border_left=65
+    plot.handles['plot'].min_border_top=20
+    plot.handles['plot'].min_border_bottom=65
+    plot.handles['plot'].outline_line_color='black'
+    plot.handles['plot'].outline_line_alpha=1
+    plot.handles['plot'].outline_line_width=1
+    plot.handles['plot'].toolbar.autohide = True
+
+
+
 
 def render_hv(hv_plot) -> bokeh.plotting.Figure:
     """Render a holoviews plot as a bokeh plot"""

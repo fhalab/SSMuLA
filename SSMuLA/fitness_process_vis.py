@@ -63,15 +63,24 @@ class ProcessData:
         mut_seq = ""
         mut_num = 0
 
-        for i, (mut, wt) in enumerate(
-            zip(muts, self.parent_aa)
-        ):
+        for i, (mut, wt) in enumerate(zip(muts, self.parent_aa)):
+            # get wt aa + mut position from ie
+            # "TrpB4": {
+            #     "positions": {1: 183, 2: 184, 3: 227, 4: 228},
+            #     "codons": {1: "GTG", 2: "TTC", 3: "GTG", 4: "AGC"},
+            #     "AAs": {1: "V", 2: "F", 3: "V", 4: "S"}
+            # }
+
+            wt_aa_pos = LIB_INFO_DICT[self.lib_name]["AAs"][i + 1] + str(
+                LIB_INFO_DICT[self.lib_name]["positions"][i + 1]
+            )
+
             if mut != wt:
                 mut_num += 1
                 if mut_num != 1:
-                    mut_seq += ":" + LIB_INFO_DICT[self.lib_name]["AAs"][i + 1] + mut
+                    mut_seq += ":" + wt_aa_pos + mut
                 else:
-                    mut_seq += LIB_INFO_DICT[self.lib_name]["AAs"][i + 1] + mut
+                    mut_seq += wt_aa_pos + mut
         return mut_seq
 
     def _append_mut(self, df: pd.DataFrame) -> pd.DataFrame:
