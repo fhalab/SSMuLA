@@ -24,16 +24,23 @@ from bokeh.models import NumeralTickFormatter
 
 import holoviews as hv
 from holoviews import dim
-hv.extension('bokeh')
+
+hv.extension("bokeh")
 
 from SSMuLA.aa_global import ALL_AAS
 from SSMuLA.landscape_global import LIB_POS_0_IDX, LIB_POS_MAP
 from SSMuLA.util import checkNgen_folder, get_file_name, get_dir_name
-from SSMuLA.vis import JSON_THEME, save_bokeh_hv, one_decimal_x, one_decimal_y, fixmargins, LIB_COLORS
+from SSMuLA.vis import (
+    JSON_THEME,
+    save_bokeh_hv,
+    one_decimal_y,
+    fixmargins,
+    LIB_COLORS,
+)
 
 from bokeh.themes.theme import Theme
 
-hv.renderer('bokeh').theme = JSON_THEME
+hv.renderer("bokeh").theme = JSON_THEME
 
 
 EPISTASIS_TYPE = ["magnitude", "sign", "reciprocal sign"]
@@ -95,12 +102,21 @@ class PairwiseEpistasis:
 
         self._input_csv = input_csv
         self._output_folder = checkNgen_folder(output_folder)
-        self._filter_min_by = filter_min_by
+
+        if filter_min_by in ["", "none", "None", None]:
+            self._filter_min_by = "none"
+        else:
+            self._filter_min_by = filter_min_by
         self._n_jobs = n_jobs
 
         # generate and save the pairwise epistasis DataFrame
         self.filtered_epistasis_df.to_csv(self.output_csv, index=True)
         print(f"Saving pairwise epistasis in {self.output_csv}...")
+
+    @property
+    def fitness_process_type(self) -> str:
+        """The fitness process type."""
+        return get_dir_name(self._input_csv)
 
     @property
     def output_csv(self) -> str:
@@ -112,7 +128,12 @@ class PairwiseEpistasis:
         - str: The output folder.
         """
 
-        output_csv = self._input_csv.replace("data", self._output_folder)
+        output_csv = os.path.join(
+            self._output_folder,
+            self._filter_min_by,
+            self.fitness_process_type,
+            f"{self.lib_name}.csv",
+        )
 
         # make sure the subfolder exists and create them if not
         checkNgen_folder(output_csv)
@@ -179,7 +200,7 @@ class PairwiseEpistasis:
             return filter_epistasis_results(
                 self.epistasis_df, self.active_fit_min
             ).copy()
-        elif self._filter_min_by == "" or None:
+        elif self._filter_min_by == "none":
             return self.epistasis_df.copy()
         else:
             return filter_epistasis_results(
@@ -384,17 +405,23 @@ class VisPairwiseEpistasis:
     """A class to visualize pairwise epistasis data."""
 
     def __init__(
-        self, pairwise_cvs: str, vis_folder: str = "results/pairwise_epistasis_vis"
+        self,
+        pairwise_cvs: str,
+        vis_folder: str = "results/pairwise_epistasis_vis",
+        filter_min_by: str = "active_min",
     ):
 
         """
         Args:
         - pairwise_cvs: The path to the pairwise epistasis data.
             ie. results/pairwise_epistasis/DHFR/scale2max/DHFR.csv
+        - vis_folder: The folder to save the visualizations.
+        - filter_min_by: The minimum fitness to filter by.
         """
 
         self._pairwise_cvs = pairwise_cvs
         self._vis_folder = checkNgen_folder(vis_folder)
+        self._filter_min_by = filter_min_by
 
         print(
             "Visulizing pairwise epistasis for {} saved to {}".format(
@@ -561,12 +588,19 @@ class VisPairwiseEpistasis:
     @property
     def vis_subfolder(self) -> str:
         """The subfolder to save visualizations."""
-        return os.path.join(self._vis_folder, self.lib_name, self.fitness_process_type)
+        return checkNgen_folder(
+            os.path.join(
+                self._vis_folder,
+                self._filter_min_by,
+                self.fitness_process_type,
+                self.lib_name,
+            )
+        )
 
     @property
     def df(self) -> pd.DataFrame:
         """The dataframe of the pairwise epistasis data."""
-        
+
         # map int pos to real
         df = pd.read_csv(self._pairwise_cvs)
         df["positions"] = df["positions"].map(LIB_POS_MAP[self.lib_name])
@@ -628,7 +662,7 @@ class VisPairwiseEpistasis:
     def df_quartile_grouped(self) -> pd.DataFrame:
 
         """
-        The dataframe of the pairwise epistasis data 
+        The dataframe of the pairwise epistasis data
         with quartiles and grouped by quartiles.
         """
 
@@ -673,7 +707,7 @@ class VisPairwiseEpistasis:
 def run_pairwise_epistasis(
     input_folder: str = "data",
     fitness_process_type: str = "scale2max",
-    filter_min_by: str = "active_min",
+    filter_min_by: str = "none",
     output_folder: str = "results/pairwise_epistasis",
     n_jobs: int = 256,
 ):
@@ -689,13 +723,18 @@ def run_pairwise_epistasis(
     - n_jobs, int: The number of jobs to run in parallel.
     """
 
-    for lib in glob(os.path.normpath(input_folder) + "/*/" + fitness_process_type + "/*.csv"):
+    for lib in glob(
+        os.path.normpath(input_folder) + "/*/" + fitness_process_type + "/*.csv"
+    ):
         print(f"Processing {lib}...")
         PairwiseEpistasis(
             lib, filter_min_by=filter_min_by, output_folder=output_folder, n_jobs=n_jobs
         )
 
+
 def plot_pairwise_epistasis(
+    fitness_process_type: str = "scale2max",
+    filter_min_by: str = "none",
     input_folder: str = "results/pairwise_epistasis",
     output_folder: str = "results/pairwise_epistasis_vis",
 ):
@@ -704,30 +743,49 @@ def plot_pairwise_epistasis(
     Plot pairwise epistasis on all CSV files in a folder.
 
     Args:
+    - fitness_process_type, str: The fitness process type.
     - input_folder, str: The input folder.
     - output_folder, str: The output folder.
     """
 
-    summary_dict = {}
+    summary_df = pd.DataFrame(columns=["lib", "summary_type", *EPISTASIS_TYPE])
 
-    for lib in glob(os.path.normpath(input_folder) + "/*/*/*.csv"):
+    for lib in glob(
+        os.path.normpath(input_folder) + filter_min_by + fitness_process_type + "/*.csv"
+    ):
 
         print(f"Processing {lib}...")
-        fitness_process_type = get_dir_name(lib)
 
-        summary_dict[fitness_process_type] = {}
-        
         vis_class = VisPairwiseEpistasis(lib, vis_folder=output_folder)
 
-        lib_name = vis_class.lib_name
+        count_dict = vis_class.epistasis_type_counts
+        fract_dict = vis_class.epistasis_type_fraction
 
-        summary_dict[lib_name] = {}
-        summary_dict[lib_name]["counts"]= vis_class.epistasis_type_counts
-        summary_dict[lib_name]["frac"] = vis_class.epistasis_type_fraction
+        for et, ed in zip(["count", "fraction"], [count_dict, fract_dict]):
 
-        # Convert multilayer dict to dataframe
-        summary_counts_df = pd.DataFrame.from_dict(summary_dict, orient='index')
+            summary_df = summary_df.append(
+                {
+                    "lib": vis_class.lib_name,
+                    "summary_type": et,
+                    "magnitude": ed["magnitude"],
+                    "sign": ed["magnitude"],
+                    "reciprocal sign": ed["reciprocal sign"],
+                },
+                ignore_index=True,
+            )
 
+    summary_df_melt = pd.melt(
+        summary_df,
+        id_vars=["lib", "summary_type"],
+        value_vars=["magnitude", "sign", "reciprocal sign"],
+        var_name="epistasis_type",
+        value_name="value",
+    )
 
-        
+    summary_df_path = os.path.join(
+        output_folder, filter_min_by, f"{fitness_process_type}.csv"
+    )
 
+    print("Saving summary_df_melt at {}...".format(summary_df_path))
+
+    summary_df_melt.to_csv(summary_df_path, index=False)
