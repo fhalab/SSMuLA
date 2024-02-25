@@ -80,7 +80,7 @@ class PairwiseEpistasis:
         self._n_jobs = n_jobs
 
         # generate and save the pairwise epistasis DataFrame
-        self.filtered_epistasis_df.to_csv(self.output_csv, index=False)
+        self.filtered_epistasis_df.to_csv(self.output_csv, index=True)
         print(f"Saving pairwise epistasis in {self.output_csv}...")
 
     @property

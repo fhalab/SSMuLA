@@ -6,6 +6,7 @@ from __future__ import annotations
 
 from glob import glob
 from copy import deepcopy
+from itertools import combinations
 
 import pandas as pd
 
@@ -98,6 +99,16 @@ LIB_POS_0_IDX = deepcopy({
         for pos_number, pos_loc in dets["positions"].items()
     }
     for lib, dets in LIB_INFO_DICT.items()
+})
+
+LIB_POS_MAP = deepcopy({
+    lib: (
+        {
+            int("".join(k)): "/".join(v)
+            for k, v in zip(list(combinations(pos.keys(), 2)), list(combinations(pos.values(), 2)))
+        }
+    )
+    for lib, pos in LIB_POS_0_IDX.items()
 })
 
 PARENT_COMBO_DICT = deepcopy({lib: "".join(list(dets["AAs"].values())) for lib, dets in LIB_INFO_DICT.items()})
