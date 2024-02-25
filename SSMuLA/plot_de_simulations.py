@@ -32,21 +32,10 @@ import panel as pn
 
 pn.config.comms = "vscode"
 
-# Large data plotting
-import datashader as ds
-from holoviews.operation.datashader import datashade, rasterize
-
-# Making graphs
-import networkx as nx
-import itertools
-from tqdm.auto import tqdm
-from multiprocessing import Pool
-
 hv.extension("bokeh")
 
-from SSMuLA import growth_analysis as ga
 from SSMuLA.landscape_global import LIB_NAMES, TrpB_names
-from SSMuLA.vis import save_bokeh_hv, JSON_THEME, LIB_COLORS
+from SSMuLA.vis import save_bokeh_hv, JSON_THEME, LIB_COLORS, one_decimal_x, one_decimal_y, fixmargins
 from SSMuLA.util import get_file_name, checkNgen_folder
 
 hv.renderer("bokeh").theme = JSON_THEME
@@ -59,25 +48,6 @@ sim_line_styles = {
     "single_step_DE": "dashed",
     "SSM_top96": "dotted",
 }
-
-# Plot Hooks
-def one_decimal_x(plot, element):
-    plot.handles["plot"].xaxis[0].formatter = NumeralTickFormatter(format="0.0")
-
-
-def one_decimal_y(plot, element):
-    plot.handles["plot"].yaxis[0].formatter = NumeralTickFormatter(format="0.0")
-
-
-def fixmargins(plot, element):
-    plot.handles["plot"].min_border_right = 30
-    plot.handles["plot"].min_border_left = 65
-    plot.handles["plot"].min_border_top = 20
-    plot.handles["plot"].min_border_bottom = 65
-    plot.handles["plot"].outline_line_color = "black"
-    plot.handles["plot"].outline_line_alpha = 1
-    plot.handles["plot"].outline_line_width = 1
-
 
 def de_violin(
     slice_df: pd.DataFrame,

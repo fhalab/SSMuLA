@@ -22,6 +22,7 @@ if __name__ == "__main__":
     f = open(os.path.join(log_folder, f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}.out"), 'w')
     sys.stdout = f
 
-    run_pairwise_epistasis()
+    # run_pairwise_epistasis()
+    run_pairwise_epistasis(fitness_process_type="scale2parent")
     
     f.close()

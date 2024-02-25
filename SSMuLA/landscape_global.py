@@ -101,15 +101,29 @@ LIB_POS_0_IDX = deepcopy({
     for lib, dets in LIB_INFO_DICT.items()
 })
 
-LIB_POS_MAP = deepcopy({
-    lib: (
-        {
-            int("".join(k)): "/".join(v)
-            for k, v in zip(list(combinations(pos.keys(), 2)), list(combinations(pos.values(), 2)))
-        }
-    )
-    for lib, pos in LIB_POS_0_IDX.items()
-})
+
+def map_lib_pos() -> dict:
+    """
+    Map the position of the mutation to the position of the mutation in the library
+
+    Returns:
+    - dict: dictionary with the library and the position of the mutation
+        ie. 'DHFR': {1: '26/27', 2: '26/28', 12: '27/28'},
+    """
+    lib_pos = {}
+    for lib, pos in LIB_POS_0_IDX.items():
+        lib_pos[lib] = {}
+        for k, v in zip(
+            [int("".join(p)) for p in list(combinations(pos.keys(), 2))],
+            ["/".join(p) for p in list(combinations(list(map(str, pos.values())), 2))],
+        ):
+            lib_pos[lib][k] = v
+
+    return lib_pos
+
+
+LIB_POS_MAP = deepcopy(map_lib_pos())
+
 
 PARENT_COMBO_DICT = deepcopy({lib: "".join(list(dets["AAs"].values())) for lib, dets in LIB_INFO_DICT.items()})
 

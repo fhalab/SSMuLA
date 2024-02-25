@@ -109,8 +109,6 @@ def fixmargins(plot,element):
     plot.handles['plot'].toolbar.autohide = True
 
 
-
-
 def render_hv(hv_plot) -> bokeh.plotting.Figure:
     """Render a holoviews plot as a bokeh plot"""
     return hv.render(hv_plot)
@@ -125,7 +123,17 @@ def save_bokeh_hv(
     scale: int = 2,
 ):
 
-    """A function for exporting bokeh plots as svg"""
+    """
+    A function for exporting bokeh plots as svg
+    
+    Args:
+    - plot_obj: hv or bokeh plot object
+    - plot_name: str: name of the plot
+    - plot_path: str: path to save the plot without the plot_name
+    - bokehorhv: str: 'hv' or 'bokeh'
+    - dpi: int: dpi
+    - scale: int: scale
+    """
 
     plot_name = plot_name.replace(" ", "_")
     plot_path = checkNgen_folder(plot_path.replace(" ", "_"))

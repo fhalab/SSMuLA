@@ -1,4 +1,4 @@
-"""A script for calculating pairwise epistasis"""
+"""A script for calculating and plotting pairwise epistasis"""
 
 from __future__ import annotations
 
@@ -16,8 +16,27 @@ from multiprocessing import Pool
 from operator import itemgetter
 
 
+# Basic plotting
+import bokeh
+from bokeh.io import export_svg
+from bokeh.models import NumeralTickFormatter
+
+
+import holoviews as hv
+from holoviews import dim
+hv.extension('bokeh')
+
 from SSMuLA.aa_global import ALL_AAS
-from SSMuLA.util import checkNgen_folder
+from SSMuLA.landscape_global import LIB_POS_0_IDX, LIB_POS_MAP
+from SSMuLA.util import checkNgen_folder, get_file_name, get_dir_name
+from SSMuLA.vis import JSON_THEME, save_bokeh_hv, one_decimal_x, one_decimal_y, fixmargins, LIB_COLORS
+
+from bokeh.themes.theme import Theme
+
+hv.renderer('bokeh').theme = JSON_THEME
+
+
+EPISTASIS_TYPE = ["magnitude", "sign", "reciprocal sign"]
 
 
 assign_epistasis_dict = {
@@ -360,6 +379,297 @@ def calc_epsilon(row):
     )
 
 
+class VisPairwiseEpistasis:
+
+    """A class to visualize pairwise epistasis data."""
+
+    def __init__(
+        self, pairwise_cvs: str, vis_folder: str = "results/pairwise_epistasis_vis"
+    ):
+
+        """
+        Args:
+        - pairwise_cvs: The path to the pairwise epistasis data.
+            ie. results/pairwise_epistasis/DHFR/scale2max/DHFR.csv
+        """
+
+        self._pairwise_cvs = pairwise_cvs
+        self._vis_folder = checkNgen_folder(vis_folder)
+
+        print(
+            "Visulizing pairwise epistasis for {} saved to {}".format(
+                self.lib_name, self.vis_subfolder
+            )
+        )
+
+        self._epsilon_pos = self._plot_epsilon_pos()
+        self._epsilon_pos_type = self._plot_epsilon_pos_type()
+        self._type_frac = self._plot_type_frac()
+        self._quartile_type_frac = self._plot_quartile_type_frac()
+
+    def _plot_epsilon_pos(self) -> hv.Violin:
+
+        """
+        A method to plot the position vs. epsilon violin plot.
+        """
+
+        title = f"{self.lib_name} pairwise epsilon vs positions"
+
+        vis = hv.Violin(self.df, kdims=["positions"], vdims=["epsilon"],).opts(
+            violin_color=dim("positions").str(),
+            cmap=[LIB_COLORS[self.lib_name]],
+            height=300,
+            width=400,
+            show_legend=False,
+            inner=None,
+            violin_width=0.8,
+            hooks=[fixmargins],
+            title=title,
+        )
+
+        save_bokeh_hv(vis, plot_name=title, plot_path=self.vis_subfolder)
+
+        return vis
+
+    def _pos_hook(self, plot, elements):
+        """
+        Define plot hook for position
+        """
+        plot.handles["plot"].x_range.factors = [
+            (position, epistasis)
+            for position in sorted(list(self.df["positions"].unique()))
+            for epistasis in EPISTASIS_TYPE
+        ]
+
+    def _quart_hook(self, plot, element):
+        """
+        Define plot hook for quartile
+        """
+        plot.handles["plot"].x_range.factors = [
+            (epistasis, quartile)
+            for epistasis in EPISTASIS_TYPE
+            for quartile in ["Q" + str(n) for n in range(1, 5)]
+        ]
+
+    def _plot_epsilon_pos_type(self) -> hv.Violin:
+
+        """
+        A method to plot the position vs. epsilon violin plot colored by type
+        """
+
+        title = f"{self.lib_name} pairwise epsilon vs positions by type"
+
+        def hook(plot, elements):
+            plot.handles["plot"].x_range.factors = [
+                (position, epistasis)
+                for position in sorted(list(self.df["positions"].unique()))
+                for epistasis in EPISTASIS_TYPE
+            ]
+
+        vis = hv.Violin(
+            self.df,
+            kdims=["positions", "epistasis_type"],
+            vdims=["epsilon"],
+        ).opts(
+            height=400,
+            width=600,
+            xrotation=90,
+            violin_width=0.8,
+            violin_color="epistasis_type",
+            show_legend=True,
+            legend_position="top",
+            legend_offset=(0, 5),
+            hooks=[fixmargins, one_decimal_y, self._pos_hook],
+            title=title,
+        )
+
+        save_bokeh_hv(vis, plot_name=title, plot_path=self.vis_subfolder)
+
+        return vis
+
+    def _plot_type_frac(self) -> hv.Violin:
+
+        """
+        A method to plot the position vs. epistasis type fraction
+        """
+
+        title = f"{self.lib_name} pairwise epistasis type fraction"
+
+        df = self.df_grouped[self.df_grouped["total"] > 0].copy()
+
+        vis = hv.Violin(
+            df, kdims=["positions", "epistasis_type"], vdims=["frac epistasis type"]
+        ).opts(
+            height=400,
+            width=600,
+            xrotation=90,
+            violin_width=0.8,
+            violin_color="epistasis_type",
+            hooks=[fixmargins, one_decimal_y, self._pos_hook],
+            title=title,
+            show_legend=True,
+            legend_position="top",
+            legend_offset=(0, 5),
+        )
+
+        save_bokeh_hv(vis, plot_name=title, plot_path=self.vis_subfolder)
+
+        return vis
+
+    def _plot_quartile_type_frac(self) -> hv.Violin:
+
+        """
+        A method to plot the position vs. epistasis type fraction
+        """
+
+        title = f"{self.lib_name} pairwise epistasis type fraction by quartile"
+
+        df = self.df_quartile_grouped.copy()
+
+        vis = hv.Violin(
+            self.df_quartile_grouped.sort_values(["epistasis type", "quartile"]),
+            kdims=["epistasis type", "quartile"],
+            vdims=["frac epistasis type"],
+        ).opts(
+            violin_color=dim("quartile").str(),
+            height=400,
+            width=600,
+            violin_width=0.8,
+            hooks=[fixmargins, one_decimal_y, self._quart_hook],
+            show_legend=True,
+            legend_position="top",
+            legend_offset=(0, 5),
+            inner=None,
+            ylabel="fraction of epistasis type",
+            title=title,
+        )
+
+        save_bokeh_hv(vis, plot_name=title, plot_path=self.vis_subfolder)
+
+        return vis
+
+    @property
+    def lib_name(self) -> str:
+        """The name of the library."""
+        return get_file_name(self._pairwise_cvs)
+
+    @property
+    def fitness_process_type(self) -> str:
+        """The fitness process type."""
+        return get_dir_name(self._pairwise_cvs)
+
+    @property
+    def vis_subfolder(self) -> str:
+        """The subfolder to save visualizations."""
+        return os.path.join(self._vis_folder, self.lib_name, self.fitness_process_type)
+
+    @property
+    def df(self) -> pd.DataFrame:
+        """The dataframe of the pairwise epistasis data."""
+        
+        # map int pos to real
+        df = pd.read_csv(self._pairwise_cvs)
+        df["positions"] = df["positions"].map(LIB_POS_MAP[self.lib_name])
+
+        return df.copy()
+
+    @property
+    def epistasis_type_counts(self) -> dict:
+        """The counts of the epistasis types."""
+        return self.df["epistasis_type"].value_counts().to_dict()
+
+    @property
+    def epistasis_type_fraction(self) -> dict:
+        """The fraction of the epistasis types."""
+        return (self.df["epistasis_type"].value_counts() / len(self.df)).to_dict()
+
+    @property
+    def df_grouped(self) -> pd.DataFrame:
+
+        """The dataframe of the pairwise epistasis data."""
+        self.df["epistasis_type"] = self.df["epistasis_type"].astype("category")
+
+        grouped_epistasis_df = pd.DataFrame(
+            self.df.groupby(["positions", "start_seq", "epistasis_type"]).size()
+        ).rename(columns={0: "count"})
+
+        grouped_epistasis_df["total"] = grouped_epistasis_df.groupby(
+            ["positions", "start_seq"]
+        )["count"].transform("sum")
+        grouped_epistasis_df["frac epistasis type"] = (
+            grouped_epistasis_df["count"] / grouped_epistasis_df["total"]
+        )
+
+        return grouped_epistasis_df.copy()
+
+    @property
+    def df_quartiles(self) -> pd.DataFrame:
+
+        """The dataframe of the pairwise epistasis data with quartiles."""
+
+        df = self.df.copy()
+
+        # Add quartiles
+        temp = df.reset_index()[["start_seq", "fit_ab"]].drop_duplicates().copy()
+
+        cutoffs = temp["fit_ab"].quantile([0.25, 0.5, 0.75, 1]).to_dict()
+        quart_dict = {cutoff: f"Q{i+1}" for i, cutoff in enumerate(cutoffs.values())}
+
+        def assign_quartile(x):
+            for cutoff in quart_dict:
+                if x <= cutoff:
+                    return quart_dict[cutoff]
+
+        df["quartile"] = df["fit_ab"].apply(assign_quartile)
+
+        return df
+
+    @property
+    def df_quartile_grouped(self) -> pd.DataFrame:
+
+        """
+        The dataframe of the pairwise epistasis data 
+        with quartiles and grouped by quartiles.
+        """
+
+        temp = self.df_quartiles.copy()
+
+        temp["epistasis_type"] = temp["epistasis_type"].astype("category")
+
+        df = pd.DataFrame(
+            temp.groupby(["start_seq", "quartile", "epistasis_type"]).size()
+        ).rename(columns={0: "count"})
+
+        df["total"] = df.groupby(["start_seq", "quartile"])["count"].transform("sum")
+        df["frac epistasis type"] = df["count"] / df["total"]
+
+        df = df[df["total"] > 0].copy()
+
+        df.index.names = ["start_seq", "quartile", "epistasis type"]
+
+        return df
+
+    @property
+    def epsilon_pos(self) -> hv.Violin:
+        """The position vs. epsilon violin plot."""
+        return self._epsilon_pos
+
+    @property
+    def epsilon_pos_type(self) -> hv.Violin:
+        """The position vs. epsilon violin plot colored by type."""
+        return self._epsilon_pos_type
+
+    @property
+    def type_frac(self) -> hv.Violin:
+        """The position vs. epistasis type fraction."""
+        return self._type_frac
+
+    @property
+    def quartile_type_frac(self) -> hv.Violin:
+        """The position vs. epistasis type fraction by quartile."""
+        return self._quartile_type_frac
+
+
 def run_pairwise_epistasis(
     input_folder: str = "data",
     fitness_process_type: str = "scale2max",
@@ -385,11 +695,39 @@ def run_pairwise_epistasis(
             lib, filter_min_by=filter_min_by, output_folder=output_folder, n_jobs=n_jobs
         )
 
+def plot_pairwise_epistasis(
+    input_folder: str = "results/pairwise_epistasis",
+    output_folder: str = "results/pairwise_epistasis_vis",
+):
 
-######## FOR PLOTTING #####
-def hook(plot, element):
-    plot.handles["plot"].x_range.factors = [
-        (position, epistasis)
-        for position in ["01", "02", "03", "12", "13", "23"]
-        for epistasis in ["magnitude", "sign", "reciprocal sign"]
-    ]
+    """
+    Plot pairwise epistasis on all CSV files in a folder.
+
+    Args:
+    - input_folder, str: The input folder.
+    - output_folder, str: The output folder.
+    """
+
+    summary_dict = {}
+
+    for lib in glob(os.path.normpath(input_folder) + "/*/*/*.csv"):
+
+        print(f"Processing {lib}...")
+        fitness_process_type = get_dir_name(lib)
+
+        summary_dict[fitness_process_type] = {}
+        
+        vis_class = VisPairwiseEpistasis(lib, vis_folder=output_folder)
+
+        lib_name = vis_class.lib_name
+
+        summary_dict[lib_name] = {}
+        summary_dict[lib_name]["counts"]= vis_class.epistasis_type_counts
+        summary_dict[lib_name]["frac"] = vis_class.epistasis_type_fraction
+
+        # Convert multilayer dict to dataframe
+        summary_counts_df = pd.DataFrame.from_dict(summary_dict, orient='index')
+
+
+        
+
