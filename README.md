@@ -30,17 +30,20 @@ Code base for Site Saturation Mutagenesis Landscape Analysis
 * Two replicates
 * PDB ID: 8VHH
 * Define active as 1.96 standard deviations above the mean fitness of all stop-codon-containing sequences over both replicates
-* LibA
-* LibB
-* LibC
-* LibD
-* LibE
-* LibF
-* LibG
-* LibH
-* Four-site
+* Nine 3-site libraries and one 4-site library
+    * TrpB3A: A104, E105, T106
+    * TrpB3B: E105, T106, G107
+    * TrpB3C: T106, G107, A108
+    * TrpB3D: T117, A118, A119
+    * TrpB3E: F184, G185, S186
+    * TrpB3F: L162, I166, Y301
+    * TrpB3G: V227, S228, Y301
+    * TrpB3H: S228, G230, S231
+    * TrpB3I: Y182, V183, F184
+    * TrpB4: V183, F184, 227V, S228
 ##### GB1
 * PDB ID: 2GI9
+* 4-site-saturation landscape (V39, D40, G41, V54)
 
 ### Preprocessing
 * Processed with `fitness_process_vis`

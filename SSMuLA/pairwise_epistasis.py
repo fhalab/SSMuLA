@@ -88,7 +88,7 @@ class PairwiseEpistasis:
         self,
         input_csv: str,
         output_folder: str = "results/pairwise_epistasis",
-        filter_min_by: str = "active_min",
+        filter_min_by: str = "none",
         n_jobs: int = 256,
     ) -> None:
 
@@ -113,6 +113,11 @@ class PairwiseEpistasis:
         self.filtered_epistasis_df.to_csv(self.output_csv, index=True)
         print(f"Saving pairwise epistasis in {self.output_csv}...")
 
+    @property
+    def lib_name(self) -> str:
+        """The name of the library."""
+        return get_file_name(self._input_csv)
+    
     @property
     def fitness_process_type(self) -> str:
         """The fitness process type."""
@@ -408,7 +413,7 @@ class VisPairwiseEpistasis:
         self,
         pairwise_cvs: str,
         vis_folder: str = "results/pairwise_epistasis_vis",
-        filter_min_by: str = "active_min",
+        filter_min_by: str = "none",
     ):
 
         """
@@ -448,7 +453,6 @@ class VisPairwiseEpistasis:
             height=300,
             width=400,
             show_legend=False,
-            inner=None,
             violin_width=0.8,
             hooks=[fixmargins],
             title=title,
@@ -566,7 +570,6 @@ class VisPairwiseEpistasis:
             show_legend=True,
             legend_position="top",
             legend_offset=(0, 5),
-            inner=None,
             ylabel="fraction of epistasis type",
             title=title,
         )
@@ -602,7 +605,7 @@ class VisPairwiseEpistasis:
         """The dataframe of the pairwise epistasis data."""
 
         # map int pos to real
-        df = pd.read_csv(self._pairwise_cvs)
+        df = pd.read_csv(self._pairwise_cvs).dropna()
         df["positions"] = df["positions"].map(LIB_POS_MAP[self.lib_name])
 
         return df.copy()
@@ -751,7 +754,7 @@ def plot_pairwise_epistasis(
     summary_df = pd.DataFrame(columns=["lib", "summary_type", *EPISTASIS_TYPE])
 
     for lib in glob(
-        os.path.normpath(input_folder) + filter_min_by + fitness_process_type + "/*.csv"
+        os.path.join(os.path.normpath(input_folder), filter_min_by, fitness_process_type) + "/*.csv"
     ):
 
         print(f"Processing {lib}...")
@@ -780,11 +783,13 @@ def plot_pairwise_epistasis(
         value_vars=["magnitude", "sign", "reciprocal sign"],
         var_name="epistasis_type",
         value_name="value",
-    )
+    ).sort_values(["lib", "summary_type"])
 
     summary_df_path = os.path.join(
         output_folder, filter_min_by, f"{fitness_process_type}.csv"
     )
+
+    checkNgen_folder(summary_df_path)
 
     print("Saving summary_df_melt at {}...".format(summary_df_path))
 
