@@ -9,15 +9,13 @@ from cairosvg import svg2png
 import seaborn as sns
 
 import bokeh
-from bokeh.io import show, export_svg, export_png
+from bokeh.io import export_svg
 from bokeh.models import NumeralTickFormatter
-from bokeh.plotting import show
 from bokeh.themes.theme import Theme
 
 bokeh.io.output_notebook()
 
 import holoviews as hv
-from holoviews import opts
 
 hv.extension("bokeh", "matplotlib")
 

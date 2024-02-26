@@ -28,7 +28,7 @@ from holoviews import dim
 hv.extension("bokeh")
 
 from SSMuLA.aa_global import ALL_AAS
-from SSMuLA.landscape_global import LIB_POS_0_IDX, LIB_POS_MAP
+from SSMuLA.landscape_global import LIB_POS_MAP, make_new_sequence, hamming
 from SSMuLA.util import checkNgen_folder, get_file_name, get_dir_name
 from SSMuLA.vis import (
     JSON_THEME,
@@ -157,7 +157,7 @@ class PairwiseEpistasis:
 
         df = pd.read_csv(self._input_csv)
 
-        return df[~df["AAs"].str.contains("\*")]
+        return df[~df["AAs"].str.contains("\*")].copy()
 
     @property
     def active_fit_min(self) -> float:
@@ -211,43 +211,6 @@ class PairwiseEpistasis:
             return filter_epistasis_results(
                 self.epistasis_df, float(self._filter_min_by)
             ).copy()
-
-
-def make_new_sequence(input_seq: str, new_AA: str, position: int) -> str:
-    """
-    Make a new sequence by replacing the amino acid at a specific position.
-
-    Args:
-        - input_seq (str): The input sequence.
-        - new_AA (str): The new amino acid to replace.
-        - position (int): The position in the sequence to replace.
-
-    Returns:
-        - str: The new sequence with the replaced amino acid.
-    """
-    seq_list = list(input_seq)
-    seq_list[position] = new_AA
-    return "".join(seq_list)
-
-
-def hamming(str1: str, str2: str) -> int:
-    """
-    Calculate the Hamming distance between two strings.
-
-    Args:
-        - str1 (str): The first string.
-        - str2 (str): The second string.
-
-    Returns:
-        - int: The Hamming distance between the two strings.
-    """
-    assert len(str1) == len(str2)
-
-    distance = 0
-    for i in range(len(str1)):
-        if str1[i] != str2[i]:
-            distance += 1
-    return distance
 
 
 def pairwise_epistasis(seq_ab: str, data_dict: dict) -> pd.DataFrame:
@@ -434,10 +397,13 @@ class VisPairwiseEpistasis:
             )
         )
 
-        self._epsilon_pos = self._plot_epsilon_pos()
-        self._epsilon_pos_type = self._plot_epsilon_pos_type()
-        self._type_frac = self._plot_type_frac()
-        self._quartile_type_frac = self._plot_quartile_type_frac()
+        if self.df_len > 0:
+            self._epsilon_pos = self._plot_epsilon_pos()
+            self._epsilon_pos_type = self._plot_epsilon_pos_type()
+            self._type_frac = self._plot_type_frac()
+            self._quartile_type_frac = self._plot_quartile_type_frac()
+        else:
+            print(f"No data for {self.lib_name}. Skip plotting...")
 
     def _plot_epsilon_pos(self) -> hv.Violin:
 
@@ -609,6 +575,11 @@ class VisPairwiseEpistasis:
         df["positions"] = df["positions"].map(LIB_POS_MAP[self.lib_name])
 
         return df.copy()
+
+    @property
+    def df_len(self) -> int:
+        """The length of the dataframe."""
+        return len(self.df)
 
     @property
     def epistasis_type_counts(self) -> dict:

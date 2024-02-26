@@ -429,3 +429,40 @@ def append_active_cutoff(
     df["active"] = df.apply(lambda row: all(func(row) for func in lambda_funcs), axis=1)
 
     return df, fit_cutoffs
+
+
+def make_new_sequence(input_seq: str, new_AA: str, position: int) -> str:
+    """
+    Make a new sequence by replacing the amino acid at a specific position.
+
+    Args:
+        - input_seq (str): The input sequence.
+        - new_AA (str): The new amino acid to replace.
+        - position (int): The position in the sequence to replace.
+
+    Returns:
+        - str: The new sequence with the replaced amino acid.
+    """
+    seq_list = list(input_seq)
+    seq_list[position] = new_AA
+    return "".join(seq_list)
+
+
+def hamming(str1: str, str2: str) -> int:
+    """
+    Calculate the Hamming distance between two strings.
+
+    Args:
+        - str1 (str): The first string.
+        - str2 (str): The second string.
+
+    Returns:
+        - int: The Hamming distance between the two strings.
+    """
+    assert len(str1) == len(str2)
+
+    distance = 0
+    for i in range(len(str1)):
+        if str1[i] != str2[i]:
+            distance += 1
+    return distance
