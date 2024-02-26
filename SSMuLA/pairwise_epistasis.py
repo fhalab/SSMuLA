@@ -16,11 +16,6 @@ from multiprocessing import Pool
 from operator import itemgetter
 
 
-# Basic plotting
-import bokeh
-from bokeh.io import export_svg
-from bokeh.models import NumeralTickFormatter
-
 
 import holoviews as hv
 from holoviews import dim
@@ -28,7 +23,7 @@ from holoviews import dim
 hv.extension("bokeh")
 
 from SSMuLA.aa_global import ALL_AAS
-from SSMuLA.landscape_global import LIB_POS_MAP, make_new_sequence, hamming
+from SSMuLA.landscape_global import LIB_NAMES, LIB_POS_MAP, make_new_sequence, hamming
 from SSMuLA.util import checkNgen_folder, get_file_name, get_dir_name
 from SSMuLA.vis import (
     JSON_THEME,
@@ -779,3 +774,32 @@ def plot_pairwise_epistasis(
     print("Saving summary_df_melt at {}...".format(summary_df_path))
 
     summary_df_melt.to_csv(summary_df_path, index=False)
+
+    # make bar plots base on that and save to the same directory
+    def hook(plot, element):
+        plot.handles["plot"].x_range.factors = [
+            (lib, epistasis) for lib in LIB_NAMES for epistasis in EPISTASIS_TYPE
+        ]
+
+    # Create the Holoviews Bars element
+    save_bokeh_hv(
+        hv.Bars(
+            summary_df_melt[summary_df_melt["summary_type"] == "fraction"],
+            kdims=["lib", "epistasis_type"],
+            vdims="value",
+        ).opts(
+            width=1200,
+            height=400,
+            show_legend=True,
+            legend_position="top",
+            legend_offset=(0, 5),
+            ylabel="Fraction",
+            multi_level=False,
+            title="Fraction of pairwise epistasis types",
+            xlabel="Library",
+            hooks=[fixmargins, one_decimal_y, hook],
+        ),
+        plot_name=fitness_process_type,
+        plot_path=os.path.join(output_folder, filter_min_by),
+    )
+    

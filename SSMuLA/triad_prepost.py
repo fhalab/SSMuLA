@@ -20,10 +20,17 @@ TrpB_LIB_FOLDER = "data/TrpB/processed"
 TrpB3_TRIAD_TXT = deepcopy(sorted(list(glob(f"{TrpB_TRIAD_FOLDER}/*3*/*/*.txt"))))
 TrpB4_TRIAD_TXT = deepcopy(sorted(list(glob(f"{TrpB_TRIAD_FOLDER}/*4*/*/*.txt"))))
 
-TrpB3_lib_triad_pair = {
+lib_triad_pair = {
     os.path.join(TrpB_LIB_FOLDER, lib + ".csv"): triad
     for lib, triad in zip(TrpB_names[:-1], TrpB3_TRIAD_TXT)
 }
+
+# append the other two lib
+for lib in ["DHFR", "GB1"]:
+    lib_triad_pair[f"data/{lib}/processed/{lib}.csv"] = f"triad/{lib}/{lib}_fixed.txt"
+
+sorted_lib_triad_pair = deepcopy(dict(sorted(lib_triad_pair.items(), key=lambda x: x[0])))
+
 TrpB4_lib_triad_pair = {
     os.path.join(TrpB_LIB_FOLDER, "TrpB4.csv"): triad for triad in TrpB4_TRIAD_TXT
 }
@@ -293,12 +300,12 @@ def run_parse_triad_results(triad_folder: str = "triad"):
     Currently TrpB only
     """
 
-    for lib, triad_txt in TrpB3_lib_triad_pair.items():
+    for lib, triad_txt in sorted_lib_triad_pair.items():
         ParseTriadResults(input_csv=lib, triad_txt=triad_txt, triad_folder=triad_folder)
 
     # need to merge
     trpb4_df = []
-    for lib, triad_txt in TrpB3_lib_triad_pair.items():
+    for lib, triad_txt in TrpB4_lib_triad_pair.items():
         trpb4_df.append(
             ParseTriadResults(
                 input_csv=lib, triad_txt=triad_txt, triad_folder=triad_folder

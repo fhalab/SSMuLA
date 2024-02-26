@@ -9,25 +9,10 @@ from copy import deepcopy
 # Data manipulation
 import pandas as pd
 
-import matplotlib.pyplot as plt
-import seaborn as sns
-
-import bokeh
-from bokeh.io import export_svg
-from bokeh.models import NumeralTickFormatter
-from bokeh.themes.theme import Theme
-
-
-from bokeh.io import output_notebook
-
-output_notebook()
 
 import holoviews as hv
 from holoviews import dim
 
-import panel as pn
-
-pn.config.comms = "vscode"
 
 hv.extension("bokeh")
 
@@ -80,9 +65,11 @@ def de_violin(
     if lib_name == "TrpB":
         v_width = 1280
         cmap = [LIB_COLORS[lib_name] for lib_name in TrpB_names]
+        xrotation = 45
     else:
         v_width = 400
         cmap = [LIB_COLORS[lib_name]]
+        xrotation = 0
 
     violin = hv.Violin(
         slice_df,
@@ -97,6 +84,7 @@ def de_violin(
         title=plot_name,
         hooks=[fixmargins, one_decimal_y],
         ylabel="Max fitness achieved",
+        xrotation=xrotation,
     )
 
     save_bokeh_hv(
