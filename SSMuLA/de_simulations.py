@@ -5,6 +5,7 @@ A script for simluating DE, and SSM recombination
 from __future__ import annotations
 
 import os
+from glob import glob
 
 import pandas as pd
 import numpy as np
@@ -12,10 +13,11 @@ import numpy as np
 from multiprocessing import Pool
 
 import itertools
-import tqdm
+from tqdm import tqdm
 
 from SSMuLA.aa_global import ALL_AAS, ALL_AA_STR
-from SSMuLA.util import checkNgen_folder
+from SSMuLA.landscape_global import LIB_INFO_DICT
+from SSMuLA.util import checkNgen_folder, get_file_name
 
 
 def make_new_sequence(input_seq: str, new_AA: str, position: int) -> str:
@@ -84,7 +86,7 @@ def simulate_single_step_DE(data, seq_col, fitness_col, n_sites=4):
     fitness_array = np.empty(len(active_AAs) * len(position_orders))
     fitness_dict = {}
 
-    for i, start_seq in tqdm.tqdm(enumerate(active_AAs)):
+    for i, start_seq in tqdm(enumerate(active_AAs)):
 
         # Draw an initial variant
         start_fitness = data_dict[start_seq]
@@ -143,7 +145,7 @@ def simulate_single_step_DE(data, seq_col, fitness_col, n_sites=4):
     return (fitness_array, output_df)
 
 
-def simulate_simple_SSM_recomb_DE(data, seq_col, fitness_col, n_sites=4):
+def simulate_simple_recomb_SSM_DE(data, seq_col, fitness_col, n_sites=4):
 
     data = data.copy()
     data[seq_col] = data[seq_col].apply(lambda x: "".join(x.split("_")))
@@ -154,7 +156,7 @@ def simulate_simple_SSM_recomb_DE(data, seq_col, fitness_col, n_sites=4):
 
     fitness_dict = {}
 
-    for start_seq in tqdm.tqdm(active_AAs):
+    for start_seq in tqdm(active_AAs):
 
         # Draw an initial variant
         start_fitness = data_dict[start_seq]
@@ -416,7 +418,7 @@ def sample_SSM_test_top_N(
     ]
 
     with Pool(n_jobs) as pool:
-        results = pool.starmap(try_start_seq, tqdm.tqdm(pool_args))
+        results = pool.starmap(try_start_seq, tqdm(pool_args))
 
     fitness_dict = {active_AAs[i]: results[i] for i in range(len(active_AAs))}
 
@@ -455,7 +457,7 @@ def simulate_iterative_SM(data, seq_col, fitness_col, n_sites=4):
     fitness_array = np.empty(len(active_AAs) * 1)
     fitness_dict = {}
 
-    for i, start_seq in tqdm.tqdm(enumerate(active_AAs)):
+    for i, start_seq in tqdm(enumerate(active_AAs)):
 
         # Draw an initial variant
         start_fitness = data_dict[start_seq]
@@ -566,19 +568,19 @@ def run_all_de_simulations(
 
     ######## Simulate a simple SSM recombination ########
     print("\nSimulate a simple SSM recombination")
-    SSM_recomb = simulate_simple_SSM_recomb_DE(
+    recomb_SSM = simulate_simple_recomb_SSM_DE(
         data=df,
         seq_col=seq_col,
         fitness_col=fitness_col,
         n_sites=n_sites,
     )
-    print_characteristics(SSM_recomb)
+    print_characteristics(recomb_SSM)
 
-    SSM_recomb.to_csv(os.path.join(save_dir, f"{lib_name}-SSM_recomb.csv"), index=False)
+    recomb_SSM.to_csv(os.path.join(save_dir, f"{lib_name}-recomb_SSM.csv"), index=False)
 
     ######## Simulate SSM predict top N ########
     print(f"\nSimulate SSM predict top {N}")
-    SSM_pred96 = sample_SSM_test_top_N(
+    top96_SSM = sample_SSM_test_top_N(
         data=df,
         seq_col=seq_col,
         fitness_col=fitness_col,
@@ -587,12 +589,49 @@ def run_all_de_simulations(
         max_samples=max_samples,
         n_jobs=n_jobs,
     )
-    print_characteristics(SSM_pred96)
+    print_characteristics(top96_SSM)
 
-    SSM_pred96.to_csv(os.path.join(save_dir, f"{lib_name}-SSM_top{N}.csv"), index=False)
+    top96_SSM.to_csv(os.path.join(save_dir, f"{lib_name}-top{N}_SSM.csv"), index=False)
 
     return {
         "single step SSM": single_step_DE,
-        "SSM recomb": SSM_recomb,
-        "SSM predict top 96": SSM_pred96,
+        " recomb": recomb_SSM,
+        "SSM predict top 96": top96_SSM,
     }
+
+
+# Run simulations for each library
+def run_all_lib_de_simulations(de_opts: list = ["DE-active", "DE-no_stop_codons", "DE-all"]):
+    """
+    Run all simulations for each library.
+    """
+    for scale_type in ["scale2parent", "scale2max"]:
+        # Run simulations for each library
+        for lib in glob(f"data/*/{scale_type}/*.csv"):
+
+            lib_name = get_file_name(lib)
+            n_sites = len(LIB_INFO_DICT[lib_name]["positions"])
+            
+            df = pd.read_csv(lib).copy()
+
+            for de_det in de_opts:
+
+                print(f"Running {de_det} simulations for {lib_name} over {n_sites}...")
+
+                if de_det == "DE-all":
+                    select_df = df.copy()
+                elif de_det == "DE-active":
+                    select_df = df[df["active"] == True].copy()
+                elif de_det == "DE-no_stop_codons":
+                    select_df = df[~df["AAs"].str.contains("\*")].copy()
+
+                run_all_de_simulations(
+                    df=select_df, 
+                    seq_col="AAs", 
+                    fitness_col="fitness",
+                    lib_name=lib_name,
+                    save_dir=f"results/simulations/{de_det}/{scale_type}",
+                    n_sites=n_sites, 
+                    N=96, 
+                    max_samples=None,
+                    n_jobs=256)

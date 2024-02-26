@@ -12,8 +12,8 @@ Code base for Site Saturation Mutagenesis Landscape Analysis
 
 #### Three systems
 ##### DHFR
-* A dihydrofolate reductasae (DHFR) encoded by *E. coli folA* gene [Papkou *et al.*, Science (2023)](https://www.science.org/doi/full/10.1126/science.adh3860)
-* 9 mucleotides at 3 amino aicd positions (A26, D27, L28)
+* A dihydrofolate reductase (DHFR) encoded by *E. coli folA* gene [Papkou *et al.*, Science (2023)](https://www.science.org/doi/full/10.1126/science.adh3860)
+* 9 nucleotides at 3 amino acid positions (A26, D27, L28)
 * Almost 4^9 (262,144) DNA genotypes
 * Map fitness to trimethoprim resistance
 * Sixfold replicates
@@ -21,12 +21,12 @@ Code base for Site Saturation Mutagenesis Landscape Analysis
 * Define active / functional mutations with a mixture Gaussian model to the fitness values using the `mixEM` function from the `mixtools` in R package, by setting the number of components (distributions) to k=3 and using the bell-shaped distribution’s 0.999 quantile as fitness cut-off value
 ##### TrpB
 * A thermostable β-subunit of tryptophan synthase [Johnston *et al.*, PNAS (2024)]
-* Synthesizes L-tryptophan from indol and L-serine
+* Synthesizes L-tryptophan from indole and L-serine
 * Select for ability to complement Trp auxotrophy supplied with exogenous indole
 * Connects TrpB activity to growth rate
 * Hyperthermophile *Thermotoga maritima*, Tm9D8* was selected as the parent enzyme
 * 4-site-saturation landscape (V183, F184, V227, S228)
-* Fitness calcualted from multiple timepoints and aggregared into a final fitness score per vairant
+* Fitness calculated from multiple timepoints and aggregated into a final fitness score per variant
 * Two replicates
 * PDB ID: 8VHH
 * Define active as 1.96 standard deviations above the mean fitness of all stop-codon-containing sequences over both replicates

@@ -117,7 +117,7 @@ class PairwiseEpistasis:
     def lib_name(self) -> str:
         """The name of the library."""
         return get_file_name(self._input_csv)
-    
+
     @property
     def fitness_process_type(self) -> str:
         """The fitness process type."""
@@ -584,12 +584,18 @@ class VisPairwiseEpistasis:
     @property
     def epistasis_type_counts(self) -> dict:
         """The counts of the epistasis types."""
-        return self.df["epistasis_type"].value_counts().to_dict()
+        if self.df_len > 0:
+            return self.df["epistasis_type"].value_counts().to_dict()
+        else:
+            return {epistasis_type: 0 for epistasis_type in EPISTASIS_TYPE}
 
     @property
     def epistasis_type_fraction(self) -> dict:
         """The fraction of the epistasis types."""
-        return (self.df["epistasis_type"].value_counts() / len(self.df)).to_dict()
+        if self.df_len > 0:
+            return (self.df["epistasis_type"].value_counts() / len(self.df)).to_dict()
+        else:
+            return {epistasis_type: 0 for epistasis_type in EPISTASIS_TYPE}
 
     @property
     def df_grouped(self) -> pd.DataFrame:
@@ -724,26 +730,34 @@ def plot_pairwise_epistasis(
 
     summary_df = pd.DataFrame(columns=["lib", "summary_type", *EPISTASIS_TYPE])
 
-    for lib in glob(
-        os.path.join(os.path.normpath(input_folder), filter_min_by, fitness_process_type) + "/*.csv"
+    for lib in sorted(
+        glob(
+            os.path.join(
+                os.path.normpath(input_folder), filter_min_by, fitness_process_type
+            )
+            + "/*.csv"
+        )
     ):
 
-        print(f"Processing {lib}...")
+        print(f"Plotting {lib}...")
 
-        vis_class = VisPairwiseEpistasis(lib, vis_folder=output_folder)
+        vis_class = VisPairwiseEpistasis(
+            lib,
+            filter_min_by=filter_min_by,
+            vis_folder=output_folder)
 
         count_dict = vis_class.epistasis_type_counts
         fract_dict = vis_class.epistasis_type_fraction
 
-        for et, ed in zip(["count", "fraction"], [count_dict, fract_dict]):
+        for et, ed in zip(["count", "fraction"], [count_dict, fract_dict]):  
 
             summary_df = summary_df.append(
                 {
                     "lib": vis_class.lib_name,
                     "summary_type": et,
-                    "magnitude": ed["magnitude"],
-                    "sign": ed["magnitude"],
-                    "reciprocal sign": ed["reciprocal sign"],
+                    "magnitude": ed.get("magnitude", 0),
+                    "sign": ed.get("sign", 0),
+                    "reciprocal sign": ed.get("reciprocal sign", 0),
                 },
                 ignore_index=True,
             )

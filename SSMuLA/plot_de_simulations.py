@@ -4,13 +4,10 @@
 from glob import glob
 
 import os
-import re
-import pickle
-import datetime
+from copy import deepcopy
 
 # Data manipulation
 import pandas as pd
-import numpy as np
 
 import matplotlib.pyplot as plt
 import seaborn as sns
@@ -26,7 +23,7 @@ from bokeh.io import output_notebook
 output_notebook()
 
 import holoviews as hv
-from holoviews import opts, dim
+from holoviews import dim
 
 import panel as pn
 
@@ -35,19 +32,29 @@ pn.config.comms = "vscode"
 hv.extension("bokeh")
 
 from SSMuLA.landscape_global import LIB_NAMES, TrpB_names
-from SSMuLA.vis import save_bokeh_hv, JSON_THEME, LIB_COLORS, one_decimal_x, one_decimal_y, fixmargins
+from SSMuLA.vis import (
+    save_bokeh_hv,
+    JSON_THEME,
+    LIB_COLORS,
+    one_decimal_x,
+    one_decimal_y,
+    fixmargins,
+)
 from SSMuLA.util import get_file_name, checkNgen_folder
 
 hv.renderer("bokeh").theme = JSON_THEME
 
 # order of de simluation from simple to complex
-SIM_ORDER = ["SSM_recomb", "single_step_DE", "SSM_top96"]
+SIM_ORDER = deepcopy(["recomb_SSM", "single_step_DE", "top96_SSM"])
 
-sim_line_styles = {
-    "SSM_recomb": "solid",
-    "single_step_DE": "dashed",
-    "SSM_top96": "dotted",
-}
+sim_line_styles = deepcopy(
+    {
+        "recomb_SSM": "solid",
+        "single_step_DE": "dashed",
+        "top96_SSM": "dotted",
+    }
+)
+
 
 def de_violin(
     slice_df: pd.DataFrame,
@@ -70,16 +77,22 @@ def de_violin(
 
     print(f"Plotting DE max fitness achieved violin...")
 
+    if lib_name == "TrpB":
+        v_width = 1280
+        cmap = [LIB_COLORS[lib_name] for lib_name in TrpB_names]
+    else:
+        v_width = 400
+        cmap = [LIB_COLORS[lib_name]]
+
     violin = hv.Violin(
         slice_df,
         kdims=["simulation", "lib"],
         vdims=["final_fitness"],
     ).opts(
         violin_color=dim("lib").str(),
-        cmap=[LIB_COLORS[lib_name]],
+        cmap=cmap,
         width=v_width,
         height=300,
-        inner=None,
         violin_width=0.8,
         title=plot_name,
         hooks=[fixmargins, one_decimal_y],
@@ -100,9 +113,9 @@ def de_violin(
 
 def de_ecdf(slice_df: pd.DataFrame, lib_name: str, plot_name: str, plot_folder: str):
 
-    """ 
+    """
     A function to plot an ECDF of the DE simulation results
-    
+
     Args:
     - slice_df (pd.DataFrame): A dataframe containing the DE simulation results
     - lib_name (str): The name of the library to plot
@@ -112,38 +125,82 @@ def de_ecdf(slice_df: pd.DataFrame, lib_name: str, plot_name: str, plot_folder: 
 
     print(f"Plotting DE max fitness achieved ECDF...")
 
-
     # Initialize an empty HoloViews Overlay container
     overlay = hv.Overlay()
 
-    # Initialize a dictionary to store legend labels
-    legend_labels = {}
+    if lib_name == "TrpB":
+        # Initialize a dictionary to store legend labels
+        sim_legend_labels = {}
+        lib_legend_labels = {}
 
-    # Iterate over simulation types and libraries, create individual traces, and overlay them
-    for sim, style in sim_line_styles.items():
-        # for lib_name, lib_color in LIB_COLORS.items():
-        selection = slice_df[
-            (slice_df["simulation"] == sim) & (slice_df["lib"] == lib_name)
-        ]
-        if not selection.empty:
-            curve = hv.Curve(
-                selection.sort_values(["simulation", "lib", "final_fitness"]),
-                kdims="final_fitness",
-                vdims=["final_fitness ECDF", "lib", "simulation"],
-            )
-            overlay *= curve.opts(
-                line_dash=style,
-                color=LIB_COLORS[lib_name],
-                width=500,
-                height=300,
-                title=plot_name,
-                hooks=[fixmargins, one_decimal_x, one_decimal_y],
-                xlabel="Max fitness achieved",
-                ylabel="ECDF",
-            )
-            legend_labels[sim] = hv.Curve([0], label=sim).opts(
-                line_dash=style, color=LIB_COLORS[lib_name]
-            )
+        # Iterate over simulation types and libraries, create individual traces, and overlay them
+        for sim, style in sim_line_styles.items():
+            for lib_name in TrpB_names:
+                selection = slice_df[
+                    (slice_df["simulation"] == sim) & (slice_df["lib"] == lib_name)
+                ]
+                if not selection.empty:
+                    curve = hv.Curve(
+                        selection.sort_values(["simulation", "lib", "final_fitness"]),
+                        kdims="final_fitness",
+                        vdims=["final_fitness ECDF", "lib", "simulation"],
+                    )
+                    overlay *= curve.opts(
+                        line_dash=style,
+                        color=LIB_COLORS[lib_name],
+                        width=1200,
+                        height=800,
+                        title=plot_name,
+                        hooks=[fixmargins, one_decimal_x, one_decimal_y],
+                        xlabel="Max fitness achieved",
+                        ylabel="ECDF",
+                    )
+
+                sim_legend_labels[sim] = hv.Curve([0], label=sim).opts(
+                    line_dash=style, color="gray"
+                )
+                lib_legend_labels[lib_name] = hv.Curve([0], label=lib_name).opts(
+                    line_dash="solid", color=LIB_COLORS[lib_name]
+                )
+
+        legend_labels = {**deepcopy(sim_legend_labels), **deepcopy(lib_legend_labels)}
+        print(legend_labels)
+
+        layout = overlay.opts(
+            title=plot_name,
+            hooks=[fixmargins, one_decimal_x, one_decimal_y],
+            xlabel="Max fitness achieved",
+            ylabel="ECDF",
+        )
+    else:
+        # Initialize a dictionary to store legend labels
+        legend_labels = {}
+
+        # Iterate over simulation types and libraries, create individual traces, and overlay them
+        for sim, style in sim_line_styles.items():
+            # for lib_name, lib_color in LIB_COLORS.items():
+            selection = slice_df[
+                (slice_df["simulation"] == sim) & (slice_df["lib"] == lib_name)
+            ]
+            if not selection.empty:
+                curve = hv.Curve(
+                    selection.sort_values(["simulation", "lib", "final_fitness"]),
+                    kdims="final_fitness",
+                    vdims=["final_fitness ECDF", "lib", "simulation"],
+                )
+                overlay *= curve.opts(
+                    line_dash=style,
+                    color=LIB_COLORS[lib_name],
+                    width=500,
+                    height=300,
+                    title=plot_name,
+                    hooks=[fixmargins, one_decimal_x, one_decimal_y],
+                    xlabel="Max fitness achieved",
+                    ylabel="ECDF",
+                )
+                legend_labels[sim] = hv.Curve([0], label=sim).opts(
+                    line_dash=style, color=LIB_COLORS[lib_name]
+                )
 
     layout = overlay.opts(
         title=f"{lib_name} max fitness achieved no imputed",
@@ -183,7 +240,16 @@ class VisDESims:
         vis_folder: str = "results/simulations_vis",
     ) -> None:
 
-        """ """
+        """
+        Args:
+        - lib_name (str): The name of the library to plot
+        - append_title (str): Additional title to append to the plot title
+        - v_width (int): Width of the violin plot
+        - sim_folder (str): Path to the DE simulation results
+        - de_sub_folder (str): Subfolder of the DE simulation results
+        - fit_scale_sub_folder (str): Subfolder of the DE simulation results
+        - vis_folder (str): Path to save the DE simulation plots
+        """
 
         self._lib_name = lib_name
         self._append_title = append_title
@@ -193,7 +259,11 @@ class VisDESims:
         self._fit_scale_sub_folder = fit_scale_sub_folder
         self._vis_folder = checkNgen_folder(os.path.normpath(vis_folder))
 
-        print("Visualizing DE simulation results for {} {} {}...".format(lib_name, de_sub_folder, vis_folder))
+        print(
+            "Visualizing DE simulation results for {} {} {}...".format(
+                lib_name, de_sub_folder, vis_folder
+            )
+        )
         self._plot_violin_ecdf()
 
     def _plot_violin_ecdf(self):
@@ -207,11 +277,19 @@ class VisDESims:
         - v_width (int): Width of the violin plot
         """
 
-        slice_df = (
-            self.all_df[self.all_df["lib"] == self._lib_name]
-            .sort_values(["simulation", "lib", "final_fitness"])
-            .copy()
-        )
+        if self._lib_name == "TrpB":
+            # all trpb
+            slice_df = (
+                self.all_df[self.all_df["lib"].isin(TrpB_names)]
+                .sort_values(["simulation", "lib", "final_fitness"])
+                .copy()
+            )
+        else:
+            slice_df = (
+                self.all_df[self.all_df["lib"] == self._lib_name]
+                .sort_values(["simulation", "lib", "final_fitness"])
+                .copy()
+            )
 
         plot_name = f"{self._lib_name} {self._append_title}"
         plot_folder = checkNgen_folder(
@@ -290,7 +368,7 @@ class VisDESims:
 
 def run_plot_de(
     de_opts: list = ["DE-active", "DE-no_stop_codons", "DE-all"],
-    sim_folder: str = "results/simulations", 
+    sim_folder: str = "results/simulations",
     vis_folder: str = "results/simulations_vis",
     v_width: int = 400,
 ):
@@ -299,11 +377,11 @@ def run_plot_de(
 
     for de_sub_folder in de_opts:
         for fit_scale_sub_folder in ["scale2parent", "scale2max"]:
-            for lib in LIB_NAMES:
-                # if "TrpB" in lib:
-                #     v_with = 1280
-                # else:
-                #     v_with = 400
+            for lib in LIB_NAMES + ["TrpB"]:
+                if "TrpB" in lib:
+                    v_width = 1280
+                else:
+                    v_width = 400
 
                 vis = VisDESims(
                     lib_name=lib,

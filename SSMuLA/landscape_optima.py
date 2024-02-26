@@ -42,7 +42,8 @@ def determine_optima(active_variant: str, df: pd.DataFrame, fit_col: str) -> int
         The rank of the active variant in the dataframe
     """
 
-    # slice out the variant and all the variants at hamming distance 1. Then sort the dataframe by descending fitness
+    # slice out the variant and all the variants at hamming distance 1. 
+    # Then sort the dataframe by descending fitness
     temp = (
         df[
             (df["AAs"].apply(lambda x: hamming(x, active_variant) == 1))
@@ -53,7 +54,8 @@ def determine_optima(active_variant: str, df: pd.DataFrame, fit_col: str) -> int
         .copy()
     )
 
-    # determine the rank of the active variant/how many variants are more active than it (0 is the best)
+    # determine the rank of the active variant or
+    # how many variants are more active than it (0 is the best)
     variant_rank = temp[temp["AAs"] == active_variant].index[0]
 
     return variant_rank
@@ -446,9 +448,9 @@ def run_loc_opt(
         ]
     )
 
-    for lib in glob(
+    for lib in sorted(glob(
         os.path.normpath(input_folder) + "/*/" + fitness_process_type + "/*.csv"
-    ):
+    )):
 
         print(f"Processing {lib}...")
 
