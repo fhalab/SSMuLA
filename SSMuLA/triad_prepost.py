@@ -250,6 +250,7 @@ class ParseTriadResults(TriadLib):
 
                     # Otherwise, append the line
                     summary_lines.append(summary_line)
+                    print(summary_line)
 
                     if summary_line[0] == str(self.mut_numb):
                         break

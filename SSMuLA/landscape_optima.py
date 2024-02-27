@@ -42,7 +42,7 @@ def determine_optima(active_variant: str, df: pd.DataFrame, fit_col: str) -> int
         The rank of the active variant in the dataframe
     """
 
-    # slice out the variant and all the variants at hamming distance 1. 
+    # slice out the variant and all the variants at hamming distance 1.
     # Then sort the dataframe by descending fitness
     temp = (
         df[
@@ -83,7 +83,13 @@ class LocOpt:
 
         self._n_jobs = n_jobs
 
+        self._loc_opt_df = self._find_loc_opt()
+
         self._hd2_escape_df, self._loc_opt_escape_df = self._append_escape()
+
+        self._merged_escape_df = pd.merge(
+            self.hd2_escape_df, self.loc_opt_escape_df, on="AAs"
+        )
 
         # do the plottings
         self._loc_opt_scatter = self._plot_loc_opt()
@@ -359,13 +365,13 @@ class LocOpt:
 
     @property
     def loc_opt_df(self) -> pd.DataFrame:
-        """Return the local optima df"""
-        return self._find_loc_opt()
+        """Return the dataframe of local optima"""
+        return self._loc_opt_df
 
     @property
     def numb_loc_opt(self) -> int:
         """Return the number of local optima"""
-        return len(self.loc_opt_df)
+        return len(self._loc_opt_df)
 
     @property
     def frac_loc_opt_active(self) -> float:
@@ -410,7 +416,7 @@ class LocOpt:
     @property
     def merged_escape_df(self) -> pd.DataFrame:
         """Return the merged double site escape dataframe"""
-        return pd.merge(self.hd2_escape_df, self.loc_opt_escape_df, on="AAs")
+        return self._merged_escape_df
 
     @property
     def loc_opt_scatter(self) -> hv.Scatter:
@@ -448,9 +454,9 @@ def run_loc_opt(
         ]
     )
 
-    for lib in sorted(glob(
-        os.path.normpath(input_folder) + "/*/" + fitness_process_type + "/*.csv"
-    )):
+    for lib in sorted(
+        glob(os.path.normpath(input_folder) + "/*/" + fitness_process_type + "/*.csv")
+    ):
 
         print(f"Processing {lib}...")
 
