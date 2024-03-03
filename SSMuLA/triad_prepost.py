@@ -27,7 +27,7 @@ lib_triad_pair = {
 
 # append the other two lib
 for lib in ["DHFR", "GB1"]:
-    lib_triad_pair[f"data/{lib}/processed/{lib}.csv"] = f"triad/{lib}/{lib}_fixed.txt"
+    lib_triad_pair[f"data/{lib}/scaled2max/{lib}.csv"] = f"triad/{lib}/{lib}_fixed.txt"
 
 sorted_lib_triad_pair = deepcopy(dict(sorted(lib_triad_pair.items(), key=lambda x: x[0])))
 
@@ -80,7 +80,7 @@ class TriadLib:
         """
         A property for the prefixes
         """
-        return [f"A_{pos}" for pos in LIB_INFO_DICT[self.lib_name]["positions"]]
+        return [f"A_{pos}" for pos in LIB_INFO_DICT[self.lib_name]["positions"].values()]
 
     @property
     def df(self) -> pd.DataFrame:

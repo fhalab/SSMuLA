@@ -13,20 +13,6 @@ from SSMuLA.util import checkNgen_folder
 if __name__ == "__main__":
 
     # log outputs
-    # f = open(
-    #     os.path.join(
-    #         checkNgen_folder("logs/triad/pre"),
-    #         f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}.out",
-    #     ),
-    #     "w",
-    # )
-    # sys.stdout = f
-
-    # run_traid_gen_mut_file()
-
-    # f.close()
-
-    # log outputs
     f = open(
         os.path.join(
             checkNgen_folder("logs/triad/post"),

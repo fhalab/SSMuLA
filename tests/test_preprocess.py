@@ -5,7 +5,7 @@ import os
 
 from datetime import datetime
 
-from SSMuLA.fitness_process_vis import ProcessDHFR, ProcessGB1, PlotTrpB
+from SSMuLA.fitness_process_vis import ProcessDHFR, ProcessGB1, PlotTrpB, sum_ks
 from SSMuLA.util import checkNgen_folder
 
 
@@ -21,5 +21,7 @@ if __name__ == "__main__":
         ProcessDHFR(scale_fit=scale_fit)
         ProcessGB1(scale_fit=scale_fit)
         PlotTrpB(scale_fit=scale_fit)
+
+    sum_ks()
 
     f.close()
