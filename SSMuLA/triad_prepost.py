@@ -248,12 +248,11 @@ class ParseTriadResults(TriadLib):
                     # Strip the newline and split on whitespace
                     summary_line = line.strip().split()
 
-                    # Otherwise, append the line
-                    summary_lines.append(summary_line)
-                    print(summary_line)
-
-                    if summary_line[0] == str(self.mut_numb):
+                    if summary_line[0] == "Average":
                         break
+                    else:
+                        # Otherwise, append the line
+                        summary_lines.append(summary_line)
 
         # Build the dataframe with col ['Index', 'Tags', 'Score', 'Seq', 'Muts']
         all_results = pd.DataFrame(summary_lines[1:], columns=summary_lines[0])

@@ -8,6 +8,8 @@ from cairosvg import svg2png
 
 import seaborn as sns
 
+import matplotlib.pyplot as plt
+
 import bokeh
 from bokeh.io import export_svg
 from bokeh.models import NumeralTickFormatter

@@ -369,21 +369,24 @@ class VisPairwiseEpistasis:
 
     def __init__(
         self,
-        pairwise_cvs: str,
+        pairwise_csv: str,
+        dets_folder: str = "results/pairwise_epistasis_dets",
         vis_folder: str = "results/pairwise_epistasis_vis",
         filter_min_by: str = "none",
     ):
 
         """
         Args:
-        - pairwise_cvs: The path to the pairwise epistasis data.
+        - pairwise_csv: The path to the pairwise epistasis data.
             ie. results/pairwise_epistasis/DHFR/scale2max/DHFR.csv
+        - dets_folder: The folder to save the processed dataframe with more details.
         - vis_folder: The folder to save the visualizations.
         - filter_min_by: The minimum fitness to filter by.
         """
 
-        self._pairwise_cvs = pairwise_cvs
+        self._pairwise_csv = pairwise_csv
         self._vis_folder = checkNgen_folder(vis_folder)
+        self._dets_folder = checkNgen_folder(dets_folder)
         self._filter_min_by = filter_min_by
 
         print(
@@ -399,6 +402,20 @@ class VisPairwiseEpistasis:
             self._quartile_type_frac = self._plot_quartile_type_frac()
         else:
             print(f"No data for {self.lib_name}. Skip plotting...")
+
+        # save the df_quartile_grouped
+        print(
+            "Visulizing pairwise epistasis with details for {} saved to {}".format(
+                self.lib_name, self.dets_subfolder
+            )
+        )     
+
+        self.df_quartiles.to_csv(    
+            os.path.join(self.dets_subfolder, f"{self.lib_name}.csv")
+        )
+        self.df_quartile_grouped.to_csv(    
+            os.path.join(self.dets_subfolder, f"{self.lib_name}_grouped.csv")
+        )
 
     def _plot_epsilon_pos(self) -> hv.Violin:
 
@@ -542,13 +559,24 @@ class VisPairwiseEpistasis:
     @property
     def lib_name(self) -> str:
         """The name of the library."""
-        return get_file_name(self._pairwise_cvs)
+        return get_file_name(self._pairwise_csv)
 
     @property
     def fitness_process_type(self) -> str:
         """The fitness process type."""
-        return get_dir_name(self._pairwise_cvs)
+        return get_dir_name(self._pairwise_csv)
 
+    @property
+    def dets_subfolder(self) -> str:
+        """The subfolder to save more detailed dataframe."""
+        return checkNgen_folder(
+            os.path.join(
+                self._dets_folder,
+                self._filter_min_by,
+                self.fitness_process_type
+            )
+        )
+    
     @property
     def vis_subfolder(self) -> str:
         """The subfolder to save visualizations."""
@@ -566,7 +594,7 @@ class VisPairwiseEpistasis:
         """The dataframe of the pairwise epistasis data."""
 
         # map int pos to real
-        df = pd.read_csv(self._pairwise_cvs).dropna()
+        df = pd.read_csv(self._pairwise_csv).dropna()
         df["positions"] = df["positions"].map(LIB_POS_MAP[self.lib_name])
 
         return df.copy()
@@ -712,6 +740,7 @@ def plot_pairwise_epistasis(
     filter_min_by: str = "none",
     input_folder: str = "results/pairwise_epistasis",
     output_folder: str = "results/pairwise_epistasis_vis",
+    dets_folder: str = "results/pairwise_epistasis_dets",
 ):
 
     """
@@ -721,6 +750,7 @@ def plot_pairwise_epistasis(
     - fitness_process_type, str: The fitness process type.
     - input_folder, str: The input folder.
     - output_folder, str: The output folder.
+    - dets_folder, str: The folder to save the processed dataframe with more details.
     """
 
     summary_df = pd.DataFrame(columns=["lib", "summary_type", *EPISTASIS_TYPE])
@@ -739,7 +769,9 @@ def plot_pairwise_epistasis(
         vis_class = VisPairwiseEpistasis(
             lib,
             filter_min_by=filter_min_by,
-            vis_folder=output_folder)
+            dets_folder=dets_folder,
+            vis_folder=output_folder
+            )
 
         count_dict = vis_class.epistasis_type_counts
         fract_dict = vis_class.epistasis_type_fraction
