@@ -11,23 +11,22 @@ import numpy as np
 from itertools import product
 
 from SSMuLA.aa_global import ALL_AAS
-from SSMuLA.landscape_global import LIB_INFO_DICT, TrpB_names
+from SSMuLA.landscape_global import LIB_INFO_DICT, LIB_NAMES, TrpB_names
 from SSMuLA.util import checkNgen_folder, get_file_name
 
 
-TrpB_TRIAD_FOLDER = "/home/shared_data/triad_structures"
-TrpB_LIB_FOLDER = "data/TrpB/processed"
-TrpB3_TRIAD_TXT = deepcopy(sorted(list(glob(f"{TrpB_TRIAD_FOLDER}/*3*/*/*.txt"))))
-TrpB4_TRIAD_TXT = deepcopy(sorted(list(glob(f"{TrpB_TRIAD_FOLDER}/*4*/*/*.txt"))))
+# TrpB_TRIAD_FOLDER = "/home/shared_data/triad_structures"
+TrpB_LIB_FOLDER = "data/TrpB/scaled2max"
+# TrpB3_TRIAD_TXT = deepcopy(sorted(list(glob(f"{TrpB_TRIAD_FOLDER}/*3*/*/*.txt"))))
+TrpB4_TRIAD_TXT = deepcopy(sorted(list(glob("triad/TrpB4/*.txt"))))
+# /disk2/fli/SSMuLA/triad/TrpB4
 
-lib_triad_pair = {
-    os.path.join(TrpB_LIB_FOLDER, lib + ".csv"): triad
-    for lib, triad in zip(TrpB_names[:-1], TrpB3_TRIAD_TXT)
-}
+lib_triad_pair = {}
 
 # append the other two lib
-for lib in ["DHFR", "GB1"]:
-    lib_triad_pair[f"data/{lib}/scaled2max/{lib}.csv"] = f"triad/{lib}/{lib}_fixed.txt"
+for lib in LIB_NAMES:
+    if lib != "TrpB4":
+        lib_triad_pair[f"data/{lib}/scaled2max/{lib}.csv"] = f"triad/{lib}/{lib}_fixed.txt"
 
 sorted_lib_triad_pair = deepcopy(dict(sorted(lib_triad_pair.items(), key=lambda x: x[0])))
 
@@ -289,7 +288,7 @@ class ParseTriadResults(TriadLib):
 
 def run_traid_gen_mut_file():
     """Run the triad gen mut file function for all libraries"""
-    for lib in glob("data/*/processed/*.csv"):
+    for lib in glob("data/*/scale2max/*.csv"):
         TriadGenMutFile(input_csv=lib)
 
 
