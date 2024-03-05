@@ -54,20 +54,25 @@ def ecdf_transform(data: pd.Series) -> pd.Series:
     return data.rank(method="first") / len(data)
 
 
-def simulate_single_step_DE(data, seq_col, fitness_col, n_sites=4):
+def simulate_single_step_DE(data: pd.DataFrame, 
+                            seq_col: str, 
+                            fitness_col: str,
+                            n_sites: int =4):
 
     """
     Simulate a single step directed evolution experiment
 
-    #### Inputs
-    - DataFrame of sequence and fitness (without stop codons!)
+    Args:
+    - data: pd.DataFrame, df of sequence and fitness (without stop codons!)
         - sequence column name
         - fitness column name
-    - zero-fitness cutoff
-    - number of samples to simulate
+    - seq_col: str, the sequence column name
+    - fitness_col: str, the fitness column name
+    - n_sites: int, number of sites to simulate
 
-    #### Outputs
-    - DataFrame
+    Returns:
+    - np.array, the fitness values
+    - pd.DataFrame, the results of the simulation
         - start sequence
         - end sequence
         - start fitness
@@ -75,18 +80,20 @@ def simulate_single_step_DE(data, seq_col, fitness_col, n_sites=4):
         - optional: order of steps taken (order that positions were targeted)
     """
 
-    data = data.copy()
+    # take out stop codons
+    data = data[~data[seq_col].str.contains("\*")].copy()
+
     data[seq_col] = data[seq_col].apply(lambda x: "".join(x.split("_")))
 
     data_dict = dict(zip(data[seq_col].values, data[fitness_col].values))
 
-    active_AAs = data[data["active"]][seq_col].values
+    AAs = data[seq_col].values
 
     position_orders = list(itertools.permutations(range(n_sites)))
-    fitness_array = np.empty(len(active_AAs) * len(position_orders))
+    fitness_array = np.empty(len(AAs) * len(position_orders))
     fitness_dict = {}
 
-    for i, start_seq in tqdm(enumerate(active_AAs)):
+    for i, start_seq in tqdm(enumerate(AAs)):
 
         # Draw an initial variant
         start_fitness = data_dict[start_seq]
@@ -142,7 +149,7 @@ def simulate_single_step_DE(data, seq_col, fitness_col, n_sites=4):
         output_df["final_fitness"].transform(ecdf_transform).values
     )
 
-    return (fitness_array, output_df)
+    return fitness_array, output_df
 
 
 def simulate_simple_recomb_SSM_DE(data, seq_col, fitness_col, n_sites=4):
@@ -528,15 +535,45 @@ def simulate_iterative_SM(data, seq_col, fitness_col, n_sites=4):
     return (fitness_array, output_df)
 
 
-def print_characteristics(df):
+def calc_characteristics(df: pd.DataFrame, 
+                         col_name: str = "final_fitness", 
+                         topns: list = [96, 384]) -> dict:
+    """
+    Calculate the mean, median for all and for topn, and fraction reaching max fitness
 
-    print("mean:", np.mean(df["final_fitness"].values))
-    print("median:", np.median(df["final_fitness"].values))
-    print(
-        "fraction reaching max:",
-        sum(df["final_fitness"].values == 1) / len(df["final_fitness"].values),
-    )
+    Args:
+    - df: pd.DataFrame, the dataframe to calculate the characteristics for
+    - col_name: str, the column name to calculate the characteristics for
+    - topns: list, the top N values to calculate the fraction reaching max fitness for
 
+    Returns:
+    - dict, the characteristics
+    """
+
+    characteristics = {}
+
+    characteristics["mean_all"] = np.mean(df[col_name].values)
+    characteristics["median_all"] = np.median(df[col_name].values)
+
+    for topn in topns:
+        if topn <= len(df):
+            characteristics[f"mean_top{topn}"] = np.mean(
+                df[col_name].sort_values(ascending=False).head(topn).values
+            )
+            characteristics[f"median_top{topn}"] = np.median(
+                df[col_name].sort_values(ascending=False).head(topn).values
+            )
+        else:
+            characteristics[f"mean_top{topn}"] = np.nan
+            characteristics[f"median_top{topn}"] = np.nan
+    
+    characteristics["fraction_max"] = sum(df[col_name].values == 1) / len(df[col_name].values)
+
+    print("Output dict:")
+    for key, value in characteristics.items():
+        print(f"{key}: {value}")
+    
+    return characteristics
 
 def run_all_de_simulations(
     df: pd.DataFrame,
@@ -601,11 +638,16 @@ def run_all_de_simulations(
 
 
 # Run simulations for each library
-def run_all_lib_de_simulations(de_opts: list = ["DE-active", "DE-no_stop_codons", "DE-all"]):
+def run_all_lib_de_simulations(scale_types: list = ["scale2max", "scale2parent"],
+                               de_opts: list = ["DE-active", "DE-all"]):
     """
     Run all simulations for each library.
+
+    Args:
+    - scale_types: list, the scale types to simulate
+    - de_opts: list, the DE options to simulate
     """
-    for scale_type in ["scale2parent", "scale2max"]:
+    for scale_type in scale_types:
         # Run simulations for each library
         for lib in glob(f"data/*/{scale_type}/*.csv"):
 
@@ -613,6 +655,9 @@ def run_all_lib_de_simulations(de_opts: list = ["DE-active", "DE-no_stop_codons"
             n_sites = len(LIB_INFO_DICT[lib_name]["positions"])
             
             df = pd.read_csv(lib).copy()
+
+            # take out stop codons
+            df = df[~df["AAs"].str.contains("\*")].copy()
 
             for de_det in de_opts:
 
@@ -622,8 +667,6 @@ def run_all_lib_de_simulations(de_opts: list = ["DE-active", "DE-no_stop_codons"
                     select_df = df.copy()
                 elif de_det == "DE-active":
                     select_df = df[df["active"] == True].copy()
-                elif de_det == "DE-no_stop_codons":
-                    select_df = df[~df["AAs"].str.contains("\*")].copy()
 
                 run_all_de_simulations(
                     df=select_df, 

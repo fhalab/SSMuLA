@@ -11,6 +11,10 @@ logs
 logs/
 logs/*
 
+ev_esm
+ev_esm/
+ev_esm/*
+
 triad
 triad/
 triad/*
@@ -20,6 +24,7 @@ KEJ/
 KEJ/*
 
 *.idea
+*.npy
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

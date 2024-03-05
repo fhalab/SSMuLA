@@ -2,11 +2,10 @@
 
 from __future__ import annotations
 
-# General imports
-from glob import glob
 import os
+from glob import glob
+from copy import deepcopy
 
-# Data manipulation
 import pandas as pd
 import numpy as np
 
@@ -14,8 +13,6 @@ import itertools
 from tqdm.auto import tqdm
 from multiprocessing import Pool
 from operator import itemgetter
-
-
 
 import holoviews as hv
 from holoviews import dim
@@ -38,7 +35,7 @@ from bokeh.themes.theme import Theme
 hv.renderer("bokeh").theme = JSON_THEME
 
 
-EPISTASIS_TYPE = ["magnitude", "sign", "reciprocal sign"]
+EPISTASIS_TYPE = deepcopy(["magnitude", "sign", "reciprocal sign"])
 
 
 assign_epistasis_dict = {
@@ -445,8 +442,16 @@ class VisPairwiseEpistasis:
         Define plot hook for position
         """
         plot.handles["plot"].x_range.factors = [
-            (position, epistasis)
-            for position in sorted(list(self.df["positions"].unique()))
+            pos for pos in sorted(list(self.df["positions"].unique()))
+        ]
+
+    def _pos_et_hook(self, plot, elements):
+        """
+        Define plot hook for position
+        """
+        plot.handles["plot"].x_range.factors = [
+            (pos, epistasis)
+            for pos in sorted(list(self.df["positions"].unique()))
             for epistasis in EPISTASIS_TYPE
         ]
 
@@ -468,15 +473,8 @@ class VisPairwiseEpistasis:
 
         title = f"{self.lib_name} pairwise epsilon vs positions by type"
 
-        def hook(plot, elements):
-            plot.handles["plot"].x_range.factors = [
-                (position, epistasis)
-                for position in sorted(list(self.df["positions"].unique()))
-                for epistasis in EPISTASIS_TYPE
-            ]
-
         vis = hv.Violin(
-            self.df,
+            self.df.sort_values(["positions", "epistasis_type"]),
             kdims=["positions", "epistasis_type"],
             vdims=["epsilon"],
         ).opts(
@@ -484,11 +482,11 @@ class VisPairwiseEpistasis:
             width=600,
             xrotation=90,
             violin_width=0.8,
-            violin_color="epistasis_type",
+            violin_color=dim("epistasis_type").str(),
             show_legend=True,
             legend_position="top",
             legend_offset=(0, 5),
-            hooks=[fixmargins, one_decimal_y, self._pos_hook],
+            hooks=[fixmargins, one_decimal_y, self._pos_et_hook],
             title=title,
         )
 
@@ -507,14 +505,16 @@ class VisPairwiseEpistasis:
         df = self.df_grouped[self.df_grouped["total"] > 0].copy()
 
         vis = hv.Violin(
-            df, kdims=["positions", "epistasis_type"], vdims=["frac epistasis type"]
+            df.sort_values(["positions", "epistasis_type"]),
+            kdims=["positions", "epistasis_type"],
+            vdims=["frac_epistasis_type"]
         ).opts(
             height=400,
             width=600,
             xrotation=90,
             violin_width=0.8,
-            violin_color="epistasis_type",
-            hooks=[fixmargins, one_decimal_y, self._pos_hook],
+            violin_color=dim("epistasis_type").str(),
+            hooks=[fixmargins, one_decimal_y, self._pos_et_hook],
             title=title,
             show_legend=True,
             legend_position="top",
@@ -536,14 +536,14 @@ class VisPairwiseEpistasis:
         df = self.df_quartile_grouped.copy()
 
         vis = hv.Violin(
-            self.df_quartile_grouped.sort_values(["epistasis type", "quartile"]),
-            kdims=["epistasis type", "quartile"],
-            vdims=["frac epistasis type"],
+            self.df_quartile_grouped.sort_values(["epistasis_type", "quartile"]),
+            kdims=["epistasis_type", "quartile"],
+            vdims=["frac_epistasis_type"],
         ).opts(
-            violin_color=dim("quartile").str(),
             height=400,
             width=600,
             violin_width=0.8,
+            violin_color=dim("quartile").str(),
             hooks=[fixmargins, one_decimal_y, self._quart_hook],
             show_legend=True,
             legend_position="top",
@@ -633,7 +633,7 @@ class VisPairwiseEpistasis:
         grouped_epistasis_df["total"] = grouped_epistasis_df.groupby(
             ["positions", "start_seq"]
         )["count"].transform("sum")
-        grouped_epistasis_df["frac epistasis type"] = (
+        grouped_epistasis_df["frac_epistasis_type"] = (
             grouped_epistasis_df["count"] / grouped_epistasis_df["total"]
         )
 
@@ -678,11 +678,11 @@ class VisPairwiseEpistasis:
         ).rename(columns={0: "count"})
 
         df["total"] = df.groupby(["start_seq", "quartile"])["count"].transform("sum")
-        df["frac epistasis type"] = df["count"] / df["total"]
+        df["frac_epistasis_type"] = df["count"] / df["total"]
 
         df = df[df["total"] > 0].copy()
 
-        df.index.names = ["start_seq", "quartile", "epistasis type"]
+        df.index.names = ["start_seq", "quartile", "epistasis_type"]
 
         return df
 
