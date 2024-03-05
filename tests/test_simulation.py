@@ -5,7 +5,7 @@ import os
 
 from datetime import datetime
 
-from SSMuLA.run_simulations import run_all_lib_de_simulations
+from SSMuLA.de_simulations import run_all_lib_de_simulations
 from SSMuLA.util import checkNgen_folder
 
 

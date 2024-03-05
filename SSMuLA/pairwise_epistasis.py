@@ -473,6 +473,11 @@ class VisPairwiseEpistasis:
 
         title = f"{self.lib_name} pairwise epsilon vs positions by type"
 
+        if self.df["epistasis_type"].nunique == len(EPISTASIS_TYPE):
+            violin_color = dim("epistasis_type").str()
+        else:
+            violin_color = "epistasis_type"
+
         vis = hv.Violin(
             self.df.sort_values(["positions", "epistasis_type"]),
             kdims=["positions", "epistasis_type"],
@@ -482,7 +487,7 @@ class VisPairwiseEpistasis:
             width=600,
             xrotation=90,
             violin_width=0.8,
-            violin_color=dim("epistasis_type").str(),
+            violin_color=violin_color,
             show_legend=True,
             legend_position="top",
             legend_offset=(0, 5),
@@ -504,6 +509,11 @@ class VisPairwiseEpistasis:
 
         df = self.df_grouped[self.df_grouped["total"] > 0].copy()
 
+        if self.df["epistasis_type"].nunique == len(EPISTASIS_TYPE):
+            violin_color = dim("epistasis_type").str()
+        else:
+            violin_color = "epistasis_type"
+
         vis = hv.Violin(
             df.sort_values(["positions", "epistasis_type"]),
             kdims=["positions", "epistasis_type"],
@@ -513,7 +523,7 @@ class VisPairwiseEpistasis:
             width=600,
             xrotation=90,
             violin_width=0.8,
-            violin_color=dim("epistasis_type").str(),
+            violin_color=violin_color,
             hooks=[fixmargins, one_decimal_y, self._pos_et_hook],
             title=title,
             show_legend=True,
@@ -596,6 +606,7 @@ class VisPairwiseEpistasis:
         # map int pos to real
         df = pd.read_csv(self._pairwise_csv).dropna()
         df["positions"] = df["positions"].map(LIB_POS_MAP[self.lib_name])
+        df["epistasis_type"] = pd.Categorical(df["epistasis_type"], categories=EPISTASIS_TYPE, ordered=True)
 
         return df.copy()
 

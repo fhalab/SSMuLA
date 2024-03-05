@@ -129,7 +129,7 @@ def de_ecdf(slice_df: pd.DataFrame, lib_name: str, plot_name: str, plot_folder: 
                 ]
                 if not selection.empty:
                     curve = hv.Curve(
-                        selection.sort_values(["simulation", "lib", "final_fitness"]),
+                        selection.sort_values(["simulation", "lib", "final_fitness", "final_fitness ECDF"]),
                         kdims="final_fitness",
                         vdims=["final_fitness ECDF", "lib", "simulation"],
                     )
@@ -172,7 +172,7 @@ def de_ecdf(slice_df: pd.DataFrame, lib_name: str, plot_name: str, plot_folder: 
             ]
             if not selection.empty:
                 curve = hv.Curve(
-                    selection.sort_values(["simulation", "lib", "final_fitness"]),
+                    selection.sort_values(["simulation", "lib", "final_fitness", "final_fitness ECDF"]),
                     kdims="final_fitness",
                     vdims=["final_fitness ECDF", "lib", "simulation"],
                 )
@@ -314,7 +314,7 @@ class VisDESims:
         - all_df (pd.DataFrame): A dataframe containing all DE simulation results
         """
 
-        all_de_sim_files = glob(f"{os.path.normpath(self.de_folder_full_path)}/*.csv")
+        all_de_sim_files = sorted(glob(f"{os.path.normpath(self.de_folder_full_path)}/*.csv"))
 
         dfs = []
 
@@ -355,7 +355,7 @@ class VisDESims:
 
 
 def run_plot_de(
-    de_opts: list = ["DE-active", "DE-no_stop_codons", "DE-all"],
+    de_opts: list = ["DE-active", "DE-all"],
     sim_folder: str = "results/simulations",
     vis_folder: str = "results/simulations_vis",
     v_width: int = 400,
@@ -364,7 +364,7 @@ def run_plot_de(
     """Run the DE simulation plotting"""
 
     for de_sub_folder in de_opts:
-        for fit_scale_sub_folder in ["scale2parent", "scale2max"]:
+        for fit_scale_sub_folder in ["scale2max", "scale2parent"]:
             for lib in LIB_NAMES + ["TrpB"]:
                 if "TrpB" in lib:
                     v_width = 1280

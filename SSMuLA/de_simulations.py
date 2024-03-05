@@ -54,16 +54,15 @@ def ecdf_transform(data: pd.Series) -> pd.Series:
     return data.rank(method="first") / len(data)
 
 
-def simulate_single_step_DE(data: pd.DataFrame, 
-                            seq_col: str, 
-                            fitness_col: str,
-                            n_sites: int =4):
+def simulate_single_step_DE(
+    df: pd.DataFrame, seq_col: str, fitness_col: str, n_sites: int = 4
+):
 
     """
     Simulate a single step directed evolution experiment
 
     Args:
-    - data: pd.DataFrame, df of sequence and fitness (without stop codons!)
+    - df: pd.DataFrame, df of sequence and fitness (without stop codons!)
         - sequence column name
         - fitness column name
     - seq_col: str, the sequence column name
@@ -80,14 +79,15 @@ def simulate_single_step_DE(data: pd.DataFrame,
         - optional: order of steps taken (order that positions were targeted)
     """
 
-    # take out stop codons
-    data = data[~data[seq_col].str.contains("\*")].copy()
+    # take out stop codons if any left
+    df = df[~df[seq_col].str.contains("\*")].copy()
 
-    data[seq_col] = data[seq_col].apply(lambda x: "".join(x.split("_")))
+    df[seq_col] = df[seq_col].apply(lambda x: "".join(x.split("_")))
 
-    data_dict = dict(zip(data[seq_col].values, data[fitness_col].values))
+    # to make things faster
+    df_dict = dict(zip(df[seq_col].values, df[fitness_col].values))
 
-    AAs = data[seq_col].values
+    AAs = df[seq_col].values
 
     position_orders = list(itertools.permutations(range(n_sites)))
     fitness_array = np.empty(len(AAs) * len(position_orders))
@@ -96,7 +96,7 @@ def simulate_single_step_DE(data: pd.DataFrame,
     for i, start_seq in tqdm(enumerate(AAs)):
 
         # Draw an initial variant
-        start_fitness = data_dict[start_seq]
+        start_fitness = df_dict[start_seq]
 
         # Loop through all possible orders of positions
         for j, temp_order in enumerate(position_orders):
@@ -113,7 +113,7 @@ def simulate_single_step_DE(data: pd.DataFrame,
 
                     # Use Try/Except in case the AA combo doesn't exist in the dataframe
                     try:
-                        temp_fitness = data_dict[temp_seq]
+                        temp_fitness = df_dict[temp_seq]
                     except:
                         temp_fitness = 0
 
@@ -152,21 +152,45 @@ def simulate_single_step_DE(data: pd.DataFrame,
     return fitness_array, output_df
 
 
-def simulate_simple_recomb_SSM_DE(data, seq_col, fitness_col, n_sites=4):
+def simulate_simple_recomb_SSM_DE(
+    df: pd.DataFrame, seq_col: str, fitness_col: str, n_sites: int = 4
+) -> pd.DataFrame:
 
-    data = data.copy()
-    data[seq_col] = data[seq_col].apply(lambda x: "".join(x.split("_")))
+    """
+    Simulate a simple SSM recombination experiment
 
-    data_dict = dict(zip(data[seq_col].values, data[fitness_col].values))
+    Args:
+    - df: pd.DataFrame, df of sequence and fitness (without stop codons!)
+        - sequence column name
+        - fitness column name
+    - seq_col: str, the sequence column name
+    - fitness_col: str, the fitness column name
+    - n_sites: int, number of sites to simulate
 
-    active_AAs = data[data["active"]][seq_col].values
+    Returns:
+    - pd.DataFrame, the results of the simulation
+        - start sequence
+        - end sequence
+        - start fitness
+        - end fitness
+        - optional: order of steps taken (order that positions were targeted)
+    """
+
+    # take out stop codons if any left
+    df = df[~df[seq_col].str.contains("\*")].copy()
+
+    df[seq_col] = df[seq_col].apply(lambda x: "".join(x.split("_")))
+
+    df_dict = dict(zip(df[seq_col].values, df[fitness_col].values))
+
+    AAs = df[seq_col].values
 
     fitness_dict = {}
 
-    for start_seq in tqdm(active_AAs):
+    for start_seq in tqdm(AAs):
 
         # Draw an initial variant
-        start_fitness = data_dict[start_seq]
+        start_fitness = df_dict[start_seq]
 
         top_SSM_variants = {}
 
@@ -182,7 +206,7 @@ def simulate_simple_recomb_SSM_DE(data, seq_col, fitness_col, n_sites=4):
 
                 # Use Try/Except in case the AA combo doesn't exist in the dataframe
                 try:
-                    temp_fitness = data_dict[temp_seq]
+                    temp_fitness = df_dict[temp_seq]
                 except:
                     temp_fitness = 0
 
@@ -199,7 +223,7 @@ def simulate_simple_recomb_SSM_DE(data, seq_col, fitness_col, n_sites=4):
         # simple recombination
         recomb_seq = "".join([top_SSM_variants[pos][pos] for pos in range(n_sites)])
         try:
-            recomb_fitness = data_dict[recomb_seq]
+            recomb_fitness = df_dict[recomb_seq]
         except:
             recomb_fitness = 0
 
@@ -214,7 +238,7 @@ def simulate_simple_recomb_SSM_DE(data, seq_col, fitness_col, n_sites=4):
             best_fitness = recomb_fitness
 
         for SSM_seq in top_SSM_variants.values():
-            SSM_fit = data_dict[SSM_seq]
+            SSM_fit = df_dict[SSM_seq]
             if SSM_fit > best_fitness:
                 best_seq = SSM_seq
                 best_fitness = SSM_fit
@@ -247,94 +271,24 @@ def simulate_simple_recomb_SSM_DE(data, seq_col, fitness_col, n_sites=4):
     return output_df
 
 
-# def sample_SSM_test_top_N(data, seq_col, fitness_col, n_sites=4, N=96, max_samples=1000):
+def try_start_seq(start_seq: str, df_dict: dict, ALL_AAS: list, n_sites: int, N: int):
 
-#     data = data.copy()
-#     data[seq_col] = data[seq_col].apply(lambda x: ''.join(x.split('_')))
+    """
+    Try a starting sequence for the SSM predict top N experiment
 
-#     data_dict = dict(zip(data[seq_col].values,data[fitness_col].values))
+    Args:
+    - start_seq: str, the starting sequence
+    - df_dict: dict, the fitness values
+    - ALL_AAS: list, all amino acids
+    - n_sites: int, number of sites to simulate
+    - N: int, the number of top sequences to predict
 
-#     active_AAs = data[data['active']].sample(frac=1)['AAs'].values
-
-#     AA_list = list('ACDEFGHIKLMNPQRSTVWY')
-#     fitness_dict = {}
-
-#     for sample_counter, start_seq in tqdm.tqdm(enumerate(active_AAs)):
-
-#         # Draw an initial variant
-#         start_fitness = data_dict[start_seq]
-
-#         SSM_data = {}
-#         SSM_to_compare = {}
-
-#         # Loop through the positions to collect SSM data
-#         for pos in range(n_sites):
-
-#             SSM_data[pos] = {}
-#             SSM_to_compare[pos] = {}
-
-#             # Try all possible mutations at the position to find the best
-#             for AA in ALL_AAS:
-#                 temp_seq = make_new_sequence(start_seq, AA, pos)
-
-#                 # Use Try/Except in case the AA combo doesn't exist in the dataframe
-#                 try:
-#                     temp_fitness = data_dict[temp_seq]
-#                 except:
-#                     temp_fitness = 0
-
-#                 SSM_data[pos][AA] = temp_fitness
-#                 SSM_to_compare[pos][temp_seq] = temp_fitness
-
-#         all_possible_combos = [''.join(x) for x in list(itertools.product('ACDEFGHIKLMNPQRSTVWY', repeat=n_sites))]
-
-#         calculated_improvement = {}
-
-#         for combo in all_possible_combos:
-#             calculated_improvement[combo] = np.product([SSM_data[i][combo[i]] / start_fitness for i in range(n_sites)])
-
-#         top_predicted = pd.DataFrame(calculated_improvement.items(), columns=['AAs', 'calculated improvement']).sort_values('calculated improvement', ascending=False).head(N)['AAs'].values
-
-#         best_seq = start_seq
-#         best_fitness = start_fitness
-
-#         for variant_seq in top_predicted:
-
-#             try:
-#                 variant_fit = data_dict[variant_seq]
-#             except:
-#                 variant_fit = 0
-
-#             if variant_fit > best_fitness:
-#                 best_seq = variant_seq
-#                 best_fitness = variant_fit
-
-#         # add a step where I also look at all the SSM variants and see if any of them are better than the top predicted
-#         for pos,temp_fit_dict in SSM_data.items():
-#             for SSM_seq,SSM_fit in temp_fit_dict.items():
-
-#                 if SSM_fit > best_fitness:
-#                     best_seq = SSM_seq
-#                     best_fitness = SSM_fit
-
-#         fitness_dict[start_seq] = [start_fitness, best_seq, best_fitness]
-
-#         if sample_counter >= max_samples-1:
-#             break
-
-#     output_df = pd.DataFrame(fitness_dict).T.reset_index().rename(columns={'index':'start_seq', 0:'start_fitness', 1:'final_seq', 2:'final_fitness'})
-
-#     output_df["final_fitness ECDF"] = output_df[
-#         'final_fitness'
-#     ].transform(ecdf_transform).values
-
-#     return output_df
-
-
-def try_start_seq(start_seq, data_dict, ALL_AAS, n_sites, N):
+    Returns:
+    - tuple, the starting fitness, the best sequence, and the best fitness
+    """
 
     # Draw an initial variant
-    start_fitness = data_dict[start_seq]
+    start_fitness = df_dict[start_seq]
 
     SSM_data = {}
     SSM_to_compare = {}
@@ -351,7 +305,7 @@ def try_start_seq(start_seq, data_dict, ALL_AAS, n_sites, N):
 
             # Use Try/Except in case the AA combo doesn't exist in the dataframe
             try:
-                temp_fitness = data_dict[temp_seq]
+                temp_fitness = df_dict[temp_seq]
             except:
                 temp_fitness = 0
 
@@ -384,7 +338,7 @@ def try_start_seq(start_seq, data_dict, ALL_AAS, n_sites, N):
     for variant_seq in top_predicted:
 
         try:
-            variant_fit = data_dict[variant_seq]
+            variant_fit = df_dict[variant_seq]
         except:
             variant_fit = 0
 
@@ -404,33 +358,59 @@ def try_start_seq(start_seq, data_dict, ALL_AAS, n_sites, N):
 
 
 def sample_SSM_test_top_N(
-    data, seq_col, fitness_col, n_sites=4, N=96, max_samples=None, n_jobs=1
+    df: pd.DataFrame,
+    seq_col: str,
+    fitness_col: str,
+    n_sites: int = 4,
+    N: int = 96,
+    max_samples: int | None = None,
+    n_jobs: int = 1,
 ):
 
-    data = data.copy()
-    data[seq_col] = data[seq_col].apply(lambda x: "".join(x.split("_")))
+    """
+    Simulate the SSM predict top N experiment
 
-    data_dict = dict(zip(data[seq_col].values, data[fitness_col].values))
+    Args:
+    - df: pd.DataFrame, df of sequence and fitness (without stop codons!)
+        - sequence column name
+        - fitness column name
+    - seq_col: str, the sequence column name
+    - fitness_col: str, the fitness column name
+    - n_sites: int, number of sites to simulate
+    - N: int, the number of top sequences to predict
+    - max_samples: int, the maximum number of samples to simulate
+    - n_jobs: int, the number of jobs to use for multiprocessing
 
-    active_AAs = data[data["active"]].sample(frac=1)["AAs"].values
+    Returns:
+    - pd.DataFrame, the results of the simulation
+        - start sequence
+        - end sequence
+        - start fitness
+        - end fitness
+        - optional: order of steps taken (order that positions were targeted)
+    """
+
+    # take out stop codons if any left
+    df = df[~df[seq_col].str.contains("\*")].copy()
+
+    df[seq_col] = df[seq_col].apply(lambda x: "".join(x.split("_")))
+
+    df_dict = dict(zip(df[seq_col].values, df[fitness_col].values))
+
+    AAs = df.sample(frac=1)["AAs"].values
 
     if max_samples is not None and type(max_samples) == int:
-        active_AAs = active_AAs[:max_samples]
+        AAs = AAs[:max_samples]
 
     fitness_dict = {}
 
     # Get the multiprocessing args
-    pool_args = [
-        (start_seq, data_dict, ALL_AAS, n_sites, N) for start_seq in active_AAs
-    ]
+    pool_args = [(start_seq, df_dict, ALL_AAS, n_sites, N) for start_seq in AAs]
 
     with Pool(n_jobs) as pool:
         results = pool.starmap(try_start_seq, tqdm(pool_args))
 
-    fitness_dict = {active_AAs[i]: results[i] for i in range(len(active_AAs))}
-
-    # for start_seq in tqdm.tqdm(active_AAs):
-    #     fitness_dict[start_seq] = try_start_seq(start_seq, data_dict, ALL_AAS, n_sites, N)
+    fitness_dict = {AAs[i]: results[i] for i in range(len(AAs))}
 
     output_df = (
         pd.DataFrame(fitness_dict)
@@ -452,92 +432,9 @@ def sample_SSM_test_top_N(
     return output_df
 
 
-def simulate_iterative_SM(data, seq_col, fitness_col, n_sites=4):
-
-    data = data.copy()
-    data[seq_col] = data[seq_col].apply(lambda x: "".join(x.split("_")))
-
-    data_dict = dict(zip(data[seq_col].values, data[fitness_col].values))
-
-    active_AAs = data[data["active"]]["AAs"].values
-
-    fitness_array = np.empty(len(active_AAs) * 1)
-    fitness_dict = {}
-
-    for i, start_seq in tqdm(enumerate(active_AAs)):
-
-        # Draw an initial variant
-        start_fitness = data_dict[start_seq]
-
-        best_seq = start_seq
-        best_fitness = start_fitness
-
-        # Loop through all possible orders of positions
-        remaining_positions = list(range(n_sites))
-        temp_order = []
-
-        for j in range(n_sites):
-            # Loop through the positions
-            previous_best_seq = best_seq
-            found_improvement = False
-            for pos in remaining_positions:
-
-                # Try all possible mutations at the position
-                for AA in ALL_AAS:
-                    temp_seq = make_new_sequence(previous_best_seq, AA, pos)
-
-                    # Use Try/Except in case the AA combo doesn't exist in the dataframe
-                    try:
-                        temp_fitness = data_dict[temp_seq]
-                    except:
-                        temp_fitness = 0
-
-                    # If this sequence is better than any previous then keep it
-                    if temp_fitness > best_fitness:
-                        best_seq = temp_seq
-                        best_fitness = temp_fitness
-                        best_site = pos
-                        found_improvement = True
-                    else:
-                        pass
-
-            if found_improvement:
-                remaining_positions.remove(best_site)
-                temp_order.append(best_site)
-            else:
-                # finish if there are no more beneficial mutations
-                break
-            # print(start_seq, best_seq, temp_order)
-
-        # print(best_seq)
-        temp_order = tuple(temp_order)
-        fitness_array[i] = best_fitness
-        fitness_dict[(start_seq, temp_order)] = [start_fitness, best_seq, best_fitness]
-
-    output_df = (
-        pd.DataFrame(fitness_dict)
-        .T.reset_index()
-        .rename(
-            columns={
-                "level_0": "start_seq",
-                "level_1": "order",
-                0: "start_fitness",
-                1: "final_seq",
-                2: "final_fitness",
-            }
-        )
-    )
-
-    output_df["final_fitness ECDF"] = (
-        output_df["final_fitness"].transform(ecdf_transform).values
-    )
-
-    return (fitness_array, output_df)
-
-
-def calc_characteristics(df: pd.DataFrame, 
-                         col_name: str = "final_fitness", 
-                         topns: list = [96, 384]) -> dict:
+def calc_char(
+    df: pd.DataFrame, col_name: str = "final_fitness", topns: list = [96, 384]
+) -> dict:
     """
     Calculate the mean, median for all and for topn, and fraction reaching max fitness
 
@@ -547,7 +444,12 @@ def calc_characteristics(df: pd.DataFrame,
     - topns: list, the top N values to calculate the fraction reaching max fitness for
 
     Returns:
-    - dict, the characteristics
+    - dict, the characteristics, with keys:
+        - mean_all
+        - median_all
+        - mean_topN
+        - median_topN
+        - fraction_max
     """
 
     characteristics = {}
@@ -566,14 +468,17 @@ def calc_characteristics(df: pd.DataFrame,
         else:
             characteristics[f"mean_top{topn}"] = np.nan
             characteristics[f"median_top{topn}"] = np.nan
-    
-    characteristics["fraction_max"] = sum(df[col_name].values == 1) / len(df[col_name].values)
+
+    characteristics["fraction_max"] = sum(df[col_name].values == 1) / len(
+        df[col_name].values
+    )
 
     print("Output dict:")
     for key, value in characteristics.items():
         print(f"{key}: {value}")
-    
+
     return characteristics
+
 
 def run_all_de_simulations(
     df: pd.DataFrame,
@@ -581,24 +486,52 @@ def run_all_de_simulations(
     save_dir: str = "results/simulations/DE",
     seq_col: str = "AAs",
     fitness_col: str = "fitness",
-    n_sites=4,
-    N=96,
-    max_samples=None,
-    n_jobs=256,
+    n_sites: int = 4,
+    N: int = 96,
+    topns: list = [96, 384],
+    max_samples: int | None = None,
+    n_jobs: int = 256,
 ):
+
+    """
+    Run all DE simulations and save results to a csv
+
+    Args:
+    - df: pd.DataFrame, df of sequence and fitness (without stop codons!)
+        - sequence column name
+        - fitness column name
+    - lib_name: str, the library name
+    - save_dir: str, the directory to save the results to
+    - seq_col: str, the sequence column name
+    - fitness_col: str, the fitness column name
+    - n_sites: int, number of sites to simulate
+    - N: int, the number of top sequences to predict
+    - topns: list, the top N values to calculate the characteristics
+    - max_samples: int, the maximum number of samples to simulate
+    - n_jobs: int, the number of jobs to use for multiprocessing
+
+    Returns:
+    - dict, the results of the simulations
+    - pd.DataFrame, the summary characteristics of the simulations
+    """
 
     save_dir = checkNgen_folder(save_dir)
 
     ######## Simulate a single step directed evolution walk ########
     print(f"Simulate a single step directed evolution walk")
     fitness_array, single_step_DE = simulate_single_step_DE(
-        data=df,
+        df=df,
         seq_col=seq_col,
         fitness_col=fitness_col,
         n_sites=n_sites,
     )
-    print_characteristics(single_step_DE)
 
+    # get the characteristics of the simulation
+    single_step_DE_char = calc_char(
+        single_step_DE, col_name="final_fitness", topns=topns
+    )
+
+    # save reults to csv
     single_step_DE.to_csv(
         os.path.join(save_dir, f"{lib_name}-single_step_DE.csv"), index=False
     )
@@ -606,19 +539,22 @@ def run_all_de_simulations(
     ######## Simulate a simple SSM recombination ########
     print("\nSimulate a simple SSM recombination")
     recomb_SSM = simulate_simple_recomb_SSM_DE(
-        data=df,
+        df=df,
         seq_col=seq_col,
         fitness_col=fitness_col,
         n_sites=n_sites,
     )
-    print_characteristics(recomb_SSM)
 
+    # get the characteristics of the simulation
+    recomb_SSM_char = calc_char(recomb_SSM, col_name="final_fitness", topns=topns)
+
+    # save reults to csv
     recomb_SSM.to_csv(os.path.join(save_dir, f"{lib_name}-recomb_SSM.csv"), index=False)
 
     ######## Simulate SSM predict top N ########
     print(f"\nSimulate SSM predict top {N}")
     top96_SSM = sample_SSM_test_top_N(
-        data=df,
+        df=df,
         seq_col=seq_col,
         fitness_col=fitness_col,
         n_sites=n_sites,
@@ -626,55 +562,95 @@ def run_all_de_simulations(
         max_samples=max_samples,
         n_jobs=n_jobs,
     )
-    print_characteristics(top96_SSM)
 
+    # get the characteristics of the simulation
+    top96_SSM_char = calc_char(top96_SSM, col_name="final_fitness", topns=topns)
+
+    # save reults to csv
     top96_SSM.to_csv(os.path.join(save_dir, f"{lib_name}-top{N}_SSM.csv"), index=False)
+
+    # get keys for characteristics
+    char_keys = list(single_step_DE_char.keys())
+    char_sum_df = pd.DataFrame(columns=["lib"] + char_keys)
+
+    for de_sim_name, de_sim_char in zip(
+        ["single_step_DE", "recomb_SSM", f"top{N}_SSM"],
+        [single_step_DE_char, recomb_SSM_char, top96_SSM_char],
+    ):
+
+        char_sum_df = char_sum_df.append(
+            {
+                "lib": lib_name,
+                "de_type": de_sim_name,
+                **de_sim_char,
+            },
+            ignore_index=True,
+        )
 
     return {
         "single step SSM": single_step_DE,
         " recomb": recomb_SSM,
         "SSM predict top 96": top96_SSM,
-    }
+    }, char_sum_df
 
 
 # Run simulations for each library
-def run_all_lib_de_simulations(scale_types: list = ["scale2max", "scale2parent"],
-                               de_opts: list = ["DE-active", "DE-all"]):
+def run_all_lib_de_simulations(
+    scale_types: list = ["scale2max", "scale2parent"],
+    de_opts: list = ["DE-active", "DE-all"],
+):
     """
     Run all simulations for each library.
 
     Args:
-    - scale_types: list, the scale types to simulate
+    - scale_types: list, the scale types of fitness to simulate
     - de_opts: list, the DE options to simulate
     """
     for scale_type in scale_types:
-        # Run simulations for each library
-        for lib in glob(f"data/*/{scale_type}/*.csv"):
+        for de_det in de_opts:
 
-            lib_name = get_file_name(lib)
-            n_sites = len(LIB_INFO_DICT[lib_name]["positions"])
-            
-            df = pd.read_csv(lib).copy()
+            all_char_sum_df = pd.DataFrame()
 
-            # take out stop codons
-            df = df[~df["AAs"].str.contains("\*")].copy()
+            # Run simulations for each library
+            for lib in sorted(glob(f"data/*/{scale_type}/*.csv")):
 
-            for de_det in de_opts:
+                lib_name = get_file_name(lib)
+                n_sites = len(LIB_INFO_DICT[lib_name]["positions"])
 
-                print(f"Running {de_det} simulations for {lib_name} over {n_sites}...")
+                print(
+                    "Running {} simulations for {} over {} with fitness {}...".format(
+                        de_det, lib_name, n_sites, scale_type
+                    )
+                )
+
+                df = pd.read_csv(lib).copy()
+
+                # take out stop codons
+                df = df[~df["AAs"].str.contains("\*")].copy()
 
                 if de_det == "DE-all":
                     select_df = df.copy()
                 elif de_det == "DE-active":
                     select_df = df[df["active"] == True].copy()
 
-                run_all_de_simulations(
-                    df=select_df, 
-                    seq_col="AAs", 
+                save_dir = f"results/simulations/{de_det}/{scale_type}"
+
+                _, char_sum_df = run_all_de_simulations(
+                    df=select_df,
+                    seq_col="AAs",
                     fitness_col="fitness",
                     lib_name=lib_name,
-                    save_dir=f"results/simulations/{de_det}/{scale_type}",
-                    n_sites=n_sites, 
-                    N=96, 
+                    save_dir=save_dir,
+                    n_sites=n_sites,
+                    N=96,
+                    topns=[96, 384],
                     max_samples=None,
-                    n_jobs=256)
+                    n_jobs=256,
+                )
+
+
+                all_char_sum_df = all_char_sum_df.append(char_sum_df)
+
+            all_char_sum_df.to_csv(
+                f"{save_dir}/all_landscape_de_summary.csv", index=False
+            )
