@@ -17,6 +17,9 @@ if __name__ == "__main__":
     f = open(os.path.join(log_folder, f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}.out"), 'w')
     sys.stdout = f
 
-    run_all_lib_de_simulations()
+    run_all_lib_de_simulations(
+        scale_types = ["scale2max"],
+        de_opts = ["DE-active", "DE-all"],
+    )
     
     f.close()

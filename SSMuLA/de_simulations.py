@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import os
 from glob import glob
+from copy import deepcopy
 
 import pandas as pd
 import numpy as np
@@ -85,9 +86,11 @@ def simulate_single_step_DE(
     df[seq_col] = df[seq_col].apply(lambda x: "".join(x.split("_")))
 
     # to make things faster
-    df_dict = dict(zip(df[seq_col].values, df[fitness_col].values))
+    df_dict = deepcopy(dict(zip(df[seq_col].values, df[fitness_col].values)))
 
     AAs = df[seq_col].values
+
+    min_fit = df[fitness_col].min()
 
     position_orders = list(itertools.permutations(range(n_sites)))
     fitness_array = np.empty(len(AAs) * len(position_orders))
@@ -111,11 +114,11 @@ def simulate_single_step_DE(
                 for AA in ALL_AAS:
                     temp_seq = make_new_sequence(best_seq, AA, pos)
 
-                    # Use Try/Except in case the AA combo doesn't exist in the dataframe
-                    try:
+                    # In case the AA combo doesn't exist in the dataframe
+                    if temp_seq in df_dict.keys():
                         temp_fitness = df_dict[temp_seq]
-                    except:
-                        temp_fitness = 0
+                    else:
+                        temp_fitness = min_fit
 
                     # If this sequence is better than any previous then keep it
                     if temp_fitness > best_fitness:
@@ -181,9 +184,11 @@ def simulate_simple_recomb_SSM_DE(
 
     df[seq_col] = df[seq_col].apply(lambda x: "".join(x.split("_")))
 
-    df_dict = dict(zip(df[seq_col].values, df[fitness_col].values))
+    df_dict = deepcopy(dict(zip(df[seq_col].values, df[fitness_col].values)))
 
     AAs = df[seq_col].values
+
+    min_fit = df[fitness_col].min()
 
     fitness_dict = {}
 
@@ -204,11 +209,11 @@ def simulate_simple_recomb_SSM_DE(
             for AA in ALL_AAS:
                 temp_seq = make_new_sequence(start_seq, AA, pos)
 
-                # Use Try/Except in case the AA combo doesn't exist in the dataframe
-                try:
+                # In case the AA combo doesn't exist in the dataframe
+                if temp_seq in df_dict.keys():
                     temp_fitness = df_dict[temp_seq]
-                except:
-                    temp_fitness = 0
+                else:
+                    temp_fitness = min_fit
 
                 # If this sequence is better than any previous then keep it
                 if temp_fitness > best_fitness:
@@ -222,10 +227,11 @@ def simulate_simple_recomb_SSM_DE(
 
         # simple recombination
         recomb_seq = "".join([top_SSM_variants[pos][pos] for pos in range(n_sites)])
-        try:
+
+        if recomb_seq in df_dict.keys():
             recomb_fitness = df_dict[recomb_seq]
-        except:
-            recomb_fitness = 0
+        else:
+            recomb_fitness = min_fit
 
         best_seq = start_seq
         best_fitness = start_fitness
@@ -290,6 +296,8 @@ def try_start_seq(start_seq: str, df_dict: dict, ALL_AAS: list, n_sites: int, N:
     # Draw an initial variant
     start_fitness = df_dict[start_seq]
 
+    min_fit = min(df_dict.values())
+
     SSM_data = {}
     SSM_to_compare = {}
 
@@ -303,11 +311,11 @@ def try_start_seq(start_seq: str, df_dict: dict, ALL_AAS: list, n_sites: int, N:
         for AA in ALL_AAS:
             temp_seq = make_new_sequence(start_seq, AA, pos)
 
-            # Use Try/Except in case the AA combo doesn't exist in the dataframe
-            try:
+            # Check in case the AA combo doesn't exist in the dataframe
+            if temp_seq in df_dict.keys():
                 temp_fitness = df_dict[temp_seq]
-            except:
-                temp_fitness = 0
+            else:
+                temp_fitness = min_fit
 
             SSM_data[pos][AA] = temp_fitness
             SSM_to_compare[pos][temp_seq] = temp_fitness
@@ -337,10 +345,10 @@ def try_start_seq(start_seq: str, df_dict: dict, ALL_AAS: list, n_sites: int, N:
 
     for variant_seq in top_predicted:
 
-        try:
+        if variant_seq in df_dict.keys():
             variant_fit = df_dict[variant_seq]
-        except:
-            variant_fit = 0
+        else:
+            variant_fit = min_fit
 
         if variant_fit > best_fitness:
             best_seq = variant_seq
@@ -395,7 +403,7 @@ def sample_SSM_test_top_N(
 
     df[seq_col] = df[seq_col].apply(lambda x: "".join(x.split("_")))
 
-    df_dict = dict(zip(df[seq_col].values, df[fitness_col].values))
+    df_dict = deepcopy(dict(zip(df[seq_col].values, df[fitness_col].values)))
 
     AAs = df.sample(frac=1)["AAs"].values
 
@@ -588,9 +596,9 @@ def run_all_de_simulations(
         )
 
     return {
-        "single step SSM": single_step_DE,
-        " recomb": recomb_SSM,
-        "SSM predict top 96": top96_SSM,
+        "single_step_DE": single_step_DE,
+        "recomb_SSM": recomb_SSM,
+        f"top{N}_SSM": top96_SSM,
     }, char_sum_df
 
 
@@ -647,7 +655,6 @@ def run_all_lib_de_simulations(
                     max_samples=None,
                     n_jobs=256,
                 )
-
 
                 all_char_sum_df = all_char_sum_df.append(char_sum_df)
 

@@ -319,12 +319,14 @@ class VisDESims:
         dfs = []
 
         for res in all_de_sim_files:
-            lib_name, sim_name = get_file_name(res).split("-")
+            # do not include the summary file
+            if "all" not in res:
+                lib_name, sim_name = get_file_name(res).split("-")
 
-            df = pd.read_csv(res)
-            df["simulation"] = sim_name
-            df["lib"] = lib_name
-            dfs.append(df)
+                df = pd.read_csv(res)
+                df["simulation"] = sim_name
+                df["lib"] = lib_name
+                dfs.append(df)
 
         all_df = pd.concat(dfs).reset_index(drop=True)
         all_df["final_fitness"] = all_df["final_fitness"].astype(float)
@@ -355,16 +357,26 @@ class VisDESims:
 
 
 def run_plot_de(
+    scale_types: list = ["scale2max", "scale2parent"],
     de_opts: list = ["DE-active", "DE-all"],
     sim_folder: str = "results/simulations",
     vis_folder: str = "results/simulations_vis",
     v_width: int = 400,
 ):
 
-    """Run the DE simulation plotting"""
+    """
+    Run the DE simulation plotting
+
+    Args:
+    - scale_types (list): The scale types of fitness
+    - de_opts (list): The DE options to plot
+    - sim_folder (str): Path to the DE simulation results
+    - vis_folder (str): Path to save the DE simulation plots
+    - v_width (int): Width of the violin plot
+    """
 
     for de_sub_folder in de_opts:
-        for fit_scale_sub_folder in ["scale2max", "scale2parent"]:
+        for fit_scale_sub_folder in scale_types:
             for lib in LIB_NAMES + ["TrpB"]:
                 if "TrpB" in lib:
                     v_width = 1280
