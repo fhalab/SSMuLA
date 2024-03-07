@@ -56,6 +56,7 @@ Code base for Site Saturation Mutagenesis Landscape Analysis
 #### MLDE
 
 ### Zero-shot
+* Note that esm and evmutation scores are generated with corresponeding scrips from `p2g4s2m`
 #### Triad
 * Prep mutation file in `.mut` format such as `A_1A+A_2A+A_3A+A_4A` with `TriadGenMutFile` class in `SSMuLA.triad_prepost` 
 * With `triad-2.1.3` local command line
@@ -72,6 +73,8 @@ Code base for Site Saturation Mutagenesis Landscape Analysis
 - [DHFR](https://v2.evcouplings.org/results/057bbf069e4b43789bd87bd22b9982ab)
 - [GB1](https://v2.evcouplings.org/results/c12744e78f4744ee8102d8021c243398)
 - [TrpB](https://v2.evcouplings.org/results/db0701748dce4dfe8f27ac5a535391bf)
+
+
 
 ## Prepare for installation
 

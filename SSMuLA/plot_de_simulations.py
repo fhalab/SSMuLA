@@ -316,19 +316,19 @@ class VisDESims:
 
         all_de_sim_files = sorted(glob(f"{os.path.normpath(self.de_folder_full_path)}/*.csv"))
 
-        dfs = []
+        all_df = pd.DataFrame()
 
         for res in all_de_sim_files:
             # do not include the summary file
-            if "all" not in res:
+            if "all_landscape" not in res:
                 lib_name, sim_name = get_file_name(res).split("-")
 
                 df = pd.read_csv(res)
                 df["simulation"] = sim_name
                 df["lib"] = lib_name
-                dfs.append(df)
+                all_df = all_df.append(df)
 
-        all_df = pd.concat(dfs).reset_index(drop=True)
+        all_df = all_df.reset_index(drop=True)
         all_df["final_fitness"] = all_df["final_fitness"].astype(float)
 
         # sort sim to be in custom order from easy to hard
