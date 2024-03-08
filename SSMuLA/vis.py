@@ -29,7 +29,7 @@ JSON_THEME = Theme(
         "attrs": {
             "Title": {
                 "align": "center",
-                "text_font_size": "15px",
+                "text_font_size": "12px",
                 "text_color": "black",
                 "text_font": "arial",
             },  # title centered and bigger
@@ -73,6 +73,10 @@ PRESENTATION_PALETTE_SATURATE = {
     "gray": "#666666",
 }
 
+LIGHT_COLORS = {
+    "yellow": "#F1D384"
+}
+
 PLOTEXTENTIONS = [".svg", ".png"]
 PLOTTYPES = [t[1:] for t in PLOTEXTENTIONS]
 
@@ -93,20 +97,20 @@ LIB_COLORS_CODON = {"DHFR": PRESENTATION_PALETTE_SATURATE["brown"]}
 
 # define plot hooks
 def one_decimal_x(plot,element):
-    plot.handles['plot'].xaxis[0].formatter = NumeralTickFormatter(format="0.0")
+    plot.handles["plot"].xaxis[0].formatter = NumeralTickFormatter(format="0.0")
 
 def one_decimal_y(plot,element):
-    plot.handles['plot'].yaxis[0].formatter = NumeralTickFormatter(format="0.0")
+    plot.handles["plot"].yaxis[0].formatter = NumeralTickFormatter(format="0.0")
 
 def fixmargins(plot,element):
-    plot.handles['plot'].min_border_right=30
-    plot.handles['plot'].min_border_left=65
-    plot.handles['plot'].min_border_top=20
-    plot.handles['plot'].min_border_bottom=65
-    plot.handles['plot'].outline_line_color='black'
-    plot.handles['plot'].outline_line_alpha=1
-    plot.handles['plot'].outline_line_width=1
-    plot.handles['plot'].toolbar.autohide = True
+    plot.handles["plot"].min_border_right=30
+    plot.handles["plot"].min_border_left=65
+    plot.handles["plot"].min_border_top=20
+    plot.handles["plot"].min_border_bottom=65
+    plot.handles["plot"].outline_line_color="black"
+    plot.handles["plot"].outline_line_alpha=1
+    plot.handles["plot"].outline_line_width=1
+    plot.handles["plot"].toolbar.autohide = True
 
 
 def render_hv(hv_plot) -> bokeh.plotting.Figure:
@@ -121,6 +125,7 @@ def save_bokeh_hv(
     bokehorhv: str = "hv",
     dpi: int = 300,
     scale: int = 2,
+    skippng: bool = False,
 ):
 
     """
@@ -133,6 +138,7 @@ def save_bokeh_hv(
     - bokehorhv: str: 'hv' or 'bokeh'
     - dpi: int: dpi
     - scale: int: scale
+    - skippng: bool: skip png
     """
 
     plot_name = plot_name.replace(" ", "_")
@@ -154,12 +160,15 @@ def save_bokeh_hv(
     plot_obj.output_backend = "svg"
     export_svg(plot_obj, filename=plot_noext + ".svg", timeout=1200)
 
-    svg2png(
-        write_to=plot_noext + ".png",
-        dpi=dpi,
-        scale=scale,
-        bytestring=open(plot_noext + ".svg").read().encode("utf-8"),
-    )
+    if not skippng:
+        svg2png(
+            write_to=plot_noext + ".png",
+            dpi=dpi,
+            scale=scale,
+            bytestring=open(plot_noext + ".svg").read().encode("utf-8"),
+        )
+    else:
+        print("Skipping png export")
 
 
 def save_plt(fig, plot_title: str, path2folder: str):

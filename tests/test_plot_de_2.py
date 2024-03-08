@@ -5,21 +5,21 @@ import os
 
 from datetime import datetime
 
-from SSMuLA.de_simulations import run_all_lib_de_simulations
+from SSMuLA.plot_de_simulations import run_plot_de
 from SSMuLA.util import checkNgen_folder
 
 
 if __name__ == "__main__":
 
-    log_folder = checkNgen_folder("logs/de")
+    log_folder = checkNgen_folder("logs/plot_de")
 
     # log outputs
     f = open(os.path.join(log_folder, f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}.out"), 'w')
     sys.stdout = f
 
-    run_all_lib_de_simulations(
+    run_plot_de(
         scale_types = ["scale2max"],
-        de_opts = ["DE-0"],
+        de_opts = ["DE-0"]
     )
     
     f.close()

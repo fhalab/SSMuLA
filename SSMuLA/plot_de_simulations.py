@@ -208,6 +208,7 @@ def de_ecdf(slice_df: pd.DataFrame, lib_name: str, plot_name: str, plot_folder: 
         bokehorhv="hv",
         dpi=300,
         scale=2,
+        skippng=(lib_name == "GB1"),
     )
 
 
@@ -326,7 +327,7 @@ class VisDESims:
                 df = pd.read_csv(res)
                 df["simulation"] = sim_name
                 df["lib"] = lib_name
-                all_df = all_df.append(df)
+                all_df = all_df._append(df)
 
         all_df = all_df.reset_index(drop=True)
         all_df["final_fitness"] = all_df["final_fitness"].astype(float)

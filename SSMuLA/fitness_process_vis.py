@@ -81,6 +81,14 @@ class LibData:
         return "".join(list(self.lib_info["codons"].values()))
 
     @property
+    def scale_type(self) -> str:
+        """Return the scale type"""
+        if self._scale_fit in ["max", "parent"]:
+            return f"scale2{self._scale_fit}"
+        else:
+            return "processed"
+    
+    @property
     def input_df(self) -> pd.DataFrame:
         """Return the input dataframe"""
         return pd.read_csv(self._input_csv)
@@ -156,14 +164,7 @@ class ProcessData(LibData):
 
         """Return the path to the output csv"""
 
-        if self._scale_fit == "parent":
-            replacewith = "scale2parent"
-        elif self._scale_fit == "max":
-            replacewith = "scale2max"
-        else:
-            replacewith = "processed"
-
-        output_csv = self._input_csv.replace("fitness_landscape", replacewith)
+        output_csv = self._input_csv.replace("fitness_landscape", self.scale_type)
         # check if the folder exists
         checkNgen_folder(output_csv)
 

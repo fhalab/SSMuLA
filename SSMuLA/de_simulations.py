@@ -579,33 +579,39 @@ def run_all_de_simulations(
 
     # get keys for characteristics
     char_keys = list(single_step_DE_char.keys())
-    char_sum_df = pd.DataFrame(columns=["lib"] + char_keys)
+    
+    # Create an initially empty DataFrame
+    char_sum_df = pd.DataFrame()
 
     for de_sim_name, de_sim_char in zip(
         ["single_step_DE", "recomb_SSM", f"top{N}_SSM"],
         [single_step_DE_char, recomb_SSM_char, top96_SSM_char],
     ):
-
-        char_sum_df = char_sum_df.append(
+        print({
+                "lib": lib_name,
+                "de_type": de_sim_name,
+                **de_sim_char,
+            })
+        
+        char_sum_df = char_sum_df._append(
             {
                 "lib": lib_name,
                 "de_type": de_sim_name,
                 **de_sim_char,
-            },
-            ignore_index=True,
+            }, ignore_index=True
         )
 
     return {
         "single_step_DE": single_step_DE,
         "recomb_SSM": recomb_SSM,
         f"top{N}_SSM": top96_SSM,
-    }, char_sum_df
+    }, char_sum_df.copy()
 
 
 # Run simulations for each library
 def run_all_lib_de_simulations(
     scale_types: list = ["scale2max", "scale2parent"],
-    de_opts: list = ["DE-active", "DE-all"],
+    de_opts: list = ["DE-active", "DE-0", "DE-all"],
 ):
     """
     Run all simulations for each library.
@@ -617,7 +623,7 @@ def run_all_lib_de_simulations(
     for scale_type in scale_types:
         for de_det in de_opts:
 
-            all_char_sum_df = pd.DataFrame()
+            all_char_sum_df_list = []
 
             # Run simulations for each library
             for lib in sorted(glob(f"data/*/{scale_type}/*.csv")):
@@ -638,6 +644,8 @@ def run_all_lib_de_simulations(
 
                 if de_det == "DE-all":
                     select_df = df.copy()
+                elif de_det == "DE-0":
+                    select_df = df[df["fitness"] >= 0].copy()
                 elif de_det == "DE-active":
                     select_df = df[df["active"] == True].copy()
 
@@ -656,8 +664,9 @@ def run_all_lib_de_simulations(
                     n_jobs=256,
                 )
 
-                all_char_sum_df = all_char_sum_df.append(char_sum_df)
+                all_char_sum_df_list.append(char_sum_df)
 
+            all_char_sum_df = pd.concat(all_char_sum_df_list, ignore_index=True)
             all_char_sum_df.to_csv(
                 f"{save_dir}/all_landscape_de_summary.csv", index=False
             )

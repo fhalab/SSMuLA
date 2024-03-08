@@ -34,6 +34,7 @@ dependencies:
   - ipywidgets
   - jinja2
   - jupyterlab
+  - jupyter_bokeh
   - matplotlib
   - multipledispatch        # required by graphein
   - mypy
