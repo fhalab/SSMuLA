@@ -51,7 +51,8 @@ class ZS_Analysis(LibData):
         ev_esm_folder: str = "ev_esm",
         triad_folder: str = "triad",
         filter_min_by: str = "none",
-        zs_dir: str = "results/zs_vis",
+        zs_comb_dir: str = "results/zs_comb",
+        zs_vis_dir: str = "results/zs_vis",
     ) -> None:
 
         """
@@ -63,7 +64,8 @@ class ZS_Analysis(LibData):
         - ev_esm_folder, str: the folder for the ev and esm scores
         - triad_folder, str: the folder for the triad scores
         - filter_min_by, str: the filter for the minimum fitness
-        - zs_dir, str: the folder for the ZS vis outputs
+        - zs_comb_dir, str: the folder for the ZS combed with fitness outputs
+        - zs_vis_dir, str: the folder for the ZS vis outputs
         """
 
         super().__init__(input_csv, scale_fit)
@@ -71,11 +73,15 @@ class ZS_Analysis(LibData):
         self._ev_esm_folder = os.path.normpath(ev_esm_folder)
         self._triad_folder = os.path.normpath(triad_folder)
         self._filter_min_by = filter_min_by
-        self._zs_dir = os.path.normpath(zs_dir)
+        self._zs_comb_dir = os.path.normpath(zs_comb_dir)
+        self._zs_vis_dir = os.path.normpath(zs_vis_dir)
 
         print(f"Get fitness data without stop codon from {self._input_csv}...")
         print(f"Get ev esm data from {self.ev_esm_path}...")
         print(f"Get triad data from {self.triad_path}...")
+
+        print(f"Save combed zs data to {self.zf_comb_path}...")
+        self.zs_df.to_csv(self.zf_comb_path, index=False)
 
         self._roc, self._zs_coord_dict = self._plot_roc()
         self._zs_fit_plot_dict = self._plot_zs_vs_fitness()
@@ -152,9 +158,7 @@ class ZS_Analysis(LibData):
             title=roc_name,
         )
 
-        save_bokeh_hv(
-            roc, plot_name=roc_name, plot_path=self.roc_folder
-        )
+        save_bokeh_hv(roc, plot_name=roc_name, plot_path=self.roc_folder)
 
         for k, v in zs_coord_dict.items():
             print(f"{k}: {v}")
@@ -266,7 +270,7 @@ class ZS_Analysis(LibData):
         Returns the path to the ev and esm scores
         """
         return f"{self._ev_esm_folder}/{self.lib_name}/{self.lib_name}.csv"
-    
+
     @property
     def ev_esm_df(self) -> pd.DataFrame:
         """
@@ -296,13 +300,13 @@ class ZS_Analysis(LibData):
 
     @property
     def triad_path(self) -> pd.DataFrame:
-            
+
         """
         Returns the path to triad scores
         """
 
         return f"{self._triad_folder}/{self.lib_name}/{self.lib_name}.csv"
-    
+
     @property
     def triad_df(self) -> pd.DataFrame:
 
@@ -328,12 +332,30 @@ class ZS_Analysis(LibData):
         ).copy()
 
     @property
+    def zf_comb_folder(self) -> str:
+        """
+        Returns the path to the ZF combined with fitness
+        """
+        return checkNgen_folder(
+            os.path.join(self._zs_comb_dir, self._filter_min_by, self.scale_type)
+        )
+
+    @property
+    def zf_comb_path(self) -> str:
+        """
+        Returns the path to the ZF combined with fitness
+        """
+        return os.path.join(self.zf_comb_folder, f"{self.lib_name}.csv")
+
+    @property
     def roc_folder(self) -> str:
         """
         Returns the folder path to the ROC curve
         """
-        return checkNgen_folder(os.path.join(self._zs_dir, "roc", self.scale_type))
-    
+        return checkNgen_folder(
+            os.path.join(self._zs_vis_dir, "roc", self._filter_min_by, self.scale_type)
+        )
+
     @property
     def roc(self) -> hv.Overlay:
         """
@@ -353,8 +375,12 @@ class ZS_Analysis(LibData):
         """
         Returns the folder path of zs vs fitness plots
         """
-        return checkNgen_folder(os.path.join(self._zs_dir, "vs_fitness", self.scale_type))
-    
+        return checkNgen_folder(
+            os.path.join(
+                self._zs_vis_dir, "vs_fitness", self._filter_min_by, self.scale_type
+            )
+        )
+
     @property
     def zs_fit_plot_dict(self) -> dict:
         """
@@ -369,7 +395,7 @@ def run_zs_analysis(
     ev_esm_folder: str = "ev_esm",
     triad_folder: str = "triad",
     filter_min_by: str = "none",
-    zs_dir="results/zs_sum",
+    zs_sum_dir="results/zs_sum",
 ) -> None:
 
     """
@@ -405,5 +431,6 @@ def run_zs_analysis(
             )
 
         zs_stat_df.to_csv(
-            f"{checkNgen_folder(zs_dir)}/zs_stat_scale2{scale_type}.csv", index=False
+            f"{checkNgen_folder(zs_sum_dir)}/{filter_min_by}/zs_stat_scale2{scale_type}.csv",
+            index=False,
         )

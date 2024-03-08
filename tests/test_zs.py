@@ -22,6 +22,6 @@ if __name__ == "__main__":
     )
     sys.stdout = f
 
-    run_zs_analysis()
+    run_zs_analysis(scale_types=["max"], filter_min_by="min0")
 
     f.close()

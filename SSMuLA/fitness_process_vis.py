@@ -92,6 +92,10 @@ class LibData:
     def input_df(self) -> pd.DataFrame:
         """Return the input dataframe"""
         return pd.read_csv(self._input_csv)
+    
+    @property
+    def df_length(self):
+        return len(self.input_df)
 
 
 class ProcessData(LibData):
