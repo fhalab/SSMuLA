@@ -20,6 +20,7 @@ from sklearn.model_selection import train_test_split
 
 from SSMuLA.aa_global import ALL_AAS
 from SSMuLA.fitness_process_vis import LibData
+from SSMuLA.util import checkNgen_folder
 
 
 # Copied from ProFET (Ofer & Linial, DOI: 10.1093/bioinformatics/btv345)
@@ -613,12 +614,15 @@ class MLDEDataset(LibData):
 
     def sample_top(self, cutoff: int, n_samples: int, seed: int) -> np.ndarray:
         """
-        Samples n_samples from the top triad scores based on a given cutoff in the ranking and a seed.
+        Samples n_samples from the top ZS scores 
+        based on a given cutoff in the ranking and a seed.
+        
         Args:
-            cutoff : number cutoff in the ranking
-            n_samples : number of samples to take
-            seed: seed for reproducibility
-        Output:
+        - cutoff : number cutoff in the ranking
+        - n_samples : number of samples to take
+        - seed: seed for reproducibility
+        
+        Returns:
             1D np.ndarray of sampled sequences
         """
         if self.df_length <= cutoff:
@@ -673,9 +677,11 @@ class MLDESim(MLDEDataset):
                  model_class: str,
                  n_samples: int,
                  n_splits: int = 5,
-                 n_subsets: int = 100,
+                 n_replicates: int = 100,
                  n_topseq: int = 384,
+                 n_topns: list[int] = [96, 384],
                  n_workers: int = 1,
+                 global_seed: int = 42,
                  verbose: bool = False,
                  save_pred: bool = True,
                  save_model: bool = False,
@@ -695,11 +701,12 @@ class MLDESim(MLDEDataset):
             ie. 'boosting'
         - n_samples: int, number of samples to train on
         - n_splits: int = 5, number of splits for cross-validation
-        - n_subsets: int = 100, number of subsets to train on
+        - n_replicates: int = 100, number of replicates
         - n_topseq: int = 384, number of top sequences to save
+        - n_topns: list[int] = [96, 384], number of top sequences to calculate max and mean fitness
         - n_workers: int = 1, number of workers for parallel processing
+        - global_seed: int = 42, global seed for reproducibility
         - verbose: bool = False, verbose output
-        - save_pred: bool = True, save predictions
         - save_model: bool = False, save models
         - scale_fit: str, scaling type
         - save_path: str, path to save results
@@ -719,171 +726,69 @@ class MLDESim(MLDEDataset):
         self._model_class = model_class
         self._n_samples = n_samples
         self._n_splits = n_splits
-        self._n_subsets = n_subsets
+        self._n_replicates = n_replicates
         self._n_topseq = n_topseq
+        self._n_topns = n_topns
         self._n_workers = n_workers
         self._verbose = verbose
-        self._save_pred = save_pred
         self._save_model = save_model
-        self._save_path = save_path
+        self._save_path = os.path.normpath(save_path)
 
         # init
-        self.top_seqs = np.full((self._n_solutions, self._n_subsets, self._n_topseq), "")
-        self.ndcgs = np.zeros((self._n_solutions, self._n_subsets))
-        self.maxes = np.zeros((self._n_solutions, self._n_subsets))
-        self.means = np.zeros((self._n_solutions, self._n_subsets))
-        self.unique = np.zeros((self._n_solutions, self._n_subsets))
-        self.labelled = np.zeros((self._n_solutions, self._n_subsets))
+        self.top_seqs = np.full((self._n_solutions, self._n_replicates, self._n_topseq), "")
+        self.ndcgs = np.zeros((self._n_solutions, self._n_replicates))
+        self.maxes = np.zeros((self._n_solutions, self._n_replicates))
+        self.means = np.zeros((self._n_solutions, self._n_replicates))
+        self.unique = np.zeros((self._n_solutions, self._n_replicates))
+        self.labelled = np.zeros((self._n_solutions, self._n_replicates))
+
+        # set up all random seeds
+        np.random.seed(global_seed)
+        random.seed(global_seed)
+        self._subset_seeds = [random.randint(0, 1000000) for _ in range(self._n_replicates)]
 
         self.encode_X(encoding=self._encoding)
 
         self.X_train_all = np.array(self.X)
 
         self.y_train_all = np.array(self.y)
-        self.y_preds_all = np.zeros((self.df_length, self._n_subsets, self._n_splits))
+        self.y_preds_all = np.zeros((self.df_length, self._n_replicates, self._n_splits))
 
-
-class MLDESim:
-    """Class for training and evaluating MLDE models."""
-
-    def __init__(
-        self,
-        zs_input_csv: str,
-        save_path: str,
-        encoding: str,
-        model_class: str,
-        n_samples: int,
-        model_config: dict,
-        data_config: dict,
-        train_config: dict,
-    ) -> None:
-        """
-        Args:
-        - zs_input_csv, str : path to the input csv file WITH ZS,
-            ie. results/zs_comb/none/scale2max/DHFR.csv
-        - save_path, str : path to save results
-        - encoding : encoding type
-        - model_class : model class
-        - n_samples : number of samples to train on
-        - model_config : model configuration
-        - data_config : data configuration
-        - train_config : training configuration
-
-        {
-        "data_config": {
-            "name": "GB1_fitness.csv",
-            "encoding": [
-                "one-hot"
-            ],
-            "library": [
-                149361,
-                32000,
-                16000,
-                8000,
-                4000
-            ],
-            "n_solutions": 5
-        },
-        "model_config": {
-            "name": [
-                "boosting"
-            ]
-        },
-        "train_config": {
-            "seed": 42,
-            "n_samples": [
-                384
-            ],
-            "n_splits": 5,
-            "n_subsets": 70,
-            "num_workers": 1,
-            "verbose": false,
-            "save_model": false
-        }
-    }
-        """
-        self.data_config = data_config
-        self.train_config = train_config
-        self.model_config = model_config
-        self.save_path = save_path
-        self.num_workers = train_config["num_workers"]
-
-        self.n_splits = train_config["n_splits"]
-        self.n_subsets = train_config["n_subsets"]
-        self.n_samples = n_samples
-
-        self.n_solutions = data_config["n_solutions"]
-        self.library = data_config["library"]
-
-        self.save_model = False
-        if "save_model" in train_config:
-            self.save_model = train_config["save_model"]
-
-        self.model_class = model_class
-
-        assert self.n_solutions == len(self.library)
-
-        self.top_seqs = np.full((self.n_solutions, self.n_subsets, 500), "")
-        self.ndcgs = np.zeros((self.n_solutions, self.n_subsets))
-        self.maxes = np.zeros((self.n_solutions, self.n_subsets))
-        self.means = np.zeros((self.n_solutions, self.n_subsets))
-        self.unique = np.zeros((self.n_solutions, self.n_subsets))
-        self.labelled = np.zeros((self.n_solutions, self.n_subsets))
-
-        # Sample and fix a random seed if not set in train_config
-        self.seed = train_config["seed"]
-        np.random.seed(self.seed)
-        random.seed(self.seed)
-
-        self.fitness_df = pd.read_csv("data/" + data_config["name"])
-        self.dataset = MLDEDataset(dataframe=self.fitness_df)
-
-        self.dataset.encode_X(encoding=encoding)
-
-        self.X_train_all = np.array(self.dataset.X)
-
-        self.y_train_all = np.array(self.dataset.y)
-        self.y_preds_all = np.zeros((self.dataset.N, self.n_subsets, self.n_splits))
-
-        self.all_combos = self.dataset.all_combos
-        self.n_sites = self.dataset.n_residues
 
     def train_all(self):
         """
         Loops through all libraries to be sampled from (n_solutions) and 
-        for each solution trains n_subsets of models. 
+        for each solution trains n_replicates of models. 
         Each model is an ensemble of n_splits models, 
         each trained on 90% of the subset selected randomly.
 
         Output: results for each of the models
         """
         with tqdm() as pbar:
-            pbar.reset(self.n_solutions * self.n_subsets * self.n_splits)
+            pbar.reset(self._n_solutions * self._n_replicates * self._n_splits)
             pbar.set_description("Training and evaluating")
 
-            for k in range(self.n_solutions):
+            for k in range(self._n_solutions):
 
-                cutoff = self.library[k]
+                cutoff = self._ft_libs[k]
    
-                for j in range(self.n_subsets):
-                    # need to check if the seeding process works the same way
-                    seqs = self.dataset.sample_top(
-                        cutoff, self.n_samples, self.seed + (k * self.n_subsets + j)
+                for j in range(self.n_replicates):
+                    
+                    seqs = self.sample_top(
+                        cutoff, self._n_samples, self._subset_seeds[j]
                     )
 
                     uniques = np.unique(seqs)
                     self.unique[k, j] = len(uniques)
-                    mask = self.dataset.get_mask(uniques)
+                    mask = self.get_mask(uniques)
                     self.labelled[k, j] = len(mask)
                     combos_train = []
 
-                    if self.save_model:
-                        save_dir = os.path.join(self.save_path, str(k), str(j))
-                        if not os.path.exists(save_dir):
-                            os.makedirs(save_dir)
-
-                    for i in range(self.n_splits):
-                        if self.n_splits > 1:
+                    if self._save_model:
+                        save_dir = checkNgen_folder(os.path.join(self._save_path, str(k), str(j)))
+                   
+                    for i in range(self._n_splits):
+                        if self._n_splits > 1:
                             # boostrap ensembling with 90% of the data
                             train_mask, validation_mask = train_test_split(
                                 mask, test_size=0.1, random_state=i
@@ -902,7 +807,7 @@ class MLDESim:
                         )
 
                         # remove this if you don't want to save the model
-                        if self.save_model:
+                        if self._save_model:
                             filename = "split" + str(i) + ".model"
                             clf.save_model(os.path.join(save_dir, filename))
 
@@ -918,7 +823,7 @@ class MLDESim:
                         self.maxes[k, j],
                         self.means[k, j],
                         self.top_seqs[k, j, :],
-                    ) = self.get_mlde_results(self.dataset.data, y_preds, uniques)
+                    ) = self.get_mlde_results(y_preds)
                     ndcg_value = ndcg(self.y_train_all, y_preds)
                     self.ndcgs[k, j] = ndcg_value
 
@@ -941,7 +846,8 @@ class MLDESim:
         y_validation: np.ndarray,
     ):
         """
-        Trains a single supervised ML model. Returns the predictions on the training set and the trained model.
+        Trains a single supervised ML model. 
+        Returns the predictions on the training set and the trained model.
         """
         if self.model_class == "boosting":
             clf = get_model(
@@ -958,33 +864,34 @@ class MLDESim:
         return y_preds, clf
 
     def get_mlde_results(
-        self, data2: pd.DataFrame, y_preds: np.ndarray, unique_seqs: list
+        self, y_preds: np.ndarray, topn: int
     ) -> tuple:
         """
         Calculates the MLDE results for a given set of predictions. 
         Returns the max and mean of the top 96 sequences and the top 500 sequences.
 
         Args:
-            data2: pandas dataframe with all sequences and fitness labels in the combinatorial space
             y_preds: the predictions on the training data
-            unique_seqs: the unique sequences in the training data
         """
-        data2["y_preds"] = y_preds
+
+        df = self.input_df.copy()
+        df["y_preds"] = y_preds
 
         ##optionally filter out the sequences in the training set
         # data2 = data2[~data2['Combo'].isin(unique_seqs)]
 
-        sorted = data2.sort_values(by=["y_preds"], ascending=False)
+        sorted = df.sort_values(by=["y_preds"], ascending=False)
 
-        top = sorted.iloc[:96, :]["fit"]
-        max_fit = np.max(top)
-        mean_fit = np.mean(top)
+        top_fit = sorted.iloc[:topn, :]["fitness"]
+        max_fit = np.max(top_fit)
+        mean_fit = np.mean(top_fit)
 
-        # save the top 500
-        top_seqs = sorted.iloc[:500, :]["Combo"].values
+        # save the top n sequeneces
+        top_seqs = sorted.iloc[:self._n_topseq, :]["AAs"].values
 
         ##for checking how many predictions are in the training set
         # top_seqs_96 = sorted.iloc[:96,:]['Combo'].values
         # print(len(np.intersect1d(np.array(unique_seqs), top_seqs_96)))
 
-        return max, mean, top_seqs
+        return max_fit, mean_fit, top_seqs
+
