@@ -516,70 +516,6 @@ encoding_dict = {
 }
 
 
-class MLDEDataset(LibData):
-    """Base class for labeled datasets linking sequence to fitness."""
-
-    def __init__(self, input_csv: str, zs_predictor: str, scale_fit: str = "max"):
-        """
-        Args:
-        - input_csv, str: path to the input csv file WITH ZS,
-            ie. results/zs_comb/none/scale2max/DHFR.csv
-        """
-
-        super().__init__(input_csv, scale_fit)
-
-        assert "zs" in self._input_csv, "Make sure the input csv has ZS scores"
-
-        self._zs_predictor = zs_predictor
-
-    def sample_top(self, cutoff: int, n_samples: int, seed: int) -> np.ndarray:
-        """
-        Samples n_samples from the top triad scores based on a given cutoff in the ranking and a seed.
-        Args:
-            cutoff : number cutoff in the ranking
-            n_samples : number of samples to take
-            seed: seed for reproducibility
-        Output:
-            1D np.ndarray of sampled sequences
-        """
-        if self.df_length <= cutoff:
-            sorted = self.input_df
-        else:
-            sorted = self.sorted_df[:cutoff]
-        
-        options = sorted["AAs"].values
-        np.random.seed(seed)
-        return np.random.choice(options, n_samples, replace=False)
-
-    def encode_X(self, encoding: str):
-        """
-        Encodes the input features based on the encoding type.
-        """
-        if encoding == 'one-hot':
-            self.X = np.array(encoding_dict[encoding](self.all_combos)) 
-            self.X = self.X.reshape(self.X.shape[0],-1) 
-
-        self.input_dim = self.X.shape[1]
-        self.n_residues = self.input_dim/len(ALL_AAS)
-    
-    def get_mask(self, seqs: list) -> list:
-        """
-        Returns an index mask for given sequences.
-        """
-        return list(self.input_df[self.input_df['AAs'].isin(seqs)].index)
-    
-    @property
-    def sorted_df(self):
-        return self.input_df.sort_values(by=self._zs_predictor, ascending=False)
-    
-    @property
-    def all_combos(self):
-        return self.input_df['AAs'].values
-    
-    @property
-    def y(self):
-        return self.input_df['fitness']
-
 ######## MODELS ########
 # code modified from https://github.com/google-research/slip/blob/main/models.py
 class KerasModelWrapper:
@@ -659,6 +595,154 @@ def ndcg(y_true, y_pred):
     return ndcg_score(y_true_normalized.reshape(1, -1), y_pred.reshape(1, -1))
 
 
+class MLDEDataset(LibData):
+    """Base class for labeled datasets linking sequence to fitness."""
+
+    def __init__(self, input_csv: str, zs_predictor: str, scale_fit: str = "max"):
+        """
+        Args:
+        - input_csv, str: path to the input csv file WITH ZS,
+            ie. results/zs_comb/none/scale2max/DHFR.csv
+        """
+
+        super().__init__(input_csv, scale_fit)
+
+        assert "zs" in self._input_csv, "Make sure the input csv has ZS scores"
+
+        self._zs_predictor = zs_predictor
+
+    def sample_top(self, cutoff: int, n_samples: int, seed: int) -> np.ndarray:
+        """
+        Samples n_samples from the top triad scores based on a given cutoff in the ranking and a seed.
+        Args:
+            cutoff : number cutoff in the ranking
+            n_samples : number of samples to take
+            seed: seed for reproducibility
+        Output:
+            1D np.ndarray of sampled sequences
+        """
+        if self.df_length <= cutoff:
+            sorted = self.input_df
+        else:
+            sorted = self.sorted_df[:cutoff]
+        
+        options = sorted["AAs"].values
+        np.random.seed(seed)
+        return np.random.choice(options, n_samples, replace=False)
+
+    def encode_X(self, encoding: str):
+        """
+        Encodes the input features based on the encoding type.
+        """
+        if encoding == 'one-hot':
+            self.X = np.array(encoding_dict[encoding](self.all_combos)) 
+            self.X = self.X.reshape(self.X.shape[0],-1) 
+
+        self.input_dim = self.X.shape[1]
+        self.n_residues = self.input_dim/len(ALL_AAS)
+    
+    def get_mask(self, seqs: list) -> list:
+        """
+        Returns an index mask for given sequences.
+        """
+        return list(self.input_df[self.input_df['AAs'].isin(seqs)].index)
+    
+    @property
+    def sorted_df(self):
+        return self.input_df.sort_values(by=self._zs_predictor, ascending=False)
+    
+    @property
+    def all_combos(self):
+        return self.input_df['AAs'].values
+    
+    @property
+    def y(self):
+        return self.input_df['fitness']
+
+class MLDESim(MLDEDataset):
+    """
+    Class for training and evaluating MLDE models
+    for a given dataset, encoding, and model class.
+    """
+
+    def __init__(self, 
+                 input_csv: str,
+                 zs_predictor: str,
+                 encoding: str,
+                 ft_libs: list[int] | None,
+                 model_class: str,
+                 n_samples: int,
+                 n_splits: int = 5,
+                 n_subsets: int = 100,
+                 n_topseq: int = 384,
+                 n_workers: int = 1,
+                 verbose: bool = False,
+                 save_pred: bool = True,
+                 save_model: bool = False,
+                 scale_fit: str = "max",
+                 save_path: str = "results",
+                 ) -> None:
+        
+        """
+        Args:
+        - input_csv: str, path to the input csv file WITH ZS,
+            ie. 'results/zs_comb/none/scale2max/DHFR.csv'
+        - zs_predictor: str, name of the ZS predictor
+        - encoding: str, encoding type
+        - ft_libs: list[int] | None = None, list of sizes of focused training libraries
+            ie. [149361, 32000, 16000, 8000, 4000]
+        - model_class: str, model class
+            ie. 'boosting'
+        - n_samples: int, number of samples to train on
+        - n_splits: int = 5, number of splits for cross-validation
+        - n_subsets: int = 100, number of subsets to train on
+        - n_topseq: int = 384, number of top sequences to save
+        - n_workers: int = 1, number of workers for parallel processing
+        - verbose: bool = False, verbose output
+        - save_pred: bool = True, save predictions
+        - save_model: bool = False, save models
+        - scale_fit: str, scaling type
+        - save_path: str, path to save results
+        """
+
+        super().__init__(input_csv, zs_predictor, scale_fit)
+
+        assert self.input_df[self.input_df["AA"].str.contains("\*")] == 0, "Make sure there are no stop codons in the input data"
+
+        self._encoding = encoding
+
+        if ft_libs is not None:
+            self._ft_libs = ft_libs
+        else:
+            self._ft_libs = [self.df_length]
+
+        self._model_class = model_class
+        self._n_samples = n_samples
+        self._n_splits = n_splits
+        self._n_subsets = n_subsets
+        self._n_topseq = n_topseq
+        self._n_workers = n_workers
+        self._verbose = verbose
+        self._save_pred = save_pred
+        self._save_model = save_model
+        self._save_path = save_path
+
+        # init
+        self.top_seqs = np.full((self._n_solutions, self._n_subsets, self._n_topseq), "")
+        self.ndcgs = np.zeros((self._n_solutions, self._n_subsets))
+        self.maxes = np.zeros((self._n_solutions, self._n_subsets))
+        self.means = np.zeros((self._n_solutions, self._n_subsets))
+        self.unique = np.zeros((self._n_solutions, self._n_subsets))
+        self.labelled = np.zeros((self._n_solutions, self._n_subsets))
+
+        self.encode_X(encoding=self._encoding)
+
+        self.X_train_all = np.array(self.X)
+
+        self.y_train_all = np.array(self.y)
+        self.y_preds_all = np.zeros((self.df_length, self._n_subsets, self._n_splits))
+
+
 class MLDESim:
     """Class for training and evaluating MLDE models."""
 
@@ -678,12 +762,45 @@ class MLDESim:
         - zs_input_csv, str : path to the input csv file WITH ZS,
             ie. results/zs_comb/none/scale2max/DHFR.csv
         - save_path, str : path to save results
-        encoding : encoding type
-        model_class : model class
-        n_samples : number of samples to train on
-        model_config : model configuration
-        data_config : data configuration
-        train_config : training configuration
+        - encoding : encoding type
+        - model_class : model class
+        - n_samples : number of samples to train on
+        - model_config : model configuration
+        - data_config : data configuration
+        - train_config : training configuration
+
+        {
+        "data_config": {
+            "name": "GB1_fitness.csv",
+            "encoding": [
+                "one-hot"
+            ],
+            "library": [
+                149361,
+                32000,
+                16000,
+                8000,
+                4000
+            ],
+            "n_solutions": 5
+        },
+        "model_config": {
+            "name": [
+                "boosting"
+            ]
+        },
+        "train_config": {
+            "seed": 42,
+            "n_samples": [
+                384
+            ],
+            "n_splits": 5,
+            "n_subsets": 70,
+            "num_workers": 1,
+            "verbose": false,
+            "save_model": false
+        }
+    }
         """
         self.data_config = data_config
         self.train_config = train_config
@@ -706,7 +823,7 @@ class MLDESim:
 
         assert self.n_solutions == len(self.library)
 
-        self.top_seqs = np.full((self.n_solutions, self.n_subsets, 500), "VDGV")
+        self.top_seqs = np.full((self.n_solutions, self.n_subsets, 500), "")
         self.ndcgs = np.zeros((self.n_solutions, self.n_subsets))
         self.maxes = np.zeros((self.n_solutions, self.n_subsets))
         self.means = np.zeros((self.n_solutions, self.n_subsets))
@@ -724,7 +841,6 @@ class MLDESim:
         self.dataset.encode_X(encoding=encoding)
 
         self.X_train_all = np.array(self.dataset.X)
-        # np.save('/home/jyang4/repos/DeCOIL/one_hot.npy', self.X_train_all)
 
         self.y_train_all = np.array(self.dataset.y)
         self.y_preds_all = np.zeros((self.dataset.N, self.n_subsets, self.n_splits))
@@ -793,7 +909,8 @@ class MLDESim:
                         self.y_preds_all[:, j, i] = y_preds
                         pbar.update()
 
-                    # need to redo some of these, loop was in wrong place? but it should be fine cause it gets replaced to the correct mean at the end
+                    # need to redo some of these, loop was in wrong place? 
+                    # but it should be fine cause it gets replaced to the correct mean at the end
                     means = np.mean(self.y_preds_all, axis=2)
                     y_preds = means[:, j]
 
@@ -860,8 +977,8 @@ class MLDESim:
         sorted = data2.sort_values(by=["y_preds"], ascending=False)
 
         top = sorted.iloc[:96, :]["fit"]
-        max = np.max(top)
-        mean = np.mean(top)
+        max_fit = np.max(top)
+        mean_fit = np.mean(top)
 
         # save the top 500
         top_seqs = sorted.iloc[:500, :]["Combo"].values
