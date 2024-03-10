@@ -19,477 +19,9 @@ from sklearn import linear_model
 from sklearn.metrics import ndcg_score
 from sklearn.model_selection import train_test_split
 
+from SSMuLA.aa_global import ALL_AAS, georgiev_parameters
+from SSMuLA.landscape_global import LibData
 from SSMuLA.util import checkNgen_folder, get_file_name
-
-
-ALL_AAS = (
-    "A",
-    "C",
-    "D",
-    "E",
-    "F",
-    "G",
-    "H",
-    "I",
-    "K",
-    "L",
-    "M",
-    "N",
-    "P",
-    "Q",
-    "R",
-    "S",
-    "T",
-    "V",
-    "W",
-    "Y",
-)
-num_tokens = len(ALL_AAS)
-
-# Copied from ProFET (Ofer & Linial, DOI: 10.1093/bioinformatics/btv345)
-# Original comment by the ProFET authors: 'Acquired from georgiev's paper of
-# AAscales using helper script "GetTextData.py". + RegEx cleaning DOI: 10.1089/cmb.2008.0173'
-gg_1 = {
-    "Q": -2.54,
-    "L": 2.72,
-    "T": -0.65,
-    "C": 2.66,
-    "I": 3.1,
-    "G": 0.15,
-    "V": 2.64,
-    "K": -3.89,
-    "M": 1.89,
-    "F": 3.12,
-    "N": -2.02,
-    "R": -2.8,
-    "H": -0.39,
-    "E": -3.08,
-    "W": 1.89,
-    "A": 0.57,
-    "D": -2.46,
-    "Y": 0.79,
-    "S": -1.1,
-    "P": -0.58,
-}
-gg_2 = {
-    "Q": 1.82,
-    "L": 1.88,
-    "T": -1.6,
-    "C": -1.52,
-    "I": 0.37,
-    "G": -3.49,
-    "V": 0.03,
-    "K": 1.47,
-    "M": 3.88,
-    "F": 0.68,
-    "N": -1.92,
-    "R": 0.31,
-    "H": 1,
-    "E": 3.45,
-    "W": -0.09,
-    "A": 3.37,
-    "D": -0.66,
-    "Y": -2.62,
-    "S": -2.05,
-    "P": -4.33,
-}
-gg_3 = {
-    "Q": -0.82,
-    "L": 1.92,
-    "T": -1.39,
-    "C": -3.29,
-    "I": 0.26,
-    "G": -2.97,
-    "V": -0.67,
-    "K": 1.95,
-    "M": -1.57,
-    "F": 2.4,
-    "N": 0.04,
-    "R": 2.84,
-    "H": -0.63,
-    "E": 0.05,
-    "W": 4.21,
-    "A": -3.66,
-    "D": -0.57,
-    "Y": 4.11,
-    "S": -2.19,
-    "P": -0.02,
-}
-gg_4 = {
-    "Q": -1.85,
-    "L": 5.33,
-    "T": 0.63,
-    "C": -3.77,
-    "I": 1.04,
-    "G": 2.06,
-    "V": 2.34,
-    "K": 1.17,
-    "M": -3.58,
-    "F": -0.35,
-    "N": -0.65,
-    "R": 0.25,
-    "H": -3.49,
-    "E": 0.62,
-    "W": -2.77,
-    "A": 2.34,
-    "D": 0.14,
-    "Y": -0.63,
-    "S": 1.36,
-    "P": -0.21,
-}
-gg_5 = {
-    "Q": 0.09,
-    "L": 0.08,
-    "T": 1.35,
-    "C": 2.96,
-    "I": -0.05,
-    "G": 0.7,
-    "V": 0.64,
-    "K": 0.53,
-    "M": -2.55,
-    "F": -0.88,
-    "N": 1.61,
-    "R": 0.2,
-    "H": 0.05,
-    "E": -0.49,
-    "W": 0.72,
-    "A": -1.07,
-    "D": 0.75,
-    "Y": 1.89,
-    "S": 1.78,
-    "P": -8.31,
-}
-gg_6 = {
-    "Q": 0.6,
-    "L": 0.09,
-    "T": -2.45,
-    "C": -2.23,
-    "I": -1.18,
-    "G": 7.47,
-    "V": -2.01,
-    "K": 0.1,
-    "M": 2.07,
-    "F": 1.62,
-    "N": 2.08,
-    "R": -0.37,
-    "H": 0.41,
-    "E": 0,
-    "W": 0.86,
-    "A": -0.4,
-    "D": 0.24,
-    "Y": -0.53,
-    "S": -3.36,
-    "P": -1.82,
-}
-gg_7 = {
-    "Q": 0.25,
-    "L": 0.27,
-    "T": -0.65,
-    "C": 0.44,
-    "I": -0.21,
-    "G": 0.41,
-    "V": -0.33,
-    "K": 4.01,
-    "M": 0.84,
-    "F": -0.15,
-    "N": 0.4,
-    "R": 3.81,
-    "H": 1.61,
-    "E": -5.66,
-    "W": -1.07,
-    "A": 1.23,
-    "D": -5.15,
-    "Y": -1.3,
-    "S": 1.39,
-    "P": -0.12,
-}
-gg_8 = {
-    "Q": 2.11,
-    "L": -4.06,
-    "T": 3.43,
-    "C": -3.49,
-    "I": 3.45,
-    "G": 1.62,
-    "V": 3.93,
-    "K": -0.01,
-    "M": 1.85,
-    "F": -0.41,
-    "N": -2.47,
-    "R": 0.98,
-    "H": -0.6,
-    "E": -0.11,
-    "W": -1.66,
-    "A": -2.32,
-    "D": -1.17,
-    "Y": 1.31,
-    "S": -1.21,
-    "P": -1.18,
-}
-gg_9 = {
-    "Q": -1.92,
-    "L": 0.43,
-    "T": 0.34,
-    "C": 2.22,
-    "I": 0.86,
-    "G": -0.47,
-    "V": -0.21,
-    "K": -0.26,
-    "M": -2.05,
-    "F": 4.2,
-    "N": -0.07,
-    "R": 2.43,
-    "H": 3.55,
-    "E": 1.49,
-    "W": -5.87,
-    "A": -2.01,
-    "D": 0.73,
-    "Y": -0.56,
-    "S": -2.83,
-    "P": 0,
-}
-gg_10 = {
-    "Q": -1.67,
-    "L": -1.2,
-    "T": 0.24,
-    "C": -3.78,
-    "I": 1.98,
-    "G": -2.9,
-    "V": 1.27,
-    "K": -1.66,
-    "M": 0.78,
-    "F": 0.73,
-    "N": 7.02,
-    "R": -0.99,
-    "H": 1.52,
-    "E": -2.26,
-    "W": -0.66,
-    "A": 1.31,
-    "D": 1.5,
-    "Y": -0.95,
-    "S": 0.39,
-    "P": -0.66,
-}
-gg_11 = {
-    "Q": 0.7,
-    "L": 0.67,
-    "T": -0.53,
-    "C": 1.98,
-    "I": 0.89,
-    "G": -0.98,
-    "V": 0.43,
-    "K": 5.86,
-    "M": 1.53,
-    "F": -0.56,
-    "N": 1.32,
-    "R": -4.9,
-    "H": -2.28,
-    "E": -1.62,
-    "W": -2.49,
-    "A": -1.14,
-    "D": 1.51,
-    "Y": 1.91,
-    "S": -2.92,
-    "P": 0.64,
-}
-gg_12 = {
-    "Q": -0.27,
-    "L": -0.29,
-    "T": 1.91,
-    "C": -0.43,
-    "I": -1.67,
-    "G": -0.62,
-    "V": -1.71,
-    "K": -0.06,
-    "M": 2.44,
-    "F": 3.54,
-    "N": -2.44,
-    "R": 2.09,
-    "H": -3.12,
-    "E": -3.97,
-    "W": -0.3,
-    "A": 0.19,
-    "D": 5.61,
-    "Y": -1.26,
-    "S": 1.27,
-    "P": -0.92,
-}
-gg_13 = {
-    "Q": -0.99,
-    "L": -2.47,
-    "T": 2.66,
-    "C": -1.03,
-    "I": -1.02,
-    "G": -0.11,
-    "V": -2.93,
-    "K": 1.38,
-    "M": -0.26,
-    "F": 5.25,
-    "N": 0.37,
-    "R": -3.08,
-    "H": -1.45,
-    "E": 2.3,
-    "W": -0.5,
-    "A": 1.66,
-    "D": -3.85,
-    "Y": 1.57,
-    "S": 2.86,
-    "P": -0.37,
-}
-gg_14 = {
-    "Q": -1.56,
-    "L": -4.79,
-    "T": -3.07,
-    "C": 0.93,
-    "I": -1.21,
-    "G": 0.15,
-    "V": 4.22,
-    "K": 1.78,
-    "M": -3.09,
-    "F": 1.73,
-    "N": -0.89,
-    "R": 0.82,
-    "H": -0.77,
-    "E": -0.06,
-    "W": 1.64,
-    "A": 4.39,
-    "D": 1.28,
-    "Y": 0.2,
-    "S": -1.88,
-    "P": 0.17,
-}
-gg_15 = {
-    "Q": 6.22,
-    "L": 0.8,
-    "T": 0.2,
-    "C": 1.43,
-    "I": -1.78,
-    "G": -0.53,
-    "V": 1.06,
-    "K": -2.71,
-    "M": -1.39,
-    "F": 2.14,
-    "N": 3.13,
-    "R": 1.32,
-    "H": -4.18,
-    "E": -0.35,
-    "W": -0.72,
-    "A": 0.18,
-    "D": -1.98,
-    "Y": -0.76,
-    "S": -2.42,
-    "P": 0.36,
-}
-gg_16 = {
-    "Q": -0.18,
-    "L": -1.43,
-    "T": -2.2,
-    "C": 1.45,
-    "I": 5.71,
-    "G": 0.35,
-    "V": -1.31,
-    "K": 1.62,
-    "M": -1.02,
-    "F": 1.1,
-    "N": 0.79,
-    "R": 0.69,
-    "H": -2.91,
-    "E": 1.51,
-    "W": 1.75,
-    "A": -2.6,
-    "D": 0.05,
-    "Y": -5.19,
-    "S": 1.75,
-    "P": 0.08,
-}
-gg_17 = {
-    "Q": 2.72,
-    "L": 0.63,
-    "T": 3.73,
-    "C": -1.15,
-    "I": 1.54,
-    "G": 0.3,
-    "V": -1.97,
-    "K": 0.96,
-    "M": -4.32,
-    "F": 0.68,
-    "N": -1.54,
-    "R": -2.62,
-    "H": 3.37,
-    "E": -2.29,
-    "W": 2.73,
-    "A": 1.49,
-    "D": 0.9,
-    "Y": -2.56,
-    "S": -2.77,
-    "P": 0.16,
-}
-gg_18 = {
-    "Q": 4.35,
-    "L": -0.24,
-    "T": -5.46,
-    "C": -1.64,
-    "I": 2.11,
-    "G": 0.32,
-    "V": -1.21,
-    "K": -1.09,
-    "M": -1.34,
-    "F": 1.46,
-    "N": -1.71,
-    "R": -1.49,
-    "H": 1.87,
-    "E": -1.47,
-    "W": -2.2,
-    "A": 0.46,
-    "D": 1.38,
-    "Y": 2.87,
-    "S": 3.36,
-    "P": -0.34,
-}
-gg_19 = {
-    "Q": 0.92,
-    "L": 1.01,
-    "T": -0.73,
-    "C": -1.05,
-    "I": -4.18,
-    "G": 0.05,
-    "V": 4.77,
-    "K": 1.36,
-    "M": 0.09,
-    "F": 2.33,
-    "N": -0.25,
-    "R": -2.57,
-    "H": 2.17,
-    "E": 0.15,
-    "W": 0.9,
-    "A": -4.22,
-    "D": -0.03,
-    "Y": -3.43,
-    "S": 2.67,
-    "P": 0.04,
-}
-
-# Package all georgiev parameters
-georgiev_parameters = [
-    gg_1,
-    gg_2,
-    gg_3,
-    gg_4,
-    gg_5,
-    gg_6,
-    gg_7,
-    gg_8,
-    gg_9,
-    gg_10,
-    gg_11,
-    gg_12,
-    gg_13,
-    gg_14,
-    gg_15,
-    gg_16,
-    gg_17,
-    gg_18,
-    gg_19,
-]
 
 
 def get_georgiev_params_for_aa(aa):
@@ -539,41 +71,43 @@ def generate_georgiev(seqs: list) -> np.ndarray:
 encoding_dict = {"one-hot": generate_onehot, "georgiev": generate_georgiev}
 
 
-class Dataset:
+class MLDEDataset(LibData):
     """Base class for labeled datasets linking sequence to fitness."""
 
-    def __init__(self, dataframe, zs_predictor: str):
-
-        self.data = dataframe
-        self.N = len(self.data)
-        if zs_predictor in self.data.columns:
-            self.sorted_data = self.data.sort_values(
-                by=zs_predictor, ascending=False
-            ).copy()
-        else:
-            print("No ZS predictor found in the dataframe. No sorting. Not ft lib")
-            self.sorted_data = self.data.copy()
-        self.all_combos = self.data["AAs"].values
-        self.y = self.data["fitness"]
-
-    def sample_top(self, cutoff: int, n_samples: int, seed: int) -> np.ndarray:
+    def __init__(self, input_csv: str, zs_predictor: str, scale_fit: str = "max"):
         """
-        Samples n_samples from the top triad scores based on a given cutoff in the ranking and a seed.
         Args:
-            cutoff : number cutoff in the ranking
-            n_samples : number of samples to take
-            seed: seed for reproducibility
-        Output:
+        - input_csv, str: path to the input csv file WITH ZS,
+            ie. results/zs_comb/none/scale2max/DHFR.csv
+        """
+
+        super().__init__(input_csv, scale_fit)
+
+        assert "zs" in self._input_csv, "Make sure the input csv has ZS scores"
+
+        self._zs_predictor = zs_predictor
+
+    def sample_top(self, cutoff: int, n_sample: int, seed: int) -> np.ndarray:
+        """
+        Samples n_samples from the top ZS scores
+        based on a given cutoff in the ranking and a seed.
+
+        Args:
+        - cutoff : number cutoff in the ranking
+        - n_sample : number of samples to take
+        - seed: seed for reproducibility
+
+        Returns:
             1D np.ndarray of sampled sequences
         """
-        if self.N <= cutoff:
-            sorted = self.data
+        if self.df_length <= cutoff:
+            sorted = self.input_df.copy()
         else:
-            sorted = self.sorted_data[:cutoff]
+            sorted = self.sorted_df[:cutoff].copy()
 
         options = sorted["AAs"].values
         np.random.seed(seed)
-        return np.random.choice(options, n_samples, replace=False)
+        return np.random.choice(options, n_sample, replace=False).copy()
 
     def encode_X(self, encoding: str):
         """
@@ -583,14 +117,33 @@ class Dataset:
             self.X = np.array(encoding_dict[encoding](self.all_combos))
             self.X = self.X.reshape(self.X.shape[0], -1)
 
-        self.input_dim = self.X.shape[1]
-        self.n_residues = self.input_dim / len(ALL_AAS)
+        self._n_sites = self.X.shape[1] / len(ALL_AAS)
 
     def get_mask(self, seqs: list) -> list:
         """
         Returns an index mask for given sequences.
         """
-        return list(self.data[self.data["AAs"].isin(seqs)].index)
+        return list(self.input_df[self.input_df["AAs"].isin(seqs)].index)
+
+    @property
+    def sorted_df(self):
+        if self._zs_predictor not in self.input_df.columns:
+            print(
+                f"ZS predictor {self._zs_predictor} not in input dataframe - dataframe NOT sorted."
+            )
+            return self.input_df.copy()
+        else:
+            return self.input_df.sort_values(
+                by=self._zs_predictor, ascending=False
+            ).copy()
+
+    @property
+    def all_combos(self):
+        return self.input_df["AAs"].values.copy()
+
+    @property
+    def y(self):
+        return self.input_df["fitness"].copy()
 
 
 # code modified from https://github.com/google-research/slip/blob/main/models.py
@@ -671,91 +224,99 @@ def ndcg(y_true, y_pred):
     return ndcg_score(y_true_normalized.reshape(1, -1), y_pred.reshape(1, -1))
 
 
-class MLDESim:
+class MLDESim(MLDEDataset):
     """Class for training and evaluating MLDE models."""
 
     def __init__(
         self,
-        save_path: str,
+        input_csv: str,
+        zs_predictor: str,
         encoding: str,
         model_class: str,
-        n_samples: int,
-        model_config: dict,
-        data_config: dict,
-        train_config: dict,
-        eval_config: dict,
+        n_sample: int,
+        n_split: int = 5,
+        n_replicate: int = 100,
+        n_top: int = 384,
+        n_worker: int = 1,
+        global_seed: int = 42,
+        verbose: bool = False,
+        save_model: bool = False,
+        ft_libs: list[float] = [1],
+        scale_fit: str = "max",
+        save_path: str = "results/mlde",
     ) -> None:
 
         """
         Args:
-        - save_path : path to save results
-        - encoding : encoding type
-        - model_class : model class
-        - n_samples : number of samples to train on
-        - model_config : model configuration
-        - data_config : data configuration
-        - train_config : training configuration
-        - eval_config : evaluation configuration
+        - input_csv: str, path to the input csv file WITH ZS,
+            ie. 'results/zs_comb/none/scale2max/DHFR.csv'
+        - zs_predictor: str, name of the ZS predictor
+        - encoding: str, encoding type
+        - ft_libs: list[float] = [1], list of percent of focused training libraries
+            ie. [1, 0.5, 0.25, 0.125]
+        - model_class: str, model class
+            ie. 'boosting'
+        - n_sample: int, number of samples to train on
+        - n_split: int = 5, number of splits for cross-validation
+        - n_replicate: int = 100, number of replicates
+        - n_top: int = 384, number of top sequences to calculate max and mean fitness
+        - n_worker: int = 1, number of workers for parallel processing
+        - global_seed: int = 42, global seed for reproducibility
+        - verbose: bool = False, verbose output
+        - save_model: bool = False, save models
+        - scale_fit: str, scaling type
+        - save_path: str, path to save results
         """
 
-        self.data_config = data_config
-        self.train_config = train_config
-        self.model_config = model_config
-        self.save_path = save_path
-        self.num_workers = train_config["num_workers"]
+        super().__init__(input_csv, zs_predictor, scale_fit)
 
-        self.n_splits = train_config["n_splits"]
-        self._n_replicate = train_config["n_subsets"]
-        self.n_samples = n_samples
+        assert (
+            len(self.input_df[self.input_df["AAs"].str.contains("\*")]) == 0
+        ), "Make sure there are no stop codons in the input data"
 
-        self.library = data_config["library"]
-        self.zs_predictor = data_config["zs_predictor"]
+        self._encoding = encoding
 
-        self.n_solutions = len(self.library)
+        if ft_libs != [1]:
+            self._ft_libs = [f * len(ALL_AAS) ** self.n_sites for f in ft_libs if f < 1]
+            print(self._ft_libs)
+        else:
+            self._ft_libs = [self.df_length]
 
-        self.save_model = False
-        if "save_model" in train_config:
-            self.save_model = train_config["save_model"]
+        self._n_solution = len(self._ft_libs)
 
-        self.n_top = eval_config["n_top"]
+        self._model_class = model_class
+        self._n_sample = n_sample
+        self._n_split = n_split
+        self._n_replicate = n_replicate
+        self._n_top = n_top
+        self._n_worker = n_worker
+        self._verbose = verbose
+        self._save_model = save_model
+        self._save_path = checkNgen_folder(os.path.normpath(save_path))
 
-        self.model_class = model_class
+        # init
+        self.top_seqs = np.full((self._n_solution, self._n_replicate, self._n_top), "")
+        self.ndcgs = np.zeros((self._n_solution, self._n_replicate))
+        self.maxes = np.copy(self.ndcgs)
+        self.means = np.copy(self.ndcgs)
+        self.unique = np.copy(self.ndcgs)
+        self.labelled = np.copy(self.ndcgs)
+        self.y_preds = np.zeros((self._n_solution, self._n_replicate, self.df_length))
 
-        self.top_seqs = np.full((self.n_solutions, self._n_replicate, self.n_top), "")
-        self.ndcgs = np.zeros((self.n_solutions, self._n_replicate))
-        self.maxes = np.zeros((self.n_solutions, self._n_replicate))
-        self.means = np.zeros((self.n_solutions, self._n_replicate))
-        self.unique = np.zeros((self.n_solutions, self._n_replicate))
-        self.labelled = np.zeros((self.n_solutions, self._n_replicate))
-
-        # Sample and fix a random seed if not set in train_config
-        self.seed = train_config["seed"]
-        np.random.seed(self.seed)
-        random.seed(self.seed)
-
+        # set up all random seeds
+        np.random.seed(global_seed)
+        random.seed(global_seed)
         self._subset_seeds = deepcopy(
             [random.randint(0, 1000000) for _ in range(self._n_replicate)]
         )
 
-        # TODO make folder option a parameter
-        self.fitness_df = pd.read_csv(
-            "results/zs_comb/none/scale2max/" + data_config["name"]
-        )
-        self.dataset = Dataset(
-            dataframe=self.fitness_df, zs_predictor=self.zs_predictor
-        )
-        self.y_preds = np.zeros((self.n_solutions, self._n_replicate, self.dataset.N))
+        self.encode_X(encoding=self._encoding)
 
-        self.dataset.encode_X(encoding=encoding)
+        self.X_train_all = np.array(self.X)
+        self.y_train_all = np.array(self.y)
 
-        self.X_train_all = np.array(self.dataset.X)
-        # np.save('/home/jyang4/repos/DeCOIL/one_hot.npy', self.X_train_all)
-
-        self.y_train_all = np.array(self.dataset.y)
-        self.y_preds_all = np.zeros((self.dataset.N, self._n_replicate, self.n_splits))
-
-        self.all_combos = self.dataset.all_combos
-        self.n_sites = self.dataset.n_residues
+        # init for all the predictions for taking avg over n_splits
+        self.y_preds_all = np.zeros((self.df_length, self._n_replicate, self._n_split))
 
     def train_all(self):
         """
@@ -767,33 +328,33 @@ class MLDESim:
         Output: results for each of the models
         """
         with tqdm() as pbar:
-            pbar.reset(self.n_solutions * self._n_replicate * self.n_splits)
+            pbar.reset(self._n_solution * self._n_replicate * self._n_split)
             pbar.set_description("Training and evaluating")
 
-            for k in range(self.n_solutions):
+            for k in range(self._n_solution):
 
-                cutoff = self.library[k]
+                cutoff = self._ft_libs[k]
 
                 for j in range(self._n_replicate):
                     # need to check if the seeding process works the same way
 
-                    seqs = self.dataset.sample_top(
-                        cutoff, self.n_samples, self._subset_seeds[j]
+                    seqs = self.sample_top(
+                        cutoff, self._n_sample, self._subset_seeds[j]
                     )
 
                     uniques = np.unique(seqs)
                     self.unique[k, j] = len(uniques)
-                    mask = self.dataset.get_mask(uniques)
+                    mask = self.get_mask(uniques)
                     self.labelled[k, j] = len(mask)
                     combos_train = []
 
-                    if self.save_model:
-                        save_dir = os.path.join(self.save_path, str(k), str(j))
-                        if not os.path.exists(save_dir):
-                            os.makedirs(save_dir)
+                    if self._save_model:
+                        save_dir = checkNgen_folder(
+                            os.path.join(self._save_path, str(k), str(j))
+                        )
 
-                    for i in range(self.n_splits):
-                        if self.n_splits > 1:
+                    for i in range(self._n_split):
+                        if self._n_split > 1:
                             # boostrap ensembling with 90% of the data
                             train_mask, validation_mask = train_test_split(
                                 mask, test_size=0.1, random_state=i
@@ -812,7 +373,7 @@ class MLDESim:
                         )
 
                         # remove this if you don't want to save the model
-                        if self.save_model:
+                        if self._save_model:
                             filename = "split" + str(i) + ".model"
                             clf.save_model(os.path.join(save_dir, filename))
 
@@ -828,7 +389,7 @@ class MLDESim:
                         self.maxes[k, j],
                         self.means[k, j],
                         self.top_seqs[k, j, :],
-                    ) = self.get_mlde_results(self.dataset.data, y_preds)
+                    ) = self.get_mlde_results(y_preds)
 
                     ndcg_value = ndcg(self.y_train_all, y_preds)
                     self.ndcgs[k, j] = ndcg_value
@@ -858,14 +419,14 @@ class MLDESim:
         Trains a single supervised ML model.
         Returns the predictions on the training set and the trained model.
         """
-        if self.model_class == "boosting":
+        if self._model_class == "boosting":
             clf = get_model(
-                self.model_class, model_kwargs={"nthread": self.num_workers}
+                self._model_class, model_kwargs={"nthread": self._n_worker}
             )
             eval_set = [(X_validation, y_validation)]
             clf.fit(X_train, y_train, eval_set=eval_set, verbose=False)
         else:
-            clf = get_model(self.model_class, model_kwargs={})
+            clf = get_model(self._model_class, model_kwargs={})
             clf.fit(X_train, y_train)
 
         y_preds = clf.predict(self.X_train_all)
@@ -874,7 +435,6 @@ class MLDESim:
 
     def get_mlde_results(
         self,
-        data2: pd.DataFrame,
         y_preds: np.ndarray,
     ) -> tuple:
         """
@@ -886,19 +446,21 @@ class MLDESim:
             y_preds: the predictions on the training data
             unique_seqs: the unique sequences in the training data
         """
-        data2["y_preds"] = y_preds
+
+        df = self.input_df.copy()
+        df["y_preds"] = y_preds
 
         ##optionally filter out the sequences in the training set
         # data2 = data2[~data2['Combo'].isin(unique_seqs)]
 
-        sorted = data2.sort_values(by=["y_preds"], ascending=False)
+        sorted = df.sort_values(by=["y_preds"], ascending=False)
 
-        top_fit = sorted.iloc[: self.n_top, :]["fitness"]
+        top_fit = sorted.iloc[: self._n_top, :]["fitness"]
         max_fit = np.max(top_fit)
         mean_fit = np.mean(top_fit)
 
-        # save the top 500
-        top_seqs = sorted.iloc[: self.n_top, :]["AAs"].values
+        # save the top
+        top_seqs = sorted.iloc[: self._n_top, :]["AAs"].astype(str).values
 
         ##for checking how many predictions are in the training set
         # top_seqs_96 = sorted.iloc[:96,:]['Combo'].values
@@ -907,51 +469,93 @@ class MLDESim:
         return max_fit, mean_fit, top_seqs
 
 
-def run_mlde_lite(config_file_name, exp_name=""):
+def run_mlde_lite(
+    input_csv: str,
+    zs_predictor: str,
+    scale_fit: str = "max",
+    filter_min_by: str = "none",
+    encodings: list[str] = ["one-hot"],
+    ft_libs: list[float] = [1],
+    model_classes: list[str] = ["boosting", "ridge"],
+    n_samples: list[int] = [384],
+    n_split: int = 5,
+    n_replicate: int = 100,
+    n_top: int = 384,
+    n_worker: int = 1,
+    global_seed: int = 42,
+    verbose: bool = False,
+    save_model: bool = False,
+    mlde_folder: str = "results/mlde",
+    exp_name="",
+):
 
-    # Get JSON config file
-    config_file = os.path.join("mlde", "configs", config_file_name)
+    """
+    Run MLDE
 
-    # Get experiment name
-    # Experiment should be either named the library optimization procedure or random sampling
-    exp_name = exp_name if len(exp_name) > 0 else config_file_name
+    Args:
+    - input_csv: str, path to the input csv file WITH ZS,
+            ie. 'results/zs_comb/none/scale2max/DHFR.csv'
+    - zs_predictor: str, name of the ZS predictor
+    - ft_libs: list[float] = [1], list of percent of focused training libraries
+            ie. [1, 0.5, 0.25, 0.125]
 
-    # Get save directory
-    save_dir = checkNgen_folder(os.path.join("mlde", "results", exp_name))
+    """
 
-    # Redirect output to log file
-    # sys.stdout = Logger()
-    # sys.stdout = open(os.path.join(save_dir, 'log.txt'), 'w')
+    if len(exp_name) == 0:
+        exp_name = get_file_name(input_csv)
 
-    print("Config file:\t {}".format(config_file))
-    print("Save directory:\t {}".format(save_dir))
-
-    # Load JSON config file
-    with open(config_file, "r") as f:
-        config = json.load(f)
-
-    save_dir_zs_sub = checkNgen_folder(
-        os.path.join(save_dir, config["data_config"]["zs_predictor"])
+    save_dir = checkNgen_folder(
+        os.path.join(
+            os.path.normpath(mlde_folder),
+            "saved",
+            zs_predictor,
+            filter_min_by,
+            scale_fit,
+            exp_name,
+        )
     )
 
-    # save the config file
-    with open(os.path.join(save_dir_zs_sub, config_file_name), "w") as f:
-        json.dump(config, f, indent=4)
+    config_folder = checkNgen_folder(os.path.dirname(save_dir.replace("saved", "configs")))
+    config_path = os.path.join(config_folder, f"{exp_name}.json")
+
+    # Load JSON config file
+    with open(config_path, "w") as f:
+        config_dict = {
+            "data_config": {
+                "input_csv": input_csv,
+                "zs_predictor": zs_predictor,
+                "encoding": encodings,
+                "ft_libs": ft_libs,
+            },
+            "model_config": {
+                "model_classes": model_classes,
+            },
+            "train_config": {
+                "n_sample": n_samples,
+                "n_splits": n_split,
+                "n_replicate": n_replicate,
+                "n_worker": n_worker,
+                "global_seed": global_seed,
+                "verbose": verbose,
+                "save_model": save_model,
+            },
+            "eval_config": {"n_top": 384},
+        }
+        json.dump(config_dict, f, indent=4)
+
+    print("Save directory:\t {}".format(save_dir))
+    print("Config file:\t {}".format(config_path))
+    for key, value in config_dict.items():
+        print(f"{key}:\t {value}")
 
     # Start training
-    encodings = config["data_config"]["encoding"]
-    library = config["data_config"]["library"]
-
-    model_classes = config["model_config"]["name"]
-    n_sampless = config["train_config"]["n_samples"]
-
     all_ndcgs = np.zeros(
         (
             len(encodings),
             len(model_classes),
-            len(n_sampless),
-            len(library),
-            config["train_config"]["n_subsets"],
+            len(n_samples),
+            len(ft_libs),
+            n_replicate,
         )
     )
     all_maxes = np.copy(all_ndcgs)
@@ -963,46 +567,51 @@ def run_mlde_lite(config_file_name, exp_name=""):
         (
             len(encodings),
             len(model_classes),
-            len(n_sampless),
-            len(library),
-            config["train_config"]["n_subsets"],
-            config["eval_config"]["n_top"],
+            len(n_samples),
+            len(ft_libs),
+            n_replicate,
+            n_top,
         ),
         "",
     )
     all_y_preds = np.zeros(
-        (len(encodings),
+        (
+            len(encodings),
             len(model_classes),
-            len(n_sampless),
-            len(library),
-            config["train_config"]["n_subsets"],
-            len(pd.read_csv("results/zs_comb/none/scale2max/" + config["data_config"]["name"]))))
+            len(n_samples),
+            len(ft_libs),
+            n_replicate,
+            len(pd.read_csv(input_csv)),
+        )
+    )
 
     for i, encoding in enumerate(encodings):
         for j, model_class in enumerate(model_classes):
-            for k, n_samples in enumerate(n_sampless):
+            for k, n_sample in enumerate(n_samples):
 
                 # keep track of how long the computation took
                 start = time.time()
 
-                exp_name2 = encoding + "_" + model_class + "_" + str(n_samples)
-                save_dir2 = checkNgen_folder(
-                    os.path.join(
-                        "mlde", "results", save_dir_zs_sub, exp_name, exp_name2
-                    )
-                )
+                exp_name_dets = f"{encoding}_{model_class}_{str(n_sample)}"
 
-                print("\n###" + exp_name2 + "###")
+                print(f"Running {exp_name_dets}...")
 
                 mlde_sim = MLDESim(
-                    save_path=save_dir2,
+                    input_csv=input_csv,
+                    zs_predictor=zs_predictor,
                     encoding=encoding,
+                    ft_libs=ft_libs,
                     model_class=model_class,
-                    n_samples=n_samples,
-                    model_config=config["model_config"],
-                    data_config=config["data_config"],
-                    train_config=config["train_config"],
-                    eval_config=config["eval_config"],
+                    n_sample=n_sample,
+                    n_split=n_split,
+                    n_replicate=n_replicate,
+                    n_top=n_top,
+                    n_worker=n_worker,
+                    global_seed=global_seed,
+                    verbose=verbose,
+                    save_model=save_model,
+                    scale_fit=scale_fit,
+                    save_path=save_dir,
                 )
 
                 (
@@ -1045,13 +654,58 @@ def run_mlde_lite(config_file_name, exp_name=""):
         all_y_preds,
     )
 
-    np.save(os.path.join(save_dir, save_dir_zs_sub, "mlde_results.npy"), mlde_results)
+    np.save(os.path.join(save_dir, f"{exp_name_dets}.npy"), mlde_results)
 
 
-def run_all_mlde(config_folder: str = "mlde/configs"):
+def run_all_mlde(
+    zs_folder: str = "results/zs_comb",
+    filter_min_by: str = "none",
+    scale_type: str = "scale2max",
+    zs_predictors: list[str] = ["none", "Triad", "ev", "esm"],
+    ft_lib_fracs: list[float] = [0.5, 0.25, 0.125],
+    encodings: list[str] = ["one-hot"],
+    model_classes: list[str] = ["boosting", "ridge"],
+    n_samples: list[int] = [384],
+    n_split: int = 5,
+    n_replicate: int = 100,
+    n_tops: list[int] = [96, 384],
+    n_worker: int = 1,
+    global_seed: int = 42,
+    verbose: bool = False,
+    save_model: bool = False,
+    mlde_folder: str = "results/mlde",
+):
     """
-    Run all MLDE give config folder path
+    Run all MLDE give zs combined csvs
     """
 
-    for config_file in sorted(glob(f"{os.path.normpath(config_folder)}/*.json")):
-        run_mlde_lite(os.path.basename(config_file))
+    for input_csv in sorted(
+        glob(f"{os.path.normpath(zs_folder)}/{filter_min_by}/{scale_type}/*.csv")
+    ):
+        for zs in zs_predictors:
+            if zs == "none":
+                ft_libs = [1]
+            else:
+                ft_libs = ft_lib_fracs
+
+            for n_top in n_tops:
+
+                run_mlde_lite(
+                    input_csv=input_csv,
+                    zs_predictor=zs,
+                    scale_fit=scale_type.split("scale2")[1],
+                    filter_min_by=filter_min_by,
+                    encodings=encodings,
+                    ft_libs=ft_libs,
+                    model_classes=model_classes,
+                    n_samples=n_samples,
+                    n_split=n_split,
+                    n_replicate=n_replicate,
+                    n_top=n_top,
+                    n_worker=n_worker,
+                    global_seed=global_seed,
+                    verbose=verbose,
+                    save_model=save_model,
+                    mlde_folder=mlde_folder,
+                    exp_name="",
+                )

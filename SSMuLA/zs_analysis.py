@@ -20,7 +20,7 @@ from sklearn.metrics import roc_curve, auc
 # Large data plotting
 from holoviews.operation.datashader import rasterize
 
-from SSMuLA.fitness_process_vis import LibData
+from SSMuLA.landscape_global import LibData
 from SSMuLA.vis import (
     JSON_THEME,
     LIGHT_COLORS,

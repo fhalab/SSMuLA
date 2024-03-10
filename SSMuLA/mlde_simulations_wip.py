@@ -20,7 +20,7 @@ from sklearn.metrics import ndcg_score
 from sklearn.model_selection import train_test_split
 
 from SSMuLA.aa_global import ALL_AAS
-from SSMuLA.fitness_process_vis import LibData
+from SSMuLA.landscape_global import LibData
 from SSMuLA.util import checkNgen_folder
 
 

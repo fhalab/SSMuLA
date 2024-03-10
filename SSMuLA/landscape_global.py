@@ -10,6 +10,8 @@ from itertools import combinations
 
 import pandas as pd
 
+from SSMuLA.util import get_file_name
+
 DEFALT_SPLITS = ["single", "double", "multi"]
 
 ACTIVE_THRESH_DICT ={
@@ -466,3 +468,67 @@ def hamming(str1: str, str2: str) -> int:
         if str1[i] != str2[i]:
             distance += 1
     return distance
+
+
+class LibData:
+    """
+    A parent class to get the library information
+    """
+
+    def __init__(self, input_csv: str, scale_fit: str) -> None:
+        """
+        Args:
+        - input_csv, str: path to the input csv file,
+            ie. data/DHFR/fitness_landscape/DHFR.csv for preprocessed
+                data/DHFR/scale2max/DHFR.csv for scaled to max = 1
+        """
+        
+        self._input_csv = input_csv
+        self._scale_fit = scale_fit
+
+    @property
+    def lib_name(self) -> dict:
+        """Return the library name"""
+        return get_file_name(self._input_csv)
+
+    @property
+    def lib_info(self) -> dict:
+        """Return the library information"""
+        return LIB_INFO_DICT[self._lib_name]
+    
+    @property
+    def protein_name(self) -> str:
+        """
+        Returns the protein name
+        """
+        if "TrpB" in self.lib_name:
+            return "TrpB"
+        else:
+            return self.lib_name
+
+    @property
+    def parent_aa(self) -> str:
+        """Return the parent amino acid"""
+        return "".join(list(self.lib_info["AAs"].values()))
+
+    @property
+    def parent_codon(self) -> float:
+        """Return the parent codon"""
+        return "".join(list(self.lib_info["codons"].values()))
+
+    @property
+    def scale_type(self) -> str:
+        """Return the scale type"""
+        if self._scale_fit in ["max", "parent"]:
+            return f"scale2{self._scale_fit}"
+        else:
+            return "processed"
+    
+    @property
+    def input_df(self) -> pd.DataFrame:
+        """Return the input dataframe"""
+        return pd.read_csv(self._input_csv)
+    
+    @property
+    def df_length(self):
+        return len(self.input_df)
