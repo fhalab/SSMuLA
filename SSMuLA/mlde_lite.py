@@ -958,7 +958,6 @@ def run_mlde_lite(config_file_name, exp_name=""):
     all_means = np.copy(all_ndcgs)
     all_unique = np.copy(all_ndcgs)
     all_labelled = np.copy(all_ndcgs)
-    all_y_preds = np.copy(all_ndcgs)
 
     all_top_seqs = np.full(
         (
@@ -971,6 +970,13 @@ def run_mlde_lite(config_file_name, exp_name=""):
         ),
         "",
     )
+    all_y_preds = np.zeros(
+        (len(encodings),
+            len(model_classes),
+            len(n_sampless),
+            len(library),
+            config["train_config"]["n_subsets"],
+            len(pd.read_csv("results/zs_comb/none/scale2max/" + config["data_config"]["name"]))))
 
     for i, encoding in enumerate(encodings):
         for j, model_class in enumerate(model_classes):
@@ -998,6 +1004,7 @@ def run_mlde_lite(config_file_name, exp_name=""):
                     train_config=config["train_config"],
                     eval_config=config["eval_config"],
                 )
+
                 (
                     top_seqs,
                     maxes,
