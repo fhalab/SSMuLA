@@ -494,7 +494,7 @@ class LibData:
     @property
     def lib_info(self) -> dict:
         """Return the library information"""
-        return LIB_INFO_DICT[self._lib_name]
+        return LIB_INFO_DICT[self.lib_name]
     
     @property
     def protein_name(self) -> str:
@@ -515,6 +515,11 @@ class LibData:
     def parent_codon(self) -> float:
         """Return the parent codon"""
         return "".join(list(self.lib_info["codons"].values()))
+    
+    @property
+    def n_site(self) -> int:
+        """Return the number of sites"""
+        return len(self.lib_info["positions"])
 
     @property
     def scale_type(self) -> str:

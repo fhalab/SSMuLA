@@ -20,7 +20,7 @@ from sklearn.metrics import ndcg_score
 from sklearn.model_selection import train_test_split
 
 from SSMuLA.aa_global import ALL_AAS, georgiev_parameters
-from SSMuLA.landscape_global import LibData
+from SSMuLA.landscape_global import LibData, LIB_INFO_DICT
 from SSMuLA.util import checkNgen_folder, get_file_name
 
 
@@ -118,6 +118,8 @@ class MLDEDataset(LibData):
             self.X = self.X.reshape(self.X.shape[0], -1)
 
         self._n_sites = self.X.shape[1] / len(ALL_AAS)
+
+        assert self._n_sites == self.n_site, "Number of sites do not match"
 
     def get_mask(self, seqs: list) -> list:
         """
@@ -277,7 +279,7 @@ class MLDESim(MLDEDataset):
         self._encoding = encoding
 
         if ft_libs != [1]:
-            self._ft_libs = [f * len(ALL_AAS) ** self.n_sites for f in ft_libs if f < 1]
+            self._ft_libs = [int(f * len(ALL_AAS) ** self.n_site) for f in ft_libs if f < 1]
             print(self._ft_libs)
         else:
             self._ft_libs = [self.df_length]
@@ -516,7 +518,7 @@ def run_mlde_lite(
     )
 
     config_folder = checkNgen_folder(os.path.dirname(save_dir.replace("saved", "configs")))
-    config_path = os.path.join(config_folder, f"{exp_name}.json")
+    config_path = os.path.join(config_folder, f"{exp_name}_{n_top}.json")
 
     # Load JSON config file
     with open(config_path, "w") as f:
@@ -539,7 +541,7 @@ def run_mlde_lite(
                 "verbose": verbose,
                 "save_model": save_model,
             },
-            "eval_config": {"n_top": 384},
+            "eval_config": {"n_top": n_top},
         }
         json.dump(config_dict, f, indent=4)
 
@@ -592,7 +594,7 @@ def run_mlde_lite(
                 # keep track of how long the computation took
                 start = time.time()
 
-                exp_name_dets = f"{encoding}_{model_class}_{str(n_sample)}"
+                exp_name_dets = f"{encoding}_{model_class}_sample{str(n_sample)}_top{str(n_top)}"
 
                 print(f"Running {exp_name_dets}...")
 
@@ -654,7 +656,8 @@ def run_mlde_lite(
         all_y_preds,
     )
 
-    np.save(os.path.join(save_dir, f"{exp_name_dets}.npy"), mlde_results)
+    comb_exp_dets = "|".join(encodings) + "_" + "|".join(model_classes)
+    np.save(os.path.join(save_dir, f"{comb_exp_dets}_sample{str(n_sample)}_top{str(n_top)}.npy"), mlde_results)
 
 
 def run_all_mlde(
@@ -686,6 +689,7 @@ def run_all_mlde(
             if zs == "none":
                 ft_libs = [1]
             else:
+                zs = f"{zs}_score"
                 ft_libs = ft_lib_fracs
 
             for n_top in n_tops:
