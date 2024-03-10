@@ -1,27 +1,50 @@
-"""A script for MLDE simulations"""
+"""A scirpt for the MLDE_lite"""
 
 from __future__ import annotations
 
-import json
-import os
-import random
+from typing import Callable, Dict
 
+import os
+import time
+import json
+import random
 import numpy as np
 import pandas as pd
-
+from glob import glob
+from copy import deepcopy
 from tqdm.auto import tqdm
-
-from typing import Callable, Dict
 
 import xgboost as xgb
 from sklearn import linear_model
 from sklearn.metrics import ndcg_score
 from sklearn.model_selection import train_test_split
 
-from SSMuLA.aa_global import ALL_AAS
-from SSMuLA.fitness_process_vis import LibData
-from SSMuLA.util import checkNgen_folder
+from SSMuLA.util import checkNgen_folder, get_file_name
 
+
+ALL_AAS = (
+    "A",
+    "C",
+    "D",
+    "E",
+    "F",
+    "G",
+    "H",
+    "I",
+    "K",
+    "L",
+    "M",
+    "N",
+    "P",
+    "Q",
+    "R",
+    "S",
+    "T",
+    "V",
+    "W",
+    "Y",
+)
+num_tokens = len(ALL_AAS)
 
 # Copied from ProFET (Ofer & Linial, DOI: 10.1093/bioinformatics/btv345)
 # Original comment by the ProFET authors: 'Acquired from georgiev's paper of
@@ -469,11 +492,13 @@ georgiev_parameters = [
 ]
 
 
-def get_georgiev_params_for_aa(aa: str):
+def get_georgiev_params_for_aa(aa):
     return [gg[aa] for gg in georgiev_parameters]
+
 
 def get_georgiev_params_for_seq(s):
     return np.concatenate([get_georgiev_params_for_aa(aa) for aa in s])
+
 
 def seqs_to_georgiev(seqs):
     return np.stack([get_georgiev_params_for_seq(s) for s in seqs])
@@ -511,13 +536,63 @@ def generate_georgiev(seqs: list) -> np.ndarray:
     return X
 
 
-encoding_dict = {
-    'one-hot' : generate_onehot,
-    'georgiev' : generate_georgiev
-}
+encoding_dict = {"one-hot": generate_onehot, "georgiev": generate_georgiev}
 
 
-######## MODELS ########
+class Dataset:
+    """Base class for labeled datasets linking sequence to fitness."""
+
+    def __init__(self, dataframe, zs_predictor: str):
+
+        self.data = dataframe
+        self.N = len(self.data)
+        if zs_predictor in self.data.columns:
+            self.sorted_data = self.data.sort_values(
+                by=zs_predictor, ascending=False
+            ).copy()
+        else:
+            print("No ZS predictor found in the dataframe. No sorting. Not ft lib")
+            self.sorted_data = self.data.copy()
+        self.all_combos = self.data["AAs"].values
+        self.y = self.data["fitness"]
+
+    def sample_top(self, cutoff: int, n_samples: int, seed: int) -> np.ndarray:
+        """
+        Samples n_samples from the top triad scores based on a given cutoff in the ranking and a seed.
+        Args:
+            cutoff : number cutoff in the ranking
+            n_samples : number of samples to take
+            seed: seed for reproducibility
+        Output:
+            1D np.ndarray of sampled sequences
+        """
+        if self.N <= cutoff:
+            sorted = self.data
+        else:
+            sorted = self.sorted_data[:cutoff]
+
+        options = sorted["AAs"].values
+        np.random.seed(seed)
+        return np.random.choice(options, n_samples, replace=False)
+
+    def encode_X(self, encoding: str):
+        """
+        Encodes the input features based on the encoding type.
+        """
+        if encoding == "one-hot":
+            self.X = np.array(encoding_dict[encoding](self.all_combos))
+            self.X = self.X.reshape(self.X.shape[0], -1)
+
+        self.input_dim = self.X.shape[1]
+        self.n_residues = self.input_dim / len(ALL_AAS)
+
+    def get_mask(self, seqs: list) -> list:
+        """
+        Returns an index mask for given sequences.
+        """
+        return list(self.data[self.data["AAs"].isin(seqs)].index)
+
+
 # code modified from https://github.com/google-research/slip/blob/main/models.py
 class KerasModelWrapper:
     """Wraps a Keras model to have the sklearn model interface."""
@@ -596,199 +671,129 @@ def ndcg(y_true, y_pred):
     return ndcg_score(y_true_normalized.reshape(1, -1), y_pred.reshape(1, -1))
 
 
-class MLDEDataset(LibData):
-    """Base class for labeled datasets linking sequence to fitness."""
+class MLDESim:
+    """Class for training and evaluating MLDE models."""
 
-    def __init__(self, input_csv: str, zs_predictor: str, scale_fit: str = "max"):
+    def __init__(
+        self,
+        save_path: str,
+        encoding: str,
+        model_class: str,
+        n_samples: int,
+        model_config: dict,
+        data_config: dict,
+        train_config: dict,
+        eval_config: dict,
+    ) -> None:
+
         """
         Args:
-        - input_csv, str: path to the input csv file WITH ZS,
-            ie. results/zs_comb/none/scale2max/DHFR.csv
+        - save_path : path to save results
+        - encoding : encoding type
+        - model_class : model class
+        - n_samples : number of samples to train on
+        - model_config : model configuration
+        - data_config : data configuration
+        - train_config : training configuration
+        - eval_config : evaluation configuration
         """
 
-        super().__init__(input_csv, scale_fit)
+        self.data_config = data_config
+        self.train_config = train_config
+        self.model_config = model_config
+        self.save_path = save_path
+        self.num_workers = train_config["num_workers"]
 
-        assert "zs" in self._input_csv, "Make sure the input csv has ZS scores"
+        self.n_splits = train_config["n_splits"]
+        self._n_replicate = train_config["n_subsets"]
+        self.n_samples = n_samples
 
-        self._zs_predictor = zs_predictor
+        self.library = data_config["library"]
+        self.zs_predictor = data_config["zs_predictor"]
 
-    def sample_top(self, cutoff: int, n_samples: int, seed: int) -> np.ndarray:
-        """
-        Samples n_samples from the top ZS scores 
-        based on a given cutoff in the ranking and a seed.
-        
-        Args:
-        - cutoff : number cutoff in the ranking
-        - n_samples : number of samples to take
-        - seed: seed for reproducibility
-        
-        Returns:
-            1D np.ndarray of sampled sequences
-        """
-        if self.df_length <= cutoff:
-            sorted = self.input_df
-        else:
-            sorted = self.sorted_df[:cutoff]
-        
-        options = sorted["AAs"].values
-        np.random.seed(seed)
-        return np.random.choice(options, n_samples, replace=False)
+        self.n_solutions = len(self.library)
 
-    def encode_X(self, encoding: str):
-        """
-        Encodes the input features based on the encoding type.
-        """
-        if encoding == 'one-hot':
-            self.X = np.array(encoding_dict[encoding](self.all_combos)) 
-            self.X = self.X.reshape(self.X.shape[0],-1) 
+        self.save_model = False
+        if "save_model" in train_config:
+            self.save_model = train_config["save_model"]
 
-        self.input_dim = self.X.shape[1]
-        self.n_residues = self.input_dim/len(ALL_AAS)
-    
-    def get_mask(self, seqs: list) -> list:
-        """
-        Returns an index mask for given sequences.
-        """
-        return list(self.input_df[self.input_df['AAs'].isin(seqs)].index)
-    
-    @property
-    def sorted_df(self):
-        return self.input_df.sort_values(by=self._zs_predictor, ascending=False)
-    
-    @property
-    def all_combos(self):
-        return self.input_df['AAs'].values
-    
-    @property
-    def y(self):
-        return self.input_df['fitness']
+        self.n_top = eval_config["n_top"]
 
-class MLDESim(MLDEDataset):
-    """
-    Class for training and evaluating MLDE models
-    for a given dataset, encoding, and model class.
-    """
+        self.model_class = model_class
 
-    def __init__(self, 
-                 input_csv: str,
-                 zs_predictor: str,
-                 encoding: str,
-                 ft_libs: list[int] | None,
-                 model_class: str,
-                 n_samples: int,
-                 n_splits: int = 5,
-                 n_replicates: int = 100,
-                 n_topseq: int = 384,
-                 n_topns: list[int] = [96, 384],
-                 n_workers: int = 1,
-                 global_seed: int = 42,
-                 verbose: bool = False,
-                 save_pred: bool = True,
-                 save_model: bool = False,
-                 scale_fit: str = "max",
-                 save_path: str = "results",
-                 ) -> None:
-        
-        """
-        Args:
-        - input_csv: str, path to the input csv file WITH ZS,
-            ie. 'results/zs_comb/none/scale2max/DHFR.csv'
-        - zs_predictor: str, name of the ZS predictor
-        - encoding: str, encoding type
-        - ft_libs: list[int] | None = None, list of sizes of focused training libraries
-            ie. [149361, 32000, 16000, 8000, 4000]
-        - model_class: str, model class
-            ie. 'boosting'
-        - n_samples: int, number of samples to train on
-        - n_splits: int = 5, number of splits for cross-validation
-        - n_replicates: int = 100, number of replicates
-        - n_topseq: int = 384, number of top sequences to save
-        - n_topns: list[int] = [96, 384], number of top sequences to calculate max and mean fitness
-        - n_workers: int = 1, number of workers for parallel processing
-        - global_seed: int = 42, global seed for reproducibility
-        - verbose: bool = False, verbose output
-        - save_model: bool = False, save models
-        - scale_fit: str, scaling type
-        - save_path: str, path to save results
-        """
+        self.top_seqs = np.full((self.n_solutions, self._n_replicate, self.n_top), "")
+        self.ndcgs = np.zeros((self.n_solutions, self._n_replicate))
+        self.maxes = np.zeros((self.n_solutions, self._n_replicate))
+        self.means = np.zeros((self.n_solutions, self._n_replicate))
+        self.unique = np.zeros((self.n_solutions, self._n_replicate))
+        self.labelled = np.zeros((self.n_solutions, self._n_replicate))
 
-        super().__init__(input_csv, zs_predictor, scale_fit)
+        # Sample and fix a random seed if not set in train_config
+        self.seed = train_config["seed"]
+        np.random.seed(self.seed)
+        random.seed(self.seed)
 
-        assert self.input_df[self.input_df["AA"].str.contains("\*")] == 0, "Make sure there are no stop codons in the input data"
+        self._subset_seeds = deepcopy(
+            [random.randint(0, 1000000) for _ in range(self._n_replicate)]
+        )
 
-        self._encoding = encoding
+        # TODO make folder option a parameter
+        self.fitness_df = pd.read_csv(
+            "results/zs_comb/none/scale2max/" + data_config["name"]
+        )
+        self.dataset = Dataset(
+            dataframe=self.fitness_df, zs_predictor=self.zs_predictor
+        )
+        self.y_preds = np.zeros((self.n_solutions, self._n_replicate, self.dataset.N))
 
-        if ft_libs is not None:
-            self._ft_libs = ft_libs
-        else:
-            self._ft_libs = [self.df_length]
+        self.dataset.encode_X(encoding=encoding)
 
-        self._model_class = model_class
-        self._n_samples = n_samples
-        self._n_splits = n_splits
-        self._n_replicates = n_replicates
-        self._n_topseq = n_topseq
-        self._n_topns = n_topns
-        self._n_workers = n_workers
-        self._verbose = verbose
-        self._save_model = save_model
-        self._save_path = os.path.normpath(save_path)
+        self.X_train_all = np.array(self.dataset.X)
+        # np.save('/home/jyang4/repos/DeCOIL/one_hot.npy', self.X_train_all)
 
-        # init
-        self.top_seqs = np.full((self._n_solutions, self._n_replicates, self._n_topseq), "")
-        self.ndcgs = np.zeros((self._n_solutions, self._n_replicates))
-        self.maxes = np.zeros((self._n_solutions, self._n_replicates))
-        self.means = np.zeros((self._n_solutions, self._n_replicates))
-        self.unique = np.zeros((self._n_solutions, self._n_replicates))
-        self.labelled = np.zeros((self._n_solutions, self._n_replicates))
+        self.y_train_all = np.array(self.dataset.y)
+        self.y_preds_all = np.zeros((self.dataset.N, self._n_replicate, self.n_splits))
 
-        # set up all random seeds
-        np.random.seed(global_seed)
-        random.seed(global_seed)
-        self._subset_seeds = [random.randint(0, 1000000) for _ in range(self._n_replicates)]
-
-        self.encode_X(encoding=self._encoding)
-
-        self.X_train_all = np.array(self.X)
-
-        self.y_train_all = np.array(self.y)
-        self.y_preds_all = np.zeros((self.df_length, self._n_replicates, self._n_splits))
-
+        self.all_combos = self.dataset.all_combos
+        self.n_sites = self.dataset.n_residues
 
     def train_all(self):
         """
-        Loops through all libraries to be sampled from (n_solutions) and 
-        for each solution trains n_replicates of models. 
-        Each model is an ensemble of n_splits models, 
+        Loops through all libraries to be sampled from (n_solutions) and
+        for each solution trains n_subsets of models.
+        Each model is an ensemble of n_splits models,
         each trained on 90% of the subset selected randomly.
 
         Output: results for each of the models
         """
         with tqdm() as pbar:
-            pbar.reset(self._n_solutions * self._n_replicates * self._n_splits)
+            pbar.reset(self.n_solutions * self._n_replicate * self.n_splits)
             pbar.set_description("Training and evaluating")
 
-            for k in range(self._n_solutions):
+            for k in range(self.n_solutions):
 
-                cutoff = self._ft_libs[k]
-   
-                for j in range(self.n_replicates):
-                    
-                    seqs = self.sample_top(
-                        cutoff, self._n_samples, self._subset_seeds[j]
+                cutoff = self.library[k]
+
+                for j in range(self._n_replicate):
+                    # need to check if the seeding process works the same way
+
+                    seqs = self.dataset.sample_top(
+                        cutoff, self.n_samples, self._subset_seeds[j]
                     )
 
                     uniques = np.unique(seqs)
                     self.unique[k, j] = len(uniques)
-                    mask = self.get_mask(uniques)
+                    mask = self.dataset.get_mask(uniques)
                     self.labelled[k, j] = len(mask)
                     combos_train = []
 
-                    if self._save_model:
-                        save_dir = checkNgen_folder(os.path.join(self._save_path, str(k), str(j)))
-                   
-                    for i in range(self._n_splits):
-                        if self._n_splits > 1:
+                    if self.save_model:
+                        save_dir = os.path.join(self.save_path, str(k), str(j))
+                        if not os.path.exists(save_dir):
+                            os.makedirs(save_dir)
+
+                    for i in range(self.n_splits):
+                        if self.n_splits > 1:
                             # boostrap ensembling with 90% of the data
                             train_mask, validation_mask = train_test_split(
                                 mask, test_size=0.1, random_state=i
@@ -807,15 +812,15 @@ class MLDESim(MLDEDataset):
                         )
 
                         # remove this if you don't want to save the model
-                        if self._save_model:
+                        if self.save_model:
                             filename = "split" + str(i) + ".model"
                             clf.save_model(os.path.join(save_dir, filename))
 
                         self.y_preds_all[:, j, i] = y_preds
                         pbar.update()
 
-                    # need to redo some of these, loop was in wrong place? 
-                    # but it should be fine cause it gets replaced to the correct mean at the end
+                    # TODO check if loop in the right place?
+                    # it gets replaced to the correct mean at the end
                     means = np.mean(self.y_preds_all, axis=2)
                     y_preds = means[:, j]
 
@@ -823,9 +828,12 @@ class MLDESim(MLDEDataset):
                         self.maxes[k, j],
                         self.means[k, j],
                         self.top_seqs[k, j, :],
-                    ) = self.get_mlde_results(y_preds)
+                    ) = self.get_mlde_results(self.dataset.data, y_preds)
+
                     ndcg_value = ndcg(self.y_train_all, y_preds)
                     self.ndcgs[k, j] = ndcg_value
+
+                    self.y_preds[k, j, :] = y_preds
 
         pbar.close
 
@@ -836,6 +844,7 @@ class MLDESim(MLDEDataset):
             self.ndcgs,
             self.unique,
             self.labelled,
+            self.y_preds,
         )
 
     def train_single(
@@ -846,7 +855,7 @@ class MLDESim(MLDEDataset):
         y_validation: np.ndarray,
     ):
         """
-        Trains a single supervised ML model. 
+        Trains a single supervised ML model.
         Returns the predictions on the training set and the trained model.
         """
         if self.model_class == "boosting":
@@ -864,30 +873,32 @@ class MLDESim(MLDEDataset):
         return y_preds, clf
 
     def get_mlde_results(
-        self, y_preds: np.ndarray, topn: int
+        self,
+        data2: pd.DataFrame,
+        y_preds: np.ndarray,
     ) -> tuple:
         """
-        Calculates the MLDE results for a given set of predictions. 
+        Calculates the MLDE results for a given set of predictions.
         Returns the max and mean of the top 96 sequences and the top 500 sequences.
 
         Args:
+            data2: pandas dataframe with all sequences and fitness labels in the combinatorial space
             y_preds: the predictions on the training data
+            unique_seqs: the unique sequences in the training data
         """
-
-        df = self.input_df.copy()
-        df["y_preds"] = y_preds
+        data2["y_preds"] = y_preds
 
         ##optionally filter out the sequences in the training set
         # data2 = data2[~data2['Combo'].isin(unique_seqs)]
 
-        sorted = df.sort_values(by=["y_preds"], ascending=False)
+        sorted = data2.sort_values(by=["y_preds"], ascending=False)
 
-        top_fit = sorted.iloc[:topn, :]["fitness"]
+        top_fit = sorted.iloc[: self.n_top, :]["fitness"]
         max_fit = np.max(top_fit)
         mean_fit = np.mean(top_fit)
 
-        # save the top n sequeneces
-        top_seqs = sorted.iloc[:self._n_topseq, :]["AAs"].values
+        # save the top 500
+        top_seqs = sorted.iloc[: self.n_top, :]["AAs"].values
 
         ##for checking how many predictions are in the training set
         # top_seqs_96 = sorted.iloc[:96,:]['Combo'].values
@@ -895,3 +906,145 @@ class MLDESim(MLDEDataset):
 
         return max_fit, mean_fit, top_seqs
 
+
+def run_mlde_lite(config_file_name, exp_name=""):
+
+    # Get JSON config file
+    config_file = os.path.join("mlde", "configs", config_file_name)
+
+    # Get experiment name
+    # Experiment should be either named the library optimization procedure or random sampling
+    exp_name = exp_name if len(exp_name) > 0 else config_file_name
+
+    # Get save directory
+    save_dir = checkNgen_folder(os.path.join("mlde", "results", exp_name))
+
+    # Redirect output to log file
+    # sys.stdout = Logger()
+    # sys.stdout = open(os.path.join(save_dir, 'log.txt'), 'w')
+
+    print("Config file:\t {}".format(config_file))
+    print("Save directory:\t {}".format(save_dir))
+
+    # Load JSON config file
+    with open(config_file, "r") as f:
+        config = json.load(f)
+
+    save_dir_zs_sub = checkNgen_folder(
+        os.path.join(save_dir, config["data_config"]["zs_predictor"])
+    )
+
+    # save the config file
+    with open(os.path.join(save_dir_zs_sub, config_file_name), "w") as f:
+        json.dump(config, f, indent=4)
+
+    # Start training
+    encodings = config["data_config"]["encoding"]
+    library = config["data_config"]["library"]
+
+    model_classes = config["model_config"]["name"]
+    n_sampless = config["train_config"]["n_samples"]
+
+    all_ndcgs = np.zeros(
+        (
+            len(encodings),
+            len(model_classes),
+            len(n_sampless),
+            len(library),
+            config["train_config"]["n_subsets"],
+        )
+    )
+    all_maxes = np.copy(all_ndcgs)
+    all_means = np.copy(all_ndcgs)
+    all_unique = np.copy(all_ndcgs)
+    all_labelled = np.copy(all_ndcgs)
+    all_y_preds = np.copy(all_ndcgs)
+
+    all_top_seqs = np.full(
+        (
+            len(encodings),
+            len(model_classes),
+            len(n_sampless),
+            len(library),
+            config["train_config"]["n_subsets"],
+            config["eval_config"]["n_top"],
+        ),
+        "",
+    )
+
+    for i, encoding in enumerate(encodings):
+        for j, model_class in enumerate(model_classes):
+            for k, n_samples in enumerate(n_sampless):
+
+                # keep track of how long the computation took
+                start = time.time()
+
+                exp_name2 = encoding + "_" + model_class + "_" + str(n_samples)
+                save_dir2 = checkNgen_folder(
+                    os.path.join(
+                        "mlde", "results", save_dir_zs_sub, exp_name, exp_name2
+                    )
+                )
+
+                print("\n###" + exp_name2 + "###")
+
+                mlde_sim = MLDESim(
+                    save_path=save_dir2,
+                    encoding=encoding,
+                    model_class=model_class,
+                    n_samples=n_samples,
+                    model_config=config["model_config"],
+                    data_config=config["data_config"],
+                    train_config=config["train_config"],
+                    eval_config=config["eval_config"],
+                )
+                (
+                    top_seqs,
+                    maxes,
+                    means,
+                    ndcgs,
+                    unique,
+                    labelled,
+                    y_preds,
+                ) = mlde_sim.train_all()
+
+                all_top_seqs[i, j, k, :, :, :] = top_seqs
+                all_ndcgs[i, j, k, :, :] = ndcgs
+                all_maxes[i, j, k, :, :] = maxes
+                all_means[i, j, k, :, :] = means
+                all_unique[i, j, k, :, :] = unique
+                all_labelled[i, j, k, :, :] = labelled
+                all_y_preds[i, j, k, :, :, :] = y_preds
+
+                end = time.time()
+                print("Time: " + str(end - start))
+
+    mlde_results = {}
+    (
+        mlde_results["top_seqs"],
+        mlde_results["maxes"],
+        mlde_results["means"],
+        mlde_results["ndcgs"],
+        mlde_results["unique"],
+        mlde_results["labelled"],
+        mlde_results["y_preds"],
+    ) = (
+        all_top_seqs,
+        all_maxes,
+        all_means,
+        all_ndcgs,
+        all_unique,
+        all_labelled,
+        all_y_preds,
+    )
+
+    np.save(os.path.join(save_dir, save_dir_zs_sub, "mlde_results.npy"), mlde_results)
+
+
+def run_all_mlde(config_folder: str = "mlde/configs"):
+    """
+    Run all MLDE give config folder path
+    """
+
+    for config_file in sorted(glob(f"{os.path.normpath(config_folder)}/*.json")):
+        run_mlde_lite(os.path.basename(config_file))
