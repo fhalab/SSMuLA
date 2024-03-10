@@ -23,6 +23,8 @@ from SSMuLA.aa_global import ALL_AAS, georgiev_parameters
 from SSMuLA.landscape_global import LibData, LIB_INFO_DICT
 from SSMuLA.util import checkNgen_folder, get_file_name
 
+n_mut_cutoff_dict = {0: "all", 1: "single", 2: "double", 3: "triple", 4: "quadruple"}
+
 
 def get_georgiev_params_for_aa(aa):
     return [gg[aa] for gg in georgiev_parameters]
@@ -74,11 +76,19 @@ encoding_dict = {"one-hot": generate_onehot, "georgiev": generate_georgiev}
 class MLDEDataset(LibData):
     """Base class for labeled datasets linking sequence to fitness."""
 
-    def __init__(self, input_csv: str, zs_predictor: str, scale_fit: str = "max"):
+    def __init__(
+        self,
+        input_csv: str,
+        zs_predictor: str,
+        scale_fit: str = "max",
+        filter_min_by: str = "none",
+        n_mut_cutoff: int = 0,
+    ):
         """
         Args:
         - input_csv, str: path to the input csv file WITH ZS,
             ie. results/zs_comb/none/scale2max/DHFR.csv
+        - n_mut_cutoff: number of mutations cutoff, default 0 meaning no cutoff
         """
 
         super().__init__(input_csv, scale_fit)
@@ -86,6 +96,8 @@ class MLDEDataset(LibData):
         assert "zs" in self._input_csv, "Make sure the input csv has ZS scores"
 
         self._zs_predictor = zs_predictor
+        self._filter_min_by = filter_min_by
+        self._n_mut_cutoff = n_mut_cutoff
 
     def sample_top(self, cutoff: int, n_sample: int, seed: int) -> np.ndarray:
         """
@@ -100,10 +112,23 @@ class MLDEDataset(LibData):
         Returns:
             1D np.ndarray of sampled sequences
         """
-        if self.df_length <= cutoff:
-            sorted = self.input_df.copy()
+
+        if self._n_mut_cutoff > 0:
+            df = self.filtered_df[
+                self.filtered_df["n_mut"] <= self._n_mut_cutoff
+            ].copy()
+            print(f"Sample all {n_mut_cutoff_dict[self._n_mut_cutoff]} total {len(df)}")
         else:
-            sorted = self.sorted_df[:cutoff].copy()
+            df = self.filtered_df.copy()
+
+        if len(df) <= cutoff or self._zs_predictor not in df.columns:
+            sorted = df.copy()
+        else:
+            sorted = (
+                df.sort_values(by=self._zs_predictor, ascending=False)
+                .copy()[:cutoff]
+                .copy()
+            )
 
         options = sorted["AAs"].values
         np.random.seed(seed)
@@ -125,27 +150,35 @@ class MLDEDataset(LibData):
         """
         Returns an index mask for given sequences.
         """
-        return list(self.input_df[self.input_df["AAs"].isin(seqs)].index)
+        return list(self.filtered_df[self.filtered_df["AAs"].isin(seqs)].index)
 
     @property
-    def sorted_df(self):
-        if self._zs_predictor not in self.input_df.columns:
-            print(
-                f"ZS predictor {self._zs_predictor} not in input dataframe - dataframe NOT sorted."
-            )
-            return self.input_df.copy()
+    def filtered_df(self):
+
+        df = self.input_df.copy()
+        # make sure no stop codon
+        df = df[~df["AAs"].str.contains("\*")]
+
+        if self._filter_min_by in ["none", "", None]:
+            return df.copy()
+        elif self._filter_min_by == "active":
+            return df[df["active"] == True].copy()
+        elif self._filter_min_by == "0":
+            return df[df["fitness"] >= 0].copy()
+        elif self._filter_min_by == "min0":
+            df["fitness"] = df["fitness"].apply(lambda x: max(0, x))
+            return df.copy()
         else:
-            return self.input_df.sort_values(
-                by=self._zs_predictor, ascending=False
-            ).copy()
+            print(f"{self._filter_min_by} not valid -> no filter beyond no stop codon")
+            return df.copy()
 
     @property
     def all_combos(self):
-        return self.input_df["AAs"].values.copy()
+        return self.filtered_df["AAs"].values.copy()
 
     @property
     def y(self):
-        return self.input_df["fitness"].copy()
+        return self.filtered_df["fitness"].copy()
 
 
 # code modified from https://github.com/google-research/slip/blob/main/models.py
@@ -245,6 +278,8 @@ class MLDESim(MLDEDataset):
         save_model: bool = False,
         ft_libs: list[float] = [1],
         scale_fit: str = "max",
+        filter_min_by: str = "none",
+        n_mut_cutoff: int = 0,
         save_path: str = "results/mlde",
     ) -> None:
 
@@ -267,10 +302,14 @@ class MLDESim(MLDEDataset):
         - verbose: bool = False, verbose output
         - save_model: bool = False, save models
         - scale_fit: str, scaling type
+        - filter_min_by: str, filter minimum fitness by
+        - n_mut_cutoff: int = 0, number of mutations cutoff, default 0 meaning no cutoff
         - save_path: str, path to save results
         """
 
-        super().__init__(input_csv, zs_predictor, scale_fit)
+        super().__init__(
+            input_csv, zs_predictor, scale_fit, filter_min_by, n_mut_cutoff
+        )
 
         assert (
             len(self.input_df[self.input_df["AAs"].str.contains("\*")]) == 0
@@ -279,7 +318,9 @@ class MLDESim(MLDEDataset):
         self._encoding = encoding
 
         if ft_libs != [1]:
-            self._ft_libs = [int(f * len(ALL_AAS) ** self.n_site) for f in ft_libs if f < 1]
+            self._ft_libs = [
+                int(f * len(ALL_AAS) ** self.n_site) for f in ft_libs if f < 1
+            ]
             print(self._ft_libs)
         else:
             self._ft_libs = [self.df_length]
@@ -297,7 +338,7 @@ class MLDESim(MLDEDataset):
         self._save_path = checkNgen_folder(os.path.normpath(save_path))
 
         # init
-        self.top_seqs = np.full((self._n_solution, self._n_replicate, self._n_top), "")
+        self.top_seqs = np.full((self._n_solution, self._n_replicate, self._n_top), "".join(["n"]*self.n_site))
         self.ndcgs = np.zeros((self._n_solution, self._n_replicate))
         self.maxes = np.copy(self.ndcgs)
         self.means = np.copy(self.ndcgs)
@@ -341,7 +382,9 @@ class MLDESim(MLDEDataset):
                     # need to check if the seeding process works the same way
 
                     seqs = self.sample_top(
-                        cutoff, self._n_sample, self._subset_seeds[j]
+                        cutoff=cutoff,
+                        n_sample=self._n_sample,
+                        seed=self._subset_seeds[j],
                     )
 
                     uniques = np.unique(seqs)
@@ -422,9 +465,7 @@ class MLDESim(MLDEDataset):
         Returns the predictions on the training set and the trained model.
         """
         if self._model_class == "boosting":
-            clf = get_model(
-                self._model_class, model_kwargs={"nthread": self._n_worker}
-            )
+            clf = get_model(self._model_class, model_kwargs={"nthread": self._n_worker})
             eval_set = [(X_validation, y_validation)]
             clf.fit(X_train, y_train, eval_set=eval_set, verbose=False)
         else:
@@ -476,6 +517,7 @@ def run_mlde_lite(
     zs_predictor: str,
     scale_fit: str = "max",
     filter_min_by: str = "none",
+    n_mut_cutoff: int = 0,
     encodings: list[str] = ["one-hot"],
     ft_libs: list[float] = [1],
     model_classes: list[str] = ["boosting", "ridge"],
@@ -511,13 +553,15 @@ def run_mlde_lite(
             os.path.normpath(mlde_folder),
             "saved",
             zs_predictor,
-            filter_min_by,
-            scale_fit,
+            f"{filter_min_by}-{n_mut_cutoff_dict[n_mut_cutoff]}",
+            f"scale2{scale_fit}",
             exp_name,
         )
     )
 
-    config_folder = checkNgen_folder(os.path.dirname(save_dir.replace("saved", "configs")))
+    config_folder = checkNgen_folder(
+        os.path.dirname(save_dir.replace("saved", "configs"))
+    )
     config_path = os.path.join(config_folder, f"{exp_name}_{n_top}.json")
 
     # Load JSON config file
@@ -528,6 +572,9 @@ def run_mlde_lite(
                 "zs_predictor": zs_predictor,
                 "encoding": encodings,
                 "ft_libs": ft_libs,
+                "scale_fit": scale_fit,
+                "filter_min_by": filter_min_by,
+                "n_mut_cutoff": n_mut_cutoff,
             },
             "model_config": {
                 "model_classes": model_classes,
@@ -594,7 +641,9 @@ def run_mlde_lite(
                 # keep track of how long the computation took
                 start = time.time()
 
-                exp_name_dets = f"{encoding}_{model_class}_sample{str(n_sample)}_top{str(n_top)}"
+                exp_name_dets = (
+                    f"{encoding}_{model_class}_sample{str(n_sample)}_top{str(n_top)}"
+                )
 
                 print(f"Running {exp_name_dets}...")
 
@@ -613,6 +662,7 @@ def run_mlde_lite(
                     verbose=verbose,
                     save_model=save_model,
                     scale_fit=scale_fit,
+                    filter_min_by=filter_min_by,
                     save_path=save_dir,
                 )
 
@@ -657,12 +707,18 @@ def run_mlde_lite(
     )
 
     comb_exp_dets = "|".join(encodings) + "_" + "|".join(model_classes)
-    np.save(os.path.join(save_dir, f"{comb_exp_dets}_sample{str(n_sample)}_top{str(n_top)}.npy"), mlde_results)
+    np.save(
+        os.path.join(
+            save_dir, f"{comb_exp_dets}_sample{str(n_sample)}_top{str(n_top)}.npy"
+        ),
+        mlde_results,
+    )
 
 
 def run_all_mlde(
     zs_folder: str = "results/zs_comb",
     filter_min_by: str = "none",
+    n_mut_cutoffs: list[int] = [0, 1, 2],
     scale_type: str = "scale2max",
     zs_predictors: list[str] = ["none", "Triad", "ev", "esm"],
     ft_lib_fracs: list[float] = [0.5, 0.25, 0.125],
@@ -685,31 +741,39 @@ def run_all_mlde(
     for input_csv in sorted(
         glob(f"{os.path.normpath(zs_folder)}/{filter_min_by}/{scale_type}/*.csv")
     ):
-        for zs in zs_predictors:
-            if zs == "none":
-                ft_libs = [1]
-            else:
-                zs = f"{zs}_score"
-                ft_libs = ft_lib_fracs
+        for n_mut_cutoff in n_mut_cutoffs:
+            for zs_predictor in zs_predictors:
+                if zs_predictor == "none":
+                    ft_libs = [1]
+                else:
+                    zs_predictor = f"{zs_predictor}_score"
+                    ft_libs = ft_lib_fracs
 
-            for n_top in n_tops:
+                for n_top in n_tops:
 
-                run_mlde_lite(
-                    input_csv=input_csv,
-                    zs_predictor=zs,
-                    scale_fit=scale_type.split("scale2")[1],
-                    filter_min_by=filter_min_by,
-                    encodings=encodings,
-                    ft_libs=ft_libs,
-                    model_classes=model_classes,
-                    n_samples=n_samples,
-                    n_split=n_split,
-                    n_replicate=n_replicate,
-                    n_top=n_top,
-                    n_worker=n_worker,
-                    global_seed=global_seed,
-                    verbose=verbose,
-                    save_model=save_model,
-                    mlde_folder=mlde_folder,
-                    exp_name="",
-                )
+                    print(
+                        "Running MLDE for {} with {} zero-shot predictor, {} mut number, {} top output...".format(
+                            input_csv, zs_predictor, n_mut_cutoff_dict[n_mut_cutoff], n_top
+                        )
+                    )
+
+                    run_mlde_lite(
+                        input_csv=input_csv,
+                        zs_predictor=zs_predictor,
+                        scale_fit=scale_type.split("scale2")[1],
+                        filter_min_by=filter_min_by,
+                        n_mut_cutoff=n_mut_cutoff,
+                        encodings=encodings,
+                        ft_libs=ft_libs,
+                        model_classes=model_classes,
+                        n_samples=n_samples,
+                        n_split=n_split,
+                        n_replicate=n_replicate,
+                        n_top=n_top,
+                        n_worker=n_worker,
+                        global_seed=global_seed,
+                        verbose=verbose,
+                        save_model=save_model,
+                        mlde_folder=mlde_folder,
+                        exp_name="",
+                    )

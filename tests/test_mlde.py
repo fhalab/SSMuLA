@@ -22,6 +22,6 @@ if __name__ == "__main__":
     )
     sys.stdout = f
 
-    run_all_mlde()
+    run_all_mlde(n_mut_cutoffs=[2, 1])
 
     f.close()
