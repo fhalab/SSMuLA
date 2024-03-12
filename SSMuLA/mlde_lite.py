@@ -15,6 +15,7 @@ from copy import deepcopy
 from tqdm.auto import tqdm
 
 import xgboost as xgb
+from scipy.stats import pearsonr
 from sklearn import linear_model
 from sklearn.metrics import ndcg_score
 from sklearn.model_selection import train_test_split
@@ -99,6 +100,8 @@ class MLDEDataset(LibData):
         self._filter_min_by = filter_min_by
         self._n_mut_cutoff = n_mut_cutoff
 
+        self._n_mut_cuttoff_df = self._get_n_mut_cuttoff_df()
+
     def sample_top(self, cutoff: int, n_sample: int, seed: int) -> np.ndarray:
         """
         Samples n_samples from the top ZS scores
@@ -113,13 +116,7 @@ class MLDEDataset(LibData):
             1D np.ndarray of sampled sequences
         """
 
-        if self._n_mut_cutoff > 0:
-            df = self.filtered_df[
-                self.filtered_df["n_mut"] <= self._n_mut_cutoff
-            ].copy()
-            print(f"Sample all {n_mut_cutoff_dict[self._n_mut_cutoff]} total {len(df)}")
-        else:
-            df = self.filtered_df.copy()
+        df = self._n_mut_cuttoff_df.copy()
 
         if len(df) <= cutoff or self._zs_predictor not in df.columns:
             sorted = df.copy()
@@ -131,8 +128,11 @@ class MLDEDataset(LibData):
             )
 
         options = sorted["AAs"].values
+
+        n_choice = min(n_sample, len(options)) if len(options) > n_sample else len(options)
+        
         np.random.seed(seed)
-        return np.random.choice(options, n_sample, replace=False).copy()
+        return np.random.choice(options, n_choice, replace=False).copy()
 
     def encode_X(self, encoding: str):
         """
@@ -151,6 +151,15 @@ class MLDEDataset(LibData):
         Returns an index mask for given sequences.
         """
         return list(self.filtered_df[self.filtered_df["AAs"].isin(seqs)].index)
+
+    def _get_n_mut_cuttoff_df(self):
+        """ """
+        if self._n_mut_cutoff > 0:
+            df = self.filtered_df[self.filtered_df["n_mut"] <= self._n_mut_cutoff]
+            print(f"All {n_mut_cutoff_dict[self._n_mut_cutoff]} total {len(df)}")
+        else:
+            df = self.filtered_df
+        return df.copy()
 
     @property
     def filtered_df(self):
@@ -178,7 +187,24 @@ class MLDEDataset(LibData):
 
     @property
     def y(self):
+        """
+        Return all the fitness values
+        """
         return self.filtered_df["fitness"].copy()
+
+    @property
+    def n_mut_cuttoff_df(self):
+        """
+        Return the dataframe with n_mut cutoff
+        """
+        return self._n_mut_cuttoff_df
+
+    @property
+    def len_n_mut_cuttoff_df(self):
+        """
+        Return the length of the dataframe with n_mut cutoff
+        """
+        return len(self._n_mut_cuttoff_df)
 
 
 # code modified from https://github.com/google-research/slip/blob/main/models.py
@@ -318,14 +344,31 @@ class MLDESim(MLDEDataset):
         self._encoding = encoding
 
         if ft_libs != [1]:
-            self._ft_libs = [
+            ft_lib_mut_numbs = [
                 int(f * len(ALL_AAS) ** self.n_site) for f in ft_libs if f < 1
             ]
-            print(self._ft_libs)
+            print(
+                "{} focused training library sizes valid only if bigger than {} df size {}".format(
+                    ft_lib_mut_numbs,
+                    n_mut_cutoff_dict[self._n_mut_cutoff],
+                    self.len_n_mut_cuttoff_df,
+                )
+            )
+            self._ft_libs = [
+                ft_lib
+                if ft_lib <= self.len_n_mut_cuttoff_df
+                else self.len_n_mut_cuttoff_df
+                for ft_lib in ft_lib_mut_numbs
+            ]
+            #  [x if x <= criteria else 0 for x in original_list]
+            print(f"Valid focused training library sizes: {self._ft_libs}")
         else:
             self._ft_libs = [self.df_length]
 
         self._n_solution = len(self._ft_libs)
+
+        if self._n_solution == 0:
+            print("No valid focused training library sizes")
 
         self._model_class = model_class
         self._n_sample = n_sample
@@ -338,8 +381,12 @@ class MLDESim(MLDEDataset):
         self._save_path = checkNgen_folder(os.path.normpath(save_path))
 
         # init
-        self.top_seqs = np.full((self._n_solution, self._n_replicate, self._n_top), "".join(["n"]*self.n_site))
+        self.top_seqs = np.full(
+            (self._n_solution, self._n_replicate, self._n_top),
+            "".join(["n"] * self.n_site),
+        )
         self.ndcgs = np.zeros((self._n_solution, self._n_replicate))
+        self.rhos = np.copy(self.ndcgs)
         self.maxes = np.copy(self.ndcgs)
         self.means = np.copy(self.ndcgs)
         self.unique = np.copy(self.ndcgs)
@@ -374,72 +421,78 @@ class MLDESim(MLDEDataset):
             pbar.reset(self._n_solution * self._n_replicate * self._n_split)
             pbar.set_description("Training and evaluating")
 
-            for k in range(self._n_solution):
+            if self._n_solution > 0:
 
-                cutoff = self._ft_libs[k]
+                for k in range(self._n_solution):
 
-                for j in range(self._n_replicate):
-                    # need to check if the seeding process works the same way
+                    cutoff = self._ft_libs[k]
 
-                    seqs = self.sample_top(
-                        cutoff=cutoff,
-                        n_sample=self._n_sample,
-                        seed=self._subset_seeds[j],
-                    )
+                    for j in range(self._n_replicate):
+                        # need to check if the seeding process works the same way
 
-                    uniques = np.unique(seqs)
-                    self.unique[k, j] = len(uniques)
-                    mask = self.get_mask(uniques)
-                    self.labelled[k, j] = len(mask)
-                    combos_train = []
-
-                    if self._save_model:
-                        save_dir = checkNgen_folder(
-                            os.path.join(self._save_path, str(k), str(j))
+                        seqs = self.sample_top(
+                            cutoff=cutoff,
+                            n_sample=self._n_sample,
+                            seed=self._subset_seeds[j],
                         )
 
-                    for i in range(self._n_split):
-                        if self._n_split > 1:
-                            # boostrap ensembling with 90% of the data
-                            train_mask, validation_mask = train_test_split(
-                                mask, test_size=0.1, random_state=i
-                            )
-                        else:
-                            train_mask = mask
-                            validation_mask = mask  # used for validation if desired
+                        uniques = np.unique(seqs)
+                        self.unique[k, j] = len(uniques)
+                        mask = self.get_mask(uniques)
+                        self.labelled[k, j] = len(mask)
+                        combos_train = []
 
-                        X_train = self.X_train_all[train_mask]
-                        y_train = self.y_train_all[train_mask]
-                        combos_train += list(self.all_combos[train_mask])
-                        X_validation = self.X_train_all[validation_mask]
-                        y_validation = self.y_train_all[validation_mask]
-                        y_preds, clf = self.train_single(
-                            X_train, y_train, X_validation, y_validation
-                        )
-
-                        # remove this if you don't want to save the model
                         if self._save_model:
-                            filename = "split" + str(i) + ".model"
-                            clf.save_model(os.path.join(save_dir, filename))
+                            save_dir = checkNgen_folder(
+                                os.path.join(self._save_path, str(k), str(j))
+                            )
 
-                        self.y_preds_all[:, j, i] = y_preds
-                        pbar.update()
+                        for i in range(self._n_split):
+                            if self._n_split > 1:
+                                # boostrap ensembling with 90% of the data
+                                train_mask, validation_mask = train_test_split(
+                                    mask, test_size=0.1, random_state=i
+                                )
+                            else:
+                                train_mask = mask
+                                validation_mask = mask  # used for validation if desired
 
-                    # TODO check if loop in the right place?
-                    # it gets replaced to the correct mean at the end
-                    means = np.mean(self.y_preds_all, axis=2)
-                    y_preds = means[:, j]
+                            X_train = self.X_train_all[train_mask]
+                            y_train = self.y_train_all[train_mask]
+                            combos_train += list(self.all_combos[train_mask])
+                            X_validation = self.X_train_all[validation_mask]
+                            y_validation = self.y_train_all[validation_mask]
+                            y_preds, clf = self.train_single(
+                                X_train, y_train, X_validation, y_validation
+                            )
 
-                    (
-                        self.maxes[k, j],
-                        self.means[k, j],
-                        self.top_seqs[k, j, :],
-                    ) = self.get_mlde_results(y_preds)
+                            # remove this if you don't want to save the model
+                            if self._save_model:
+                                filename = "split" + str(i) + ".model"
+                                clf.save_model(os.path.join(save_dir, filename))
 
-                    ndcg_value = ndcg(self.y_train_all, y_preds)
-                    self.ndcgs[k, j] = ndcg_value
+                            self.y_preds_all[:, j, i] = y_preds
+                            pbar.update()
 
-                    self.y_preds[k, j, :] = y_preds
+                        # TODO check if loop in the right place?
+                        # it gets replaced to the correct mean at the end
+                        means = np.mean(self.y_preds_all, axis=2)
+                        y_preds = means[:, j]
+
+                        (
+                            self.maxes[k, j],
+                            self.means[k, j],
+                            self.top_seqs[k, j, :],
+                        ) = self.get_mlde_results(y_preds)
+
+                        ndcg_value = ndcg(self.y_train_all, y_preds)
+                        self.ndcgs[k, j] = ndcg_value
+                        self.rhos[k, j] = pearsonr(self.y_train_all, y_preds)[0]
+
+                        self.y_preds[k, j, :] = y_preds
+
+            else:
+                print("No valid focused training library sizes. No output updates.")
 
         pbar.close
 
@@ -448,6 +501,7 @@ class MLDESim(MLDEDataset):
             self.maxes,
             self.means,
             self.ndcgs,
+            self.rhos,
             self.unique,
             self.labelled,
             self.y_preds,
@@ -510,6 +564,11 @@ class MLDESim(MLDEDataset):
         # print(len(np.intersect1d(np.array(unique_seqs), top_seqs_96)))
 
         return max_fit, mean_fit, top_seqs
+    
+    @property
+    def used_ft_libs(self):
+        """Return the actual ft_libs number for each"""
+        return self._ft_libs
 
 
 def run_mlde_lite(
@@ -559,43 +618,14 @@ def run_mlde_lite(
         )
     )
 
+    
+
+    print("Save directory:\t {}".format(save_dir))
+
     config_folder = checkNgen_folder(
         os.path.dirname(save_dir.replace("saved", "configs"))
     )
     config_path = os.path.join(config_folder, f"{exp_name}_{n_top}.json")
-
-    # Load JSON config file
-    with open(config_path, "w") as f:
-        config_dict = {
-            "data_config": {
-                "input_csv": input_csv,
-                "zs_predictor": zs_predictor,
-                "encoding": encodings,
-                "ft_libs": ft_libs,
-                "scale_fit": scale_fit,
-                "filter_min_by": filter_min_by,
-                "n_mut_cutoff": n_mut_cutoff,
-            },
-            "model_config": {
-                "model_classes": model_classes,
-            },
-            "train_config": {
-                "n_sample": n_samples,
-                "n_splits": n_split,
-                "n_replicate": n_replicate,
-                "n_worker": n_worker,
-                "global_seed": global_seed,
-                "verbose": verbose,
-                "save_model": save_model,
-            },
-            "eval_config": {"n_top": n_top},
-        }
-        json.dump(config_dict, f, indent=4)
-
-    print("Save directory:\t {}".format(save_dir))
-    print("Config file:\t {}".format(config_path))
-    for key, value in config_dict.items():
-        print(f"{key}:\t {value}")
 
     # Start training
     all_ndcgs = np.zeros(
@@ -607,6 +637,7 @@ def run_mlde_lite(
             n_replicate,
         )
     )
+    all_rhos = np.copy(all_ndcgs)
     all_maxes = np.copy(all_ndcgs)
     all_means = np.copy(all_ndcgs)
     all_unique = np.copy(all_ndcgs)
@@ -621,7 +652,7 @@ def run_mlde_lite(
             n_replicate,
             n_top,
         ),
-        "",
+        "".join(["n"] * len(LIB_INFO_DICT[get_file_name(input_csv)]["positions"])),
     )
     all_y_preds = np.zeros(
         (
@@ -663,6 +694,7 @@ def run_mlde_lite(
                     save_model=save_model,
                     scale_fit=scale_fit,
                     filter_min_by=filter_min_by,
+                    n_mut_cutoff=n_mut_cutoff,
                     save_path=save_dir,
                 )
 
@@ -671,6 +703,7 @@ def run_mlde_lite(
                     maxes,
                     means,
                     ndcgs,
+                    rhos,
                     unique,
                     labelled,
                     y_preds,
@@ -678,6 +711,7 @@ def run_mlde_lite(
 
                 all_top_seqs[i, j, k, :, :, :] = top_seqs
                 all_ndcgs[i, j, k, :, :] = ndcgs
+                all_rhos[i, j, k, :, :] = rhos
                 all_maxes[i, j, k, :, :] = maxes
                 all_means[i, j, k, :, :] = means
                 all_unique[i, j, k, :, :] = unique
@@ -687,20 +721,58 @@ def run_mlde_lite(
                 end = time.time()
                 print("Time: " + str(end - start))
 
+
+    # Record JSON config file
+    with open(config_path, "w") as f:
+        config_dict = {
+            "data_config": {
+                "input_csv": input_csv,
+                "zs_predictor": zs_predictor,
+                "encoding": encodings,
+                "ft_libs": mlde_sim.used_ft_libs,
+                "scale_fit": scale_fit,
+                "filter_min_by": filter_min_by,
+                "n_mut_cutoff": n_mut_cutoff,
+            },
+            "model_config": {
+                "model_classes": model_classes,
+            },
+            "train_config": {
+                "n_sample": n_samples,
+                "n_splits": n_split,
+                "n_replicate": n_replicate,
+                "n_worker": n_worker,
+                "global_seed": global_seed,
+                "verbose": verbose,
+                "save_model": save_model,
+            },
+            "eval_config": {"n_top": n_top},
+        }
+        json.dump(config_dict, f, indent=4)
+        
+    print("Config file:\t {}".format(config_path))
+    for key, value in config_dict.items():
+        print(f"{key}:\t {value}")
+
+    # put all in npy
     mlde_results = {}
     (
+        mlde_results["config"],
         mlde_results["top_seqs"],
         mlde_results["maxes"],
         mlde_results["means"],
         mlde_results["ndcgs"],
+        mlde_results["rhos"],
         mlde_results["unique"],
         mlde_results["labelled"],
         mlde_results["y_preds"],
     ) = (
+        config_dict,
         all_top_seqs,
         all_maxes,
         all_means,
         all_ndcgs,
+        all_rhos,
         all_unique,
         all_labelled,
         all_y_preds,
@@ -753,7 +825,10 @@ def run_all_mlde(
 
                     print(
                         "Running MLDE for {} with {} zero-shot predictor, {} mut number, {} top output...".format(
-                            input_csv, zs_predictor, n_mut_cutoff_dict[n_mut_cutoff], n_top
+                            input_csv,
+                            zs_predictor,
+                            n_mut_cutoff_dict[n_mut_cutoff],
+                            n_top,
                         )
                     )
 
