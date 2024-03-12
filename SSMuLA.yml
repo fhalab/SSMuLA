@@ -19,7 +19,7 @@ dependencies:
   - bokeh
   - cairosvg
   - colorcet
-  - cudatoolkit=11.6
+  - cudatoolkit=11.8
   - dask                    # for faster large df handling
   - datashader
   - dssp                    # optional for graphein, required for computing secondary structural features
@@ -56,7 +56,7 @@ dependencies:
   - pyg>=2.0.3
   - pytables
   - python-wget             # required by graphein
-  - pytorch=1.12.1
+  - pytorch=2.2.0           # for h100
   - pyviz_comms
   - pyyaml
   - requests

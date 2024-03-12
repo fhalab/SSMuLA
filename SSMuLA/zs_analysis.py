@@ -296,7 +296,7 @@ class ZS_Analysis(LibData):
         if "active" in df.columns:
             df = df.drop(columns=["active"])
 
-        return df.drop(columns=["fit", "seq", "combo"]).copy()
+        return df.drop(columns=["fit", "combo"]).copy()
 
     @property
     def triad_path(self) -> pd.DataFrame:

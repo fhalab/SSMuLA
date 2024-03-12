@@ -207,40 +207,6 @@ class MLDEDataset(LibData):
         return len(self._n_mut_cuttoff_df)
 
 
-# code modified from https://github.com/google-research/slip/blob/main/models.py
-class KerasModelWrapper:
-    """Wraps a Keras model to have the sklearn model interface."""
-
-    def __init__(
-        self,
-        model_build_fn: Callable,
-        sequence_length: int,
-        vocab_size: int,
-        fit_kwargs: Dict = dict(),
-    ):
-        """Initialize a KerasModelWrapper.
-        Args:
-          model_build_fn: A function that when called with arguments
-            `model_build_fn(sequence_length, vocab_size)` returns a Keras model.
-          sequence_length: The length of input sequences.
-          vocab_size: The one-hot dimension size for input sequences.
-          fit_kwargs: An optional dictionary of keyword arguments passed to the
-            Keras model.fit(**fit_kwargs). See
-              https://keras.io/api/models/model_training_apis/ for more details.
-        """
-        self._model_build_fn = model_build_fn
-        self._fit_kwargs = fit_kwargs
-        self._sequence_length = sequence_length
-        self._vocab_size = vocab_size
-
-    def fit(self, X, y):
-        self._model = self._model_build_fn(self._sequence_length, self._vocab_size)
-        self._model.fit(X, y, **self._fit_kwargs)
-
-    def predict(self, X):
-        return self._model.predict(x=X, verbose=0).squeeze(axis=1)
-
-
 def build_linear_model(model_kwargs):
     default_kwargs = {
         "ridge_alpha": 1.0,
@@ -810,9 +776,18 @@ def run_all_mlde(
     Run all MLDE give zs combined csvs
     """
 
-    for input_csv in sorted(
-        glob(f"{os.path.normpath(zs_folder)}/{filter_min_by}/{scale_type}/*.csv")
-    ):
+    # for input_csv in sorted(
+    #     glob(f"{os.path.normpath(zs_folder)}/{filter_min_by}/{scale_type}/*.csv")
+    # ):
+    # TODO rerun smooth out patch work
+    for input_csv in sorted(["results/zs_comb/none/scale2max/TrpB3C.csv", 
+                             "results/zs_comb/none/scale2max/TrpB3D.csv",
+                             "results/zs_comb/none/scale2max/TrpB3E.csv",
+                             "results/zs_comb/none/scale2max/TrpB3F.csv",
+                             "results/zs_comb/none/scale2max/TrpB3G.csv",
+                             "results/zs_comb/none/scale2max/TrpB3H.csv",
+                             "results/zs_comb/none/scale2max/TrpB3I.csv",
+                             "results/zs_comb/none/scale2max/TrpB4.csv",]):
         for n_mut_cutoff in n_mut_cutoffs:
             for zs_predictor in zs_predictors:
                 if zs_predictor == "none":
