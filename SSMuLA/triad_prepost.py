@@ -30,11 +30,6 @@ for lib in LIB_NAMES:
 
 sorted_lib_triad_pair = deepcopy(dict(sorted(lib_triad_pair.items(), key=lambda x: x[0])))
 
-TrpB4_lib_triad_pair = {
-    os.path.join(TrpB_LIB_FOLDER, "TrpB4.csv"): triad for triad in TrpB4_TRIAD_TXT
-}
-
-
 class TriadLib:
     """
     A class for common traid things for a given lib
@@ -207,8 +202,9 @@ class ParseTriadResults(TriadLib):
         # extract triad score into dataframe
         self._triad_df = self._get_triad_score()
 
-        # save the triad dataframe
-        self._triad_df.to_csv(self.triad_csv, index=False)
+        # save the triad dataframe unless trpb4 as need to NOT overwrite
+        if self.lib_name != "TrpB4":
+            self._triad_df.to_csv(self.triad_csv, index=False)
 
     def _get_triad_score(self) -> float:
 
@@ -303,14 +299,21 @@ def run_parse_triad_results(triad_folder: str = "triad"):
         ParseTriadResults(input_csv=lib, triad_txt=triad_txt, triad_folder=triad_folder)
 
     # need to merge
-    trpb4_df = []
-    for lib, triad_txt in TrpB4_lib_triad_pair.items():
-        trpb4_df.append(
+    trpb4_dfs = []
+    print(f"Parsing TrpB4 {TrpB4_TRIAD_TXT}...")
+    for triad_txt in TrpB4_TRIAD_TXT:
+        trpb4_dfs.append(
             ParseTriadResults(
-                input_csv=lib, triad_txt=triad_txt, triad_folder=triad_folder
+                input_csv=os.path.join(TrpB_LIB_FOLDER, "TrpB4.csv"), 
+                triad_txt=triad_txt, 
+                triad_folder=triad_folder
             ).triad_df
         )
 
-    pd.concat(trpb4_df).to_csv(
+    # resort and overwrite
+    trpb4_df = pd.concat(trpb4_dfs).sort_values("Triad_score")
+    trpb4_df["Triad_rank"] = np.arange(1, len(trpb4_df) + 1)
+
+    trpb4_df.to_csv(
         os.path.join(triad_folder, "TrpB4", "TrpB4.csv"), index=False
     )

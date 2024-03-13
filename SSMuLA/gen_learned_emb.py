@@ -429,8 +429,8 @@ class GenLearnedEmb(LibData):
         # load directly if exists
         # TODO assert for emb attrb, size check
         if os.path.exists(self.emb_path):
-            self._emb_table = tables.open_file(self.emb_path)
-            self._emb_table.flush()
+            with tables.open_file(self.emb_path, mode="r") as f:
+                self._emb_table = f.flush()
 
     def _gen_learned_emb(self):
         """Generate the learned embeddings"""
@@ -438,55 +438,54 @@ class GenLearnedEmb(LibData):
         # Close all the open files
         tables.file._open_files.close_all()
 
-        emb_table = tables.open_file(self.emb_path, mode="w")
+        with tables.open_file(self.emb_path, mode="w") as emb_table:
+           
+            # get the dim of the array to be saved
+            if self._ifsite:
+                seq_dim = len(self.site_locs)
+            else:
+                seq_dim = len(self.parent_seq)
 
-        # get the dim of the array to be saved
+            # without flattening
+            if self._flatten_emb == False:
+                earray_dim = (
+                    0,
+                    seq_dim,
+                    self.encoder_info[self._encoder_name][0],
+                )
+            elif self._flatten_emb == "mean" or self._flatten_emb == "max":
+                earray_dim = (0, self.encoder_info[self._encoder_name][0])
+            elif self._flatten_emb in [True, "flatten", "flattened", ""]:
+                earray_dim = (0, seq_dim * self.encoder.embed_dim)
 
-        if self._ifsite:
-            seq_dim = len(self.site_locs)
-        else:
-            seq_dim = len(self.parent_seq)
-
-        # without flattening
-        if self._flatten_emb == False:
-            earray_dim = (
-                0,
-                seq_dim,
-                self.encoder_info[self._encoder_name][0],
+            _ = emb_table.create_earray(
+                emb_table.root,
+                "emb",
+                tables.Float32Atom(),
+                earray_dim,
             )
-        elif self._flatten_emb == "mean" or self._flatten_emb == "max":
-            earray_dim = (0, self.encoder_info[self._encoder_name][0])
-        elif self._flatten_emb in [True, "flatten", "flattened", ""]:
-            earray_dim = (0, seq_dim * self.encoder.embed_dim)
 
-        _ = emb_table.create_earray(
-            emb_table.root,
-            "emb",
-            tables.Float32Atom(),
-            earray_dim,
-        )
+            _ = emb_table.create_earray(
+                emb_table.root,
+                "AAs",
+                tables.StringAtom(itemsize=25),
+                (0,),
+            )
 
-        _ = emb_table.create_earray(
-            emb_table.root,
-            "AAs",
-            tables.StringAtom(itemsize=25),
-            (0,),
-        )
+            encoder_generator = self.encoder.encode(
+                mut_seqs=self.input_df["seq"].tolist(),
+                batch_size=self._batch_size,
+                flatten_emb=self._flatten_emb,
+                site_locs=self.site_locs,
+                mut_names=self.input_df["AAs"].tolist(),
+            )
 
-        encoder_generator = self.encoder.encode(
-            mut_seqs=self.input_df["seq"].tolist(),
-            batch_size=self._batch_size,
-            flatten_emb=self._flatten_emb,
-            site_locs=self.site_locs,
-            mut_names=self.input_df["AAs"].tolist(),
-        )
+            # run ESM model in batches
+            for m in encoder_generator:
+                emb_table.root.emb.append(m[0])
+                emb_table.root.AAs.append(m[1])
 
-        # run ESM model in batches
-        for m in encoder_generator:
-            emb_table.root.emb.append(m[0])
-            emb_table.root.AAs.append(m[1])
-
-        emb_table.close()
+            emb_table.close()
 
     @property
     def encoder_class(self) -> AbstractEncoder:
