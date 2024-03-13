@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 from glob import glob
+from tqdm import tqdm
 from copy import deepcopy
 
 import numpy as np
@@ -413,9 +414,9 @@ def run_zs_analysis(
 
         zs_stat_df = pd.DataFrame()
 
-        for lib_path in sorted(
+        for lib_path in tqdm(sorted(
             glob(f"{os.path.normpath(data_folder)}/*/scale2{scale_type}/*.csv")
-        ):
+        )):
 
             zs = ZS_Analysis(
                 input_csv=lib_path,
