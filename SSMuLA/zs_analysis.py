@@ -74,8 +74,8 @@ class ZS_Analysis(LibData):
         self._ev_esm_folder = os.path.normpath(ev_esm_folder)
         self._triad_folder = os.path.normpath(triad_folder)
         self._filter_min_by = filter_min_by
-        self._zs_comb_dir = os.path.normpath(zs_comb_dir)
-        self._zs_vis_dir = os.path.normpath(zs_vis_dir)
+        self._zs_comb_dir = checkNgen_folder(zs_comb_dir)
+        self._zs_vis_dir = checkNgen_folder(zs_vis_dir)
 
         print(f"Get fitness data without stop codon from {self._input_csv}...")
         print(f"Get ev esm data from {self.ev_esm_path}...")
@@ -432,6 +432,6 @@ def run_zs_analysis(
             )
 
         zs_stat_df.to_csv(
-            f"{checkNgen_folder(zs_sum_dir)}/{filter_min_by}/zs_stat_scale2{scale_type}.csv",
+            f"{checkNgen_folder(os.path.join(zs_sum_dir, filter_min_by))}/zs_stat_scale2{scale_type}.csv",
             index=False,
         )

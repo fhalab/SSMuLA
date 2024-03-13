@@ -71,6 +71,7 @@ def generate_georgiev(seqs: list) -> np.ndarray:
     return X
 
 
+
 encoding_dict = {"one-hot": generate_onehot, "georgiev": generate_georgiev}
 
 

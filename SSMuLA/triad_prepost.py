@@ -26,9 +26,14 @@ lib_triad_pair = {}
 # append the other two lib
 for lib in LIB_NAMES:
     if lib != "TrpB4":
-        lib_triad_pair[f"data/{lib}/scaled2max/{lib}.csv"] = f"triad/{lib}/{lib}_fixed.txt"
+        lib_triad_pair[
+            f"data/{lib}/scaled2max/{lib}.csv"
+        ] = f"triad/{lib}/{lib}_fixed.txt"
 
-sorted_lib_triad_pair = deepcopy(dict(sorted(lib_triad_pair.items(), key=lambda x: x[0])))
+sorted_lib_triad_pair = deepcopy(
+    dict(sorted(lib_triad_pair.items(), key=lambda x: x[0]))
+)
+
 
 class TriadLib:
     """
@@ -74,7 +79,9 @@ class TriadLib:
         """
         A property for the prefixes
         """
-        return [f"A_{pos}" for pos in LIB_INFO_DICT[self.lib_name]["positions"].values()]
+        return [
+            f"A_{pos}" for pos in LIB_INFO_DICT[self.lib_name]["positions"].values()
+        ]
 
     @property
     def df(self) -> pd.DataFrame:
@@ -301,19 +308,25 @@ def run_parse_triad_results(triad_folder: str = "triad"):
     # need to merge
     trpb4_dfs = []
     print(f"Parsing TrpB4 {TrpB4_TRIAD_TXT}...")
+
     for triad_txt in TrpB4_TRIAD_TXT:
+        # ignore rank for now
         trpb4_dfs.append(
             ParseTriadResults(
-                input_csv=os.path.join(TrpB_LIB_FOLDER, "TrpB4.csv"), 
-                triad_txt=triad_txt, 
-                triad_folder=triad_folder
-            ).triad_df
+                input_csv=os.path.join(TrpB_LIB_FOLDER, "TrpB4.csv"),
+                triad_txt=triad_txt,
+                triad_folder=triad_folder,
+            )
+            .triad_df[["AAs", "Triad_score"]]
+            .copy()
         )
 
-    # resort and overwrite
-    trpb4_df = pd.concat(trpb4_dfs).sort_values("Triad_score")
-    trpb4_df["Triad_rank"] = np.arange(1, len(trpb4_df) + 1)
+    # there will be multip wt from each file so need to drop them
+    trpb4_df = pd.concat(trpb4_dfs).drop_duplicates().sort_values(["Triad_score"])
+    print(len(trpb4_df))
 
-    trpb4_df.to_csv(
-        os.path.join(triad_folder, "TrpB4", "TrpB4.csv"), index=False
-    )
+    # resort and overwrite
+    trpb4_df["Triad_rank"] = np.arange(1, len(trpb4_df) + 1)
+    print("Added new rank for TrpB4")
+
+    trpb4_df.to_csv(os.path.join(triad_folder, "TrpB4", "TrpB4.csv"), index=False)

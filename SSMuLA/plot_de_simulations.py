@@ -6,6 +6,12 @@ from glob import glob
 import os
 from copy import deepcopy
 
+import warnings
+
+# Suppress the specific FutureWarning
+warnings.filterwarnings("ignore", category=FutureWarning)
+
+
 # Data manipulation
 import pandas as pd
 
@@ -208,7 +214,7 @@ def de_ecdf(slice_df: pd.DataFrame, lib_name: str, plot_name: str, plot_folder: 
         bokehorhv="hv",
         dpi=300,
         scale=2,
-        skippng=(lib_name == "GB1"),
+        skippng=(lib_name == "GB1" or lib_name == "TrpB"),
     )
 
 
