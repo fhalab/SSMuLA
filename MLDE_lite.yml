@@ -1,3 +1,4 @@
+# conda env update --file MLDE_lite.yml --prune
 name: MLDE_lite
 channels:
   - defaults
@@ -35,6 +36,7 @@ dependencies:
   - setuptools=65.6.3=py310h06a4308_0
   - six=1.16.0=pyhd3eb1b0_1
   - sqlite=3.40.1=h5082296_0
+  - tables
   - tk=8.6.12=h1ccaba5_0
   - tzdata=2022g=h04d1e81_0
   - wheel=0.38.4=py310h06a4308_0

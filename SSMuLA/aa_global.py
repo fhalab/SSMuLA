@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections import Counter
 
 import re
+from copy import deepcopy
 
 RAND_SEED = 42
 
@@ -568,3 +569,16 @@ georgiev_parameters = [
     gg_18,
     gg_19,
 ]
+
+DEFAULT_ESM = "esm2_t33_650M_UR50D"
+
+EMB_METHOD_COMBOS = [
+    {"flatten_emb": "flatten", "ifsite": True, "combo_folder": "flatten_site"},
+    {"flatten_emb": "mean", "ifsite": True, "combo_folder": "mean_site"},
+    {"flatten_emb": "mean", "ifsite": False, "combo_folder": "mean_all"},
+]
+
+EMB_COMBO_LIST = deepcopy(sorted(i["combo_folder"] for i in EMB_METHOD_COMBOS))
+
+DEFAULT_LEARNED_EMB_COMBO = deepcopy([f"{DEFAULT_ESM}-{combo}" for combo in [EMB_COMBO_LIST]])
+DEFAULT_LEARNED_EMB_DIR = "learned_emb"

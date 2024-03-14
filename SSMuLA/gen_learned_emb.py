@@ -20,7 +20,7 @@ import esm
 import torch
 
 # from sequence_models.pretrained import load_model_and_alphabet
-from SSMuLA.aa_global import AA_NUMB, AA_TO_IND
+from SSMuLA.aa_global import DEFAULT_ESM, EMB_METHOD_COMBOS
 from SSMuLA.landscape_global import LIB_INFO_DICT, LibData
 from SSMuLA.util import checkNgen_folder
 
@@ -51,11 +51,8 @@ TRANSFORMER_INFO = {
     "esm2_t48_15B_UR50D": (5120, 48, 2),
 }
 
-DEFAULT_ESM = "esm2_t33_650M_UR50D"
-
 # Set up cuda variables
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
-
 
 class AbstractEncoder(ABC):
     """
@@ -571,13 +568,7 @@ def gen_all_learned_emb(
 ):
     """Generate all learned embeddings"""
 
-    emb_methods_combo = [
-        {"flatten_emb": "flatten", "ifsite": True, "combo_folder": "flatten_site"},
-        {"flatten_emb": "mean", "ifsite": True, "combo_folder": "mean_site"},
-        {"flatten_emb": "mean", "ifsite": False, "combo_folder": "mean_all"},
-    ]
-
-    for emb_combo_dict in emb_methods_combo:
+    for emb_combo_dict in EMB_METHOD_COMBOS:
 
         emb_sub_folder = checkNgen_folder(
             os.path.join(emb_folder, emb_combo_dict["combo_folder"])

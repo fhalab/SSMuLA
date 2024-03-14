@@ -8,6 +8,7 @@ import os
 import time
 import json
 import random
+import tables
 import numpy as np
 import pandas as pd
 from glob import glob
@@ -20,7 +21,12 @@ from sklearn import linear_model
 from sklearn.metrics import ndcg_score
 from sklearn.model_selection import train_test_split
 
-from SSMuLA.aa_global import ALL_AAS, georgiev_parameters
+from SSMuLA.aa_global import (
+    ALL_AAS,
+    georgiev_parameters,
+    DEFAULT_LEARNED_EMB_COMBO,
+    DEFAULT_LEARNED_EMB_DIR,
+)
 from SSMuLA.landscape_global import LibData, LIB_INFO_DICT
 from SSMuLA.util import checkNgen_folder, get_file_name
 
@@ -70,6 +76,32 @@ def generate_georgiev(seqs: list) -> np.ndarray:
     X = seqs_to_georgiev(seqs)
     return X
 
+
+def generate_precomp_emb(emb_path, seqs: list) -> list:
+    """ """
+    X = []
+
+    emb_table = tables.open_file(emb_path)
+    emb_table.flush()
+
+    # Convert the list of AAs to strings
+    bseqs = [aa.encode("utf-8") for aa in seqs]
+
+    # Get the AAs dataset
+    AAs_dataset = emb_table.root.AAs[:]
+
+    # Iterate over each AA and find its index
+    for seq in bseqs:
+        try:
+            idx = np.where(AAs_dataset == seq)[0][0]  # Get the first occurrence
+            # Use the index to extract the corresponding embeddings
+            embedding = emb_table.root.emb[idx]
+            X.append(embedding)
+        except IndexError:
+            print(f"AA '{seq}' not found in the dataset.")
+            X.append(None)  # Append None if AA is not found
+
+    return X
 
 
 encoding_dict = {"one-hot": generate_onehot, "georgiev": generate_georgiev}
@@ -130,8 +162,10 @@ class MLDEDataset(LibData):
 
         options = sorted["AAs"].values
 
-        n_choice = min(n_sample, len(options)) if len(options) > n_sample else len(options)
-        
+        n_choice = (
+            min(n_sample, len(options)) if len(options) > n_sample else len(options)
+        )
+
         np.random.seed(seed)
         return np.random.choice(options, n_choice, replace=False).copy()
 
@@ -141,11 +175,24 @@ class MLDEDataset(LibData):
         """
         if encoding == "one-hot":
             self.X = np.array(encoding_dict[encoding](self.all_combos))
+            # need to flatten the array
             self.X = self.X.reshape(self.X.shape[0], -1)
 
-        self._n_sites = self.X.shape[1] / len(ALL_AAS)
+            self._n_sites = self.X.shape[1] / len(ALL_AAS)
 
-        assert self._n_sites == self.n_site, "Number of sites do not match"
+            assert self._n_sites == self.n_site, "Number of sites do not match"
+
+        elif "esm" in encoding:
+            esm, combo = encoding.split("-")
+            emb_paths = glob(
+                f"{os.path.join(DEFAULT_LEARNED_EMB_DIR, combo)}/{self.lib_name}-{esm}*.h5"
+            )
+            assert len(emb_paths) == 1, "More than one learned embeddings found"
+            emb_path = emb_paths[0]
+            self.X = np.array(generate_precomp_emb(emb_path, self.all_combos))
+            # no reshape needed
+        else:
+            raise NotImplementedError
 
     def get_mask(self, seqs: list) -> list:
         """
@@ -281,7 +328,8 @@ class MLDESim(MLDEDataset):
         - input_csv: str, path to the input csv file WITH ZS,
             ie. 'results/zs_comb/none/scale2max/DHFR.csv'
         - zs_predictor: str, name of the ZS predictor
-        - encoding: str, encoding type
+        - encoding: str, encoding type,
+            ie `one-hot`, or `esm2_t33_650M_UR50D-flatten_site`
         - ft_libs: list[float] = [1], list of percent of focused training libraries
             ie. [1, 0.5, 0.25, 0.125]
         - model_class: str, model class
@@ -531,7 +579,7 @@ class MLDESim(MLDEDataset):
         # print(len(np.intersect1d(np.array(unique_seqs), top_seqs_96)))
 
         return max_fit, mean_fit, top_seqs
-    
+
     @property
     def used_ft_libs(self):
         """Return the actual ft_libs number for each"""
@@ -584,8 +632,6 @@ def run_mlde_lite(
             exp_name,
         )
     )
-
-    
 
     print("Save directory:\t {}".format(save_dir))
 
@@ -688,7 +734,6 @@ def run_mlde_lite(
                 end = time.time()
                 print("Time: " + str(end - start))
 
-
     # Record JSON config file
     with open(config_path, "w") as f:
         config_dict = {
@@ -716,7 +761,7 @@ def run_mlde_lite(
             "eval_config": {"n_top": n_top},
         }
         json.dump(config_dict, f, indent=4)
-        
+
     print("Config file:\t {}".format(config_path))
     for key, value in config_dict.items():
         print(f"{key}:\t {value}")
@@ -781,14 +826,82 @@ def run_all_mlde(
     #     glob(f"{os.path.normpath(zs_folder)}/{filter_min_by}/{scale_type}/*.csv")
     # ):
     # TODO rerun smooth out patch work
-    for input_csv in sorted(["results/zs_comb/none/scale2max/TrpB3C.csv", 
-                             "results/zs_comb/none/scale2max/TrpB3D.csv",
-                             "results/zs_comb/none/scale2max/TrpB3E.csv",
-                             "results/zs_comb/none/scale2max/TrpB3F.csv",
-                             "results/zs_comb/none/scale2max/TrpB3G.csv",
-                             "results/zs_comb/none/scale2max/TrpB3H.csv",
-                             "results/zs_comb/none/scale2max/TrpB3I.csv",
-                             "results/zs_comb/none/scale2max/TrpB4.csv",]):
+    for input_csv in sorted(
+        [
+            "results/zs_comb/none/scale2max/TrpB4.csv",
+        ]
+    ):
+        for n_mut_cutoff in n_mut_cutoffs:
+            for zs_predictor in zs_predictors:
+                if zs_predictor == "none":
+                    ft_libs = [1]
+                else:
+                    zs_predictor = f"{zs_predictor}_score"
+                    ft_libs = ft_lib_fracs
+
+                for n_top in n_tops:
+
+                    print(
+                        "Running MLDE for {} with {} zero-shot predictor, {} mut number, {} top output...".format(
+                            input_csv,
+                            zs_predictor,
+                            n_mut_cutoff_dict[n_mut_cutoff],
+                            n_top,
+                        )
+                    )
+
+                    run_mlde_lite(
+                        input_csv=input_csv,
+                        zs_predictor=zs_predictor,
+                        scale_fit=scale_type.split("scale2")[1],
+                        filter_min_by=filter_min_by,
+                        n_mut_cutoff=n_mut_cutoff,
+                        encodings=encodings,
+                        ft_libs=ft_libs,
+                        model_classes=model_classes,
+                        n_samples=n_samples,
+                        n_split=n_split,
+                        n_replicate=n_replicate,
+                        n_top=n_top,
+                        n_worker=n_worker,
+                        global_seed=global_seed,
+                        verbose=verbose,
+                        save_model=save_model,
+                        mlde_folder=mlde_folder,
+                        exp_name="",
+                    )
+
+
+### del after ###
+
+
+def run_all_mlde2(
+    zs_folder: str = "results/zs_comb",
+    filter_min_by: str = "none",
+    n_mut_cutoffs: list[int] = [0, 1, 2],
+    scale_type: str = "scale2max",
+    zs_predictors: list[str] = ["none", "Triad", "ev", "esm"],
+    ft_lib_fracs: list[float] = [0.5, 0.25, 0.125],
+    encodings: list[str] = DEFAULT_LEARNED_EMB_COMBO,
+    model_classes: list[str] = ["boosting", "ridge"],
+    n_samples: list[int] = [384],
+    n_split: int = 5,
+    n_replicate: int = 100,
+    n_tops: list[int] = [96, 384],
+    n_worker: int = 1,
+    global_seed: int = 42,
+    verbose: bool = False,
+    save_model: bool = False,
+    mlde_folder: str = "results/mlde",
+):
+    """
+    Run all MLDE give zs combined csvs
+    """
+
+    for input_csv in sorted(
+        glob(f"{os.path.normpath(zs_folder)}/{filter_min_by}/{scale_type}/*.csv")
+    ):
+
         for n_mut_cutoff in n_mut_cutoffs:
             for zs_predictor in zs_predictors:
                 if zs_predictor == "none":
