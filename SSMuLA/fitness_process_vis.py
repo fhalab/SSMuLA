@@ -11,10 +11,13 @@ from functools import reduce
 
 import os
 from glob import glob
+from tqdm import tqdm
+from copy import deepcopy
 
 import numpy as np
 import pandas as pd
-from scipy.stats import ks_2samp
+from scipy.stats import ks_2samp, skew, kurtosis, cauchy, gaussian_kde
+from scipy.signal import argrelextrema
 
 from Bio.Seq import Seq
 
@@ -23,6 +26,7 @@ import seaborn as sns
 import holoviews as hv
 
 hv.extension("bokeh")
+
 
 from SSMuLA.landscape_global import (
     ACTIVE_THRESH_DICT,
@@ -534,6 +538,10 @@ class ProcessTrpB(ProcessData):
 
         if self._scale_fit == "parent":
             df["fitness"] = df["fitness"] / self.parent_aa_fitness
+        elif self._scale_fit == "max":
+            df["fitness"] = df["fitness"] / df["fitness"].max()
+        else:
+            raise ValueError("The scale_fit should be parent or max")
 
         return df
 
@@ -620,7 +628,7 @@ class PlotTrpB:
             )
         )
 
-        for i, lib in enumerate(self.trpb3_aa_csv):
+        for i, lib in enumerate(tqdm(self.trpb3_aa_csv)):
 
             print(f"Processing {lib} ...")
 
@@ -728,6 +736,18 @@ class PlotTrpB:
         return self._ks_p_list
     
 
+def process_all(
+    scale_fit: str = "max",
+):
+    """
+    Process all dataframe and plot the fitness distribution
+    """
+
+    ProcessDHFR(scale_fit=scale_fit)
+    ProcessGB1(scale_fit=scale_fit)
+    PlotTrpB(scale_fit=scale_fit)
+
+
 def sum_ks(
     input_folder: str = "data", 
     output_folder: str = "results/fitness_distribution"
@@ -762,7 +782,7 @@ def sum_ks(
         ks_df = pd.DataFrame(columns=LIB_NAMES, index=LIB_NAMES).astype(float)
         ks_df_p = pd.DataFrame(columns=LIB_NAMES, index=LIB_NAMES).astype(float)
 
-        for lib in LIB_NAMES:
+        for lib in tqdm(LIB_NAMES):
 
             if "TrpB" in lib:
                 protein = "TrpB"
@@ -828,3 +848,233 @@ def sum_ks(
         output_dict[process_type]["ks_p"] = ks_df_p
 
     return output_dict
+
+
+class LibStat(LibData):
+    """A class for statistical analysis of landscape data"""
+
+    def __init__(
+        self,
+        input_csv: str,
+        scale_fit: str = "max",
+        results_dir: str = "results/fitness_distribution",
+    ) -> None:
+        """
+        Args:
+        - input_csv, str: path to the input csv file,
+            ie. data/DHFR/fitness_landscape/DHFR.csv for preprocessed
+                data/DHFR/scale2max/DHFR.csv for scaled to max = 1
+        - scale_fit, str: the method used to scale fitness values
+            "max" = divide by the maximum fitness value
+            "parent" = scale to parent = 1
+        - results_dir, str: the directory to save the results
+        """
+
+        super().__init__(input_csv, scale_fit)
+
+        self._results_dir = os.path.normpath(results_dir)
+
+        self._cauchy_dict = self._fit_cauchy()
+        self._kde_dict = self._fit_gaussian_kde()
+
+        # now plot with all overlay
+        self._plot_fit()
+
+    def _fit_cauchy(self) -> tuple:
+
+        """Fit a cauchy distribution to the data"""
+
+        print(f"Fit a cauchy distribution to {self.lib_name} fitenss...")
+
+        loc, scale = cauchy.fit(self.fitness)
+
+        return deepcopy({"loc": loc, "scale": scale})
+
+    def _fit_gaussian_kde(self):
+        """
+        A method to fit a gaussian kde to the fitness data
+        """
+
+        print(f"Fit a gaussian kde to {self.lib_name} fitenss...")
+
+        # Estimate PDF using kernel density estimation (KDE)
+        kde = gaussian_kde(self.fitness)
+
+        # Evaluate PDF on a grid of points
+        x_grid = np.linspace(np.min(self.fitness), np.max(self.fitness), 1000)
+        pdf_values = kde(x_grid)
+
+        # Find peaks (local maxima)
+        peaks = x_grid[argrelextrema(pdf_values, np.greater)[0]]
+
+        # Estimate percentiles
+        percentiles = [np.percentile(self.fitness, p) for p in range(0, 101)]
+
+        return deepcopy(
+            {
+                "kde": kde,
+                "peaks": peaks,
+                "peak_kde": kde(peaks),  # "heights" of the peaks
+                "percentiles": percentiles,
+                "pdf_values": pdf_values,
+            }
+        )
+
+    def _plot_fit(self):
+        """Plot the fit of the data"""
+
+        title_name = (
+            f"{self.lib_name} fitnees distribution with cauchy and gaussian kde"
+        )
+
+        # Create the figure and axes object
+        fig, ax = plt.subplots(figsize=(6, 4))
+
+        # Plot histogram of data
+        ax.hist(
+            self.fitness,
+            bins=30,
+            density=True,
+            alpha=0.6,
+            color=LIB_COLORS[self.lib_name],
+        )
+
+        # Plot fitted Cauchy distribution
+        xmin, xmax = plt.xlim()
+        x = np.linspace(xmin, xmax, 100)
+        p = cauchy.pdf(
+            x, loc=self._cauchy_dict["loc"], scale=self._cauchy_dict["scale"]
+        )
+        ax.plot(x, p, "k", linewidth=1.2, linestyle="dotted", label="Cauchy fit")
+
+        kde_dict = self.kde_dict
+        # Plot KDE estimate
+        x_grid = np.linspace(
+            np.min(self.fitness), np.max(self.fitness), len(kde_dict["pdf_values"])
+        )
+        ax.plot(
+            x_grid,
+            kde_dict["pdf_values"],
+            "k",
+            linewidth=1.2,
+            linestyle="solid",
+            label="KDE estimate",
+        )
+
+        # Mark peaks
+        ax.scatter(
+            kde_dict["peaks"],
+            kde_dict["peak_kde"],
+            color="k",
+            marker="o",
+            label="Peaks",
+        )
+
+        ax.set_title(title_name)
+        ax.legend()
+        save_plt(fig, plot_title=title_name, path2folder=self.stat_subfolder)
+
+    @property
+    def df(self) -> pd.DataFrame:
+        """Returns the dataframe without stop codons"""
+        return self.input_df[~self.input_df["AAs"].str.contains("\*")].copy()
+
+    @property
+    def numb_measured(self) -> int:
+        """Return the length of the dataframe"""
+        return len(self.df)
+
+    @property
+    def frac_measured(self) -> float:
+        """Return the fraction of complete sequences"""
+        return self.numb_measured / 20 ** self.numb_sites
+
+    @property
+    def numb_active(self) -> int:
+        """Return the number of active variants"""
+        return len(self.df[self.df["active"]])
+
+    @property
+    def frac_active(self) -> float:
+        """Return the percent active"""
+        return self.numb_active / self.numb_measured
+
+    @property
+    def fitness(self) -> pd.Series:
+        """Return the fitness column"""
+        return self.df["fitness"]
+
+    @property
+    def stat_subfolder(self) -> str:
+        """Return the subfolder for the statistics"""
+        return checkNgen_folder(
+            os.path.join(self._results_dir, self._scale_fit, "stat")
+        )
+
+    @property
+    def stat_dict(self):
+        """Get basic statistics of the data"""
+        fitness_stats = {}
+        fitness_stats["mean"] = np.mean(self.fitness)
+        fitness_stats["std"] = np.median(self.fitness)
+
+        # Variability
+        fitness_stats["range"] = np.max(self.fitness) - np.min(self.fitness)
+        fitness_stats["iqr"] = np.percentile(self.fitness, 75) - np.percentile(
+            self.fitness, 25
+        )
+        fitness_stats["std_dev"] = np.std(self.fitness)
+        fitness_stats["variance"] = np.var(self.fitness)
+
+        # shape
+        fitness_stats["skewness"] = skew(self.fitness)
+        fitness_stats["kurt"] = kurtosis(self.fitness)
+
+        fitness_stats["quartiles"] = self.fitness.quantile([0.25, 0.5, 0.75]).to_list()
+
+        return fitness_stats
+
+    @property
+    def cauchy_dict(self) -> dict:
+        """Return the cauchy fit results as a dictionary"""
+        return self._cauchy_dict
+
+    @property
+    def kde_dict(self) -> dict:
+        """Return the kde fit results as a dictionary"""
+        return self._kde_dict
+    
+
+def get_all_lib_stats(
+    input_folder: str = "data", 
+    scale_fit: str = "max",
+    results_dir: str = "results/fitness_distribution",
+):
+    """
+    Get the statistics for all libraries
+    """
+
+    stat_df = pd.DataFrame(columns=["lib", "basic_stats", "cauchy", "kde"])
+
+    for lib in tqdm(LIB_NAMES):
+
+        if "TrpB" in lib:
+            protein = "TrpB"
+        else:
+            protein = lib
+
+        print(f"Get {lib} stats...")
+
+        lib_class = LibStat(
+            os.path.join(input_folder, protein, f"scale2{scale_fit}", f"{lib}.csv"),
+            scale_fit=scale_fit,
+            results_dir=results_dir,
+        )
+        stat_df = stat_df._append(
+            {
+                "lib": lib,
+                "basic_stats": lib_class.stat_dict,
+                "cauchy": lib_class.cauchy_dict,
+                "kde": lib_class.kde_dict,
+            }
+        )

@@ -20,8 +20,6 @@ from SSMuLA.landscape_global import LIB_INFO_DICT, make_new_sequence, hamming
 from SSMuLA.vis import save_bokeh_hv, JSON_THEME
 from SSMuLA.util import get_file_name, checkNgen_folder
 
-from bokeh.themes.theme import Theme
-
 hv.renderer("bokeh").theme = JSON_THEME
 
 
@@ -61,6 +59,7 @@ def determine_optima(active_variant: str, df: pd.DataFrame, fit_col: str) -> int
     return variant_rank
 
 
+# TODO comb with libdata for libstat
 class LocOpt:
     """A class for calcaulting local optima"""
 
