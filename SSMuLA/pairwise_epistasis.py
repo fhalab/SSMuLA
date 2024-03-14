@@ -30,8 +30,6 @@ from SSMuLA.vis import (
     LIB_COLORS,
 )
 
-from bokeh.themes.theme import Theme
-
 hv.renderer("bokeh").theme = JSON_THEME
 
 
@@ -80,30 +78,61 @@ class PairwiseEpistasis:
         self,
         input_csv: str,
         output_folder: str = "results/pairwise_epistasis",
-        filter_min_by: str = "none",
-        n_jobs: int = 256,
+        activestart: bool = True,
+        n_jobs: int = 128,
     ) -> None:
 
         """
         Args:
         - input_csv, str: The input CSV file, ie. data/TrpB/scale2max/TrpB4.csv
         - output_folder, str: The output folder.
-        - filter_min_by, str: methods to filter the DataFrame by, 0 or active_min.
+        - activestart, bool: Whether to only calculate pairwise epistasis for active mutants.
         - n_jobs, int: The number of jobs to run in parallel.
         """
 
         self._input_csv = input_csv
         self._output_folder = checkNgen_folder(output_folder)
-
-        if filter_min_by in ["", "none", "None", None]:
-            self._filter_min_by = "none"
-        else:
-            self._filter_min_by = filter_min_by
+        self._activestart = activestart
         self._n_jobs = n_jobs
 
+        # calc pairwise epistasis
+        self._epistasis_df = self._process_epistasis_df()
+
         # generate and save the pairwise epistasis DataFrame
-        self.filtered_epistasis_df.to_csv(self.output_csv, index=True)
+        self._epistasis_df.to_csv(self.output_csv, index=True)
         print(f"Saving pairwise epistasis in {self.output_csv}...")
+
+    def _process_epistasis_df(self) -> pd.DataFrame:
+
+        """
+        Calculate pairwise epistasis.
+
+        Returns:
+        - pd.DataFrame: The DataFrame with pairwise epistasis.
+        """
+
+        print(f"Calculating pairwise epistasis for {self.lib_name}...")
+
+        epistasis_df = gen_epistasis_df(
+            self.df, 
+            activestart=self._activestart, 
+            seq_col="AAs", 
+            fitness_col="fitness", 
+            n_jobs=self._n_jobs
+        )
+
+        # add epsilon
+        epistasis_df["epsilon"] = epistasis_df.apply(calc_epsilon, axis=1)
+
+        # now append the active threshold with append_active_thresh
+        for onesuborall in ["onesub", "all"]:
+            for fit_min, fit_min_type in zip([self.active_fit_min, 0], ["active_min", "0_min"]):
+                epistasis_df = append_active_thresh(epistasis_df, 
+                                                    onesuborall=onesuborall, 
+                                                    fit_min=fit_min, 
+                                                    fit_min_type=fit_min_type)
+
+        return epistasis_df.copy()
 
     @property
     def lib_name(self) -> str:
@@ -125,10 +154,15 @@ class PairwiseEpistasis:
         - str: The output folder.
         """
 
+        if self._activestart:
+            append_str = "active_start"
+        else:
+            append_str = "all_start"
+
         output_csv = os.path.join(
             self._output_folder,
-            self._filter_min_by,
             self.fitness_process_type,
+            append_str,
             f"{self.lib_name}.csv",
         )
 
@@ -164,48 +198,8 @@ class PairwiseEpistasis:
 
         return self.df[self.df["active"]]["fitness"].min()
 
-    @property
-    def epistasis_df(self) -> pd.DataFrame:
 
-        """
-        Calculate pairwise epistasis.
-
-        Returns:
-        - pd.DataFrame: The DataFrame with pairwise epistasis.
-        """
-
-        epistasis_df = get_epistasis_data(
-            self.df, "AAs", "fitness", n_jobs=self._n_jobs
-        )
-
-        # add epsilon
-        epistasis_df["epsilon"] = epistasis_df.apply(calc_epsilon, axis=1)
-
-        return epistasis_df
-
-    @property
-    def filtered_epistasis_df(self) -> pd.DataFrame:
-
-        """
-        Filter the DataFrame by the minimum fitness.
-
-        Returns:
-        - pd.DataFrame: The filtered DataFrame.
-        """
-
-        if self._filter_min_by == "active_min":
-            return filter_epistasis_results(
-                self.epistasis_df, self.active_fit_min
-            ).copy()
-        elif self._filter_min_by == "none":
-            return self.epistasis_df.copy()
-        else:
-            return filter_epistasis_results(
-                self.epistasis_df, float(self._filter_min_by)
-            ).copy()
-
-
-def pairwise_epistasis(seq_ab: str, data_dict: dict) -> pd.DataFrame:
+def calc_pairwise_epistasis(seq_ab: str, data_dict: dict) -> pd.DataFrame:
     """
     Classifies the epistasis type between the given sequence and all other double mutants.
 
@@ -227,7 +221,10 @@ def pairwise_epistasis(seq_ab: str, data_dict: dict) -> pd.DataFrame:
             - epistasis_type: the type of epistasis between the starting sequence and the double mutant
     """
 
+    # get possible orders ie [(0, 1), (0, 2), (1, 2)]
     position_orders = list(itertools.combinations(range(len(seq_ab)), 2))
+
+    # initialize the dictionary to store the results
     epsilon_dict = {}
 
     fit_ab = data_dict[seq_ab]
@@ -244,13 +241,13 @@ def pairwise_epistasis(seq_ab: str, data_dict: dict) -> pd.DataFrame:
 
                 if seq_Ab in data_dict:
                     fit_Ab = data_dict[seq_Ab]
+                # ignore if that variant is not measured
                 else:
                     fit_Ab = np.nan
 
                 for AA2 in ALL_AAS:
                     if AA2 == seq_ab[temp_order[1]]:
                         pass
-
                     else:
                         seq_aB = make_new_sequence(seq_ab, AA2, temp_order[1])
                         seq_AB = make_new_sequence(seq_Ab, AA2, temp_order[1])
@@ -258,11 +255,13 @@ def pairwise_epistasis(seq_ab: str, data_dict: dict) -> pd.DataFrame:
                         # get fitness scores
                         if seq_aB in data_dict:
                             fit_aB = data_dict[seq_aB]
+                        # ignore if that variant is not measured
                         else:
                             fit_aB = np.nan
 
                         if seq_AB in data_dict:
                             fit_AB = data_dict[seq_AB]
+                        # ignore if that variant is not measured
                         else:
                             fit_AB = np.nan
 
@@ -296,19 +295,45 @@ def pairwise_epistasis(seq_ab: str, data_dict: dict) -> pd.DataFrame:
     return epistasis_results
 
 
-def get_epistasis_data(
-    full_df: pd.DataFrame, seq_col: str, fitness_col: str, n_jobs: int
+def gen_epistasis_df(
+    full_df: pd.DataFrame, 
+    activestart: bool, 
+    seq_col: str, 
+    fitness_col: str, 
+    n_jobs: int
 ) -> pd.DataFrame:
+    
+    """
+    A function to calc pairwise epistasis.
 
-    # Get all nonzero sequences
-    active_variants = full_df[full_df["active"]][seq_col]
+    Args:
+    - full_df, pd.DataFrame: The full DataFrame.
+    - activestart, bool: Whether to only calculate pairwise epistasis for active mutants.
+    - seq_col, str: The column name for the sequences.
+    - fitness_col, str: The column name for the fitness values.
+    - n_jobs, int: The number of jobs to run in parallel.
+
+    Returns:
+    - pd.DataFrame: The DataFrame with pairwise epistasis.
+    """
+
+    # make sure no stop codons are present
+    full_df = full_df[~full_df[seq_col].str.contains("\*")].copy()
+
+    # filter out active ones if needed
+    if activestart:
+        print("Only running pairwise epistasis on ACTIVE mutants...")
+        sliced_df = full_df[full_df["active"] == True].copy()
+    else:
+        print("Running pairwise epistasis on ALL sequences...")
+        sliced_df = full_df.copy()
 
     # Conver the data to a dictionary for faster lookup
     data_dict = dict(zip(full_df[seq_col].values, full_df[fitness_col].values))
-    pool_args = [(start_seq, data_dict) for start_seq in active_variants]
+    pool_args = [(start_seq, data_dict) for start_seq in sliced_df[seq_col]]
 
     with Pool(n_jobs) as pool:
-        result = pool.starmap(pairwise_epistasis, tqdm(pool_args))
+        result = pool.starmap(calc_pairwise_epistasis, tqdm(pool_args))
 
     all_epistasis_results = (
         pd.concat(result)
@@ -340,24 +365,52 @@ def get_epistasis_data(
     return all_epistasis_results
 
 
-def filter_epistasis_results(df, fit_min=0):
+def append_active_thresh(df: pd.DataFrame, 
+                            onesuborall: str, 
+                            fit_min: float=0,
+                            fit_min_type: str="active_min") -> pd.DataFrame:
+    """
+    A function for appending a column, 
+    with a name combining threshold type and fit_min_type, and 
+    a True/False value for each row if passing the fit_min threshold.
 
-    df = df[
-        (df["fit_ab"] >= fit_min)
-        & (df["fit_Ab"] >= fit_min)
-        & (df["fit_aB"] >= fit_min)
-        & (df["fit_AB"] >= fit_min)
-    ]
+    Args:
+    - df, pd.DataFrame: The DataFrame.
+    - onesuborall, str: The threshold type, either "onesub" or "all".
+    - fit_min, float: The minimum fitness value.
+    - fit_min_type, str: The minimum fitness type.
+    """
 
-    return df
+    if "active" not in df.columns:
+        df["active"] = df["fit_ab"] >= fit_min
+
+    if onesuborall == "onesub":
+        df[f"{onesuborall}_{fit_min_type}_active"] = (
+            (df[["fit_ab", "fit_Ab", "fit_aB"]] >= fit_min).all(axis=1)
+        )
+    elif onesuborall == "all":
+        df[f"{onesuborall}_{fit_min_type}_active"] = (
+            (df[["fit_ab", "fit_Ab", "fit_aB", "fit_AB"]] >= fit_min).all(axis=1)
+        )
+
+    return df.copy()
 
 
 def calc_epsilon(row):
-    return (
-        np.log(row["fit_AB"] / row["fit_ab"])
-        - np.log(row["fit_Ab"] / row["fit_ab"])
-        - np.log(row["fit_aB"] / row["fit_ab"])
-    )
+    """
+    A function for calculating epsilon.
+    """
+
+    # do try except 
+    try:
+        return (
+            np.log(row["fit_AB"] / row["fit_ab"])
+            - np.log(row["fit_Ab"] / row["fit_ab"])
+            - np.log(row["fit_aB"] / row["fit_ab"])
+        )
+    except:
+        print("Error in calculating epsilon for row: ", row)
+        return np.nan
 
 
 class VisPairwiseEpistasis:
@@ -369,7 +422,7 @@ class VisPairwiseEpistasis:
         pairwise_csv: str,
         dets_folder: str = "results/pairwise_epistasis_dets",
         vis_folder: str = "results/pairwise_epistasis_vis",
-        filter_min_by: str = "none",
+        pos_calc_filter_min: str = "none",
     ):
 
         """
@@ -378,13 +431,13 @@ class VisPairwiseEpistasis:
             ie. results/pairwise_epistasis/DHFR/scale2max/DHFR.csv
         - dets_folder: The folder to save the processed dataframe with more details.
         - vis_folder: The folder to save the visualizations.
-        - filter_min_by: The minimum fitness to filter by.
+        - pos_calc_filter_min: The minimum fitness to filter by.
         """
 
         self._pairwise_csv = pairwise_csv
         self._vis_folder = checkNgen_folder(vis_folder)
         self._dets_folder = checkNgen_folder(dets_folder)
-        self._filter_min_by = filter_min_by
+        self._pos_calc_filter_min = pos_calc_filter_min
 
         print(
             "Visulizing pairwise epistasis for {} saved to {}".format(
@@ -476,6 +529,7 @@ class VisPairwiseEpistasis:
         if self.df["epistasis_type"].nunique == len(EPISTASIS_TYPE):
             violin_color = dim("epistasis_type").str()
         else:
+            print("Not data for each epistasis type.")
             violin_color = "epistasis_type"
 
         vis = hv.Violin(
@@ -582,7 +636,7 @@ class VisPairwiseEpistasis:
         return checkNgen_folder(
             os.path.join(
                 self._dets_folder,
-                self._filter_min_by,
+                self._pos_calc_filter_min,
                 self.fitness_process_type
             )
         )
@@ -593,7 +647,7 @@ class VisPairwiseEpistasis:
         return checkNgen_folder(
             os.path.join(
                 self._vis_folder,
-                self._filter_min_by,
+                self._pos_calc_filter_min,
                 self.fitness_process_type,
                 self.lib_name,
             )
@@ -638,11 +692,11 @@ class VisPairwiseEpistasis:
         self.df["epistasis_type"] = self.df["epistasis_type"].astype("category")
 
         grouped_epistasis_df = pd.DataFrame(
-            self.df.groupby(["positions", "start_seq", "epistasis_type"]).size()
+            self.df.groupby(["positions", "start_seq", "epistasis_type"], observed=False).size()
         ).rename(columns={0: "count"})
 
         grouped_epistasis_df["total"] = grouped_epistasis_df.groupby(
-            ["positions", "start_seq"]
+            ["positions", "start_seq"], observed=False
         )["count"].transform("sum")
         grouped_epistasis_df["frac_epistasis_type"] = (
             grouped_epistasis_df["count"] / grouped_epistasis_df["total"]
@@ -685,10 +739,10 @@ class VisPairwiseEpistasis:
         temp["epistasis_type"] = temp["epistasis_type"].astype("category")
 
         df = pd.DataFrame(
-            temp.groupby(["start_seq", "quartile", "epistasis_type"]).size()
+            temp.groupby(["start_seq", "quartile", "epistasis_type"], observed=False).size()
         ).rename(columns={0: "count"})
 
-        df["total"] = df.groupby(["start_seq", "quartile"])["count"].transform("sum")
+        df["total"] = df.groupby(["start_seq", "quartile"], observed=False)["count"].transform("sum")
         df["frac_epistasis_type"] = df["count"] / df["total"]
 
         df = df[df["total"] > 0].copy()
@@ -718,12 +772,13 @@ class VisPairwiseEpistasis:
         return self._quartile_type_frac
 
 
-def run_pairwise_epistasis(
+# now for all libraries
+def calc_all_pairwise_epistasis(
     input_folder: str = "data",
     fitness_process_type: str = "scale2max",
-    filter_min_by: str = "none",
+    activestart: bool = True,
     output_folder: str = "results/pairwise_epistasis",
-    n_jobs: int = 256,
+    n_jobs: int = 128,
 ):
 
     """
@@ -732,23 +787,22 @@ def run_pairwise_epistasis(
     Args:
     - input_folder, str: The input folder.
     - fitness_process_type, str: The fitness process type.
-    - filter_min_by, str: The minimum fitness to filter by.
+    - activestart, bool: Whether to only calculate pairwise epistasis for active mutants.
     - output_folder, str: The output folder.
     - n_jobs, int: The number of jobs to run in parallel.
     """
 
-    for lib in glob(
+    for lib in sorted(glob(
         os.path.normpath(input_folder) + "/*/" + fitness_process_type + "/*.csv"
-    ):
+    )):
         print(f"Processing {lib}...")
         PairwiseEpistasis(
-            lib, filter_min_by=filter_min_by, output_folder=output_folder, n_jobs=n_jobs
+            lib, activestart=activestart, output_folder=output_folder, n_jobs=n_jobs
         )
-
 
 def plot_pairwise_epistasis(
     fitness_process_type: str = "scale2max",
-    filter_min_by: str = "none",
+    pos_calc_filter_min: str = "none",
     input_folder: str = "results/pairwise_epistasis",
     output_folder: str = "results/pairwise_epistasis_vis",
     dets_folder: str = "results/pairwise_epistasis_dets",
@@ -769,7 +823,7 @@ def plot_pairwise_epistasis(
     for lib in sorted(
         glob(
             os.path.join(
-                os.path.normpath(input_folder), filter_min_by, fitness_process_type
+                os.path.normpath(input_folder), pos_calc_filter_min, fitness_process_type
             )
             + "/*.csv"
         )
@@ -779,7 +833,7 @@ def plot_pairwise_epistasis(
 
         vis_class = VisPairwiseEpistasis(
             lib,
-            filter_min_by=filter_min_by,
+            pos_calc_filter_min=pos_calc_filter_min,
             dets_folder=dets_folder,
             vis_folder=output_folder
             )
@@ -789,7 +843,7 @@ def plot_pairwise_epistasis(
 
         for et, ed in zip(["count", "fraction"], [count_dict, fract_dict]):  
 
-            summary_df = summary_df.append(
+            summary_df = summary_df._append(
                 {
                     "lib": vis_class.lib_name,
                     "summary_type": et,
@@ -809,7 +863,7 @@ def plot_pairwise_epistasis(
     ).sort_values(["lib", "summary_type"])
 
     summary_df_path = os.path.join(
-        output_folder, filter_min_by, f"{fitness_process_type}.csv"
+        output_folder, pos_calc_filter_min, f"{fitness_process_type}.csv"
     )
 
     checkNgen_folder(summary_df_path)
@@ -843,6 +897,5 @@ def plot_pairwise_epistasis(
             hooks=[fixmargins, one_decimal_y, hook],
         ),
         plot_name=fitness_process_type,
-        plot_path=os.path.join(output_folder, filter_min_by),
+        plot_path=os.path.join(output_folder, pos_calc_filter_min),
     )
-    

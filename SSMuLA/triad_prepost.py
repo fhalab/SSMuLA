@@ -323,7 +323,6 @@ def run_parse_triad_results(triad_folder: str = "triad"):
 
     # there will be multip wt from each file so need to drop them
     trpb4_df = pd.concat(trpb4_dfs).drop_duplicates().sort_values(["Triad_score"])
-    print(len(trpb4_df))
 
     # resort and overwrite
     trpb4_df["Triad_rank"] = np.arange(1, len(trpb4_df) + 1)
