@@ -187,8 +187,9 @@ class MLDEDataset(LibData):
             emb_paths = glob(
                 f"{os.path.join(DEFAULT_LEARNED_EMB_DIR, combo)}/{self.lib_name}-{esm}*.h5"
             )
-            assert len(emb_paths) == 1, "More than one learned embeddings found"
+            assert len(emb_paths) == 1, "More than one or no learned embeddings found"
             emb_path = emb_paths[0]
+            print(f"Given {esm} and {combo} loading {emb_path}")
             self.X = np.array(generate_precomp_emb(emb_path, self.all_combos))
             # no reshape needed
         else:
@@ -635,11 +636,6 @@ def run_mlde_lite(
 
     print("Save directory:\t {}".format(save_dir))
 
-    config_folder = checkNgen_folder(
-        os.path.dirname(save_dir.replace("saved", "configs"))
-    )
-    config_path = os.path.join(config_folder, f"{exp_name}_{n_top}.json")
-
     # Start training
     all_ndcgs = np.zeros(
         (
@@ -762,10 +758,6 @@ def run_mlde_lite(
         }
         json.dump(config_dict, f, indent=4)
 
-    print("Config file:\t {}".format(config_path))
-    for key, value in config_dict.items():
-        print(f"{key}:\t {value}")
-
     # put all in npy
     mlde_results = {}
     (
@@ -797,6 +789,15 @@ def run_mlde_lite(
         ),
         mlde_results,
     )
+    
+    config_folder = checkNgen_folder(
+        os.path.dirname(save_dir.replace("saved", "configs"))
+    )
+    config_path = os.path.join(config_folder, f"{comb_exp_dets}_{exp_name}_{n_top}.json")
+
+    print("Config file:\t {}".format(config_path))
+    for key, value in config_dict.items():
+        print(f"{key}:\t {value}")
 
 
 def run_all_mlde(
@@ -941,3 +942,89 @@ def run_all_mlde2(
                         mlde_folder=mlde_folder,
                         exp_name="",
                     )
+
+from concurrent.futures import ProcessPoolExecutor, as_completed
+import numpy as np
+import os
+from glob import glob
+
+# Assuming DEFAULT_LEARNED_EMB_COMBO is a constant you have defined
+
+def run_all_mlde2_parallelized(
+    zs_folder: str = "results/zs_comb",
+    filter_min_by: str = "none",
+    n_mut_cutoffs: list[int] = [0, 1, 2],
+    scale_type: str = "scale2max",
+    zs_predictors: list[str] = ["none", "Triad", "ev", "esm"],
+    ft_lib_fracs: list[float] = [0.5, 0.25, 0.125],
+    encodings: list[str] = DEFAULT_LEARNED_EMB_COMBO,
+    model_classes: list[str] = ["boosting", "ridge"],
+    n_samples: list[int] = [384],
+    n_split: int = 5,
+    n_replicate: int = 100,
+    n_tops: list[int] = [96, 384],
+    n_worker: int = 1,
+    global_seed: int = 42,
+    verbose: bool = False,
+    save_model: bool = False,
+    mlde_folder: str = "results/mlde",
+):
+    # Create a list to hold tasks for parallel execution
+    tasks = []
+
+    # Iterate over each combination of parameters to create tasks
+    for input_csv in sorted(
+        glob(f"{os.path.normpath(zs_folder)}/{filter_min_by}/{scale_type}/*.csv")
+    ):
+        for n_mut_cutoff in n_mut_cutoffs:
+            for zs_predictor in zs_predictors:
+                # Determine feature libraries based on the predictor
+                ft_libs = [1] if zs_predictor == "none" else ft_lib_fracs
+                zs_predictor_label = "none" if zs_predictor == "none" else f"{zs_predictor}_score"
+                
+                for n_top in n_tops:
+                    # Print a message if verbose is True
+                    if verbose:
+                        print(
+                            f"Queuing MLDE for {input_csv} with {zs_predictor_label} zero-shot predictor, " +
+                            f"{n_mut_cutoff} mut number, {n_top} top output..."
+                        )
+
+                    # Append the task arguments as a tuple to the tasks list
+                    tasks.append({
+                        "input_csv": input_csv,
+                        "zs_predictor": zs_predictor_label,
+                        "scale_fit": scale_type.split("scale2")[1],
+                        "filter_min_by": filter_min_by,
+                        "n_mut_cutoff": n_mut_cutoff,
+                        "encodings": encodings,
+                        "ft_libs": ft_libs,
+                        "model_classes": model_classes,
+                        "n_samples": n_samples,
+                        "n_split": n_split,
+                        "n_replicate": n_replicate,
+                        "n_top": n_top,
+                        "n_worker": n_worker,
+                        "global_seed": global_seed,
+                        "verbose": verbose,
+                        "save_model": save_model,
+                        "mlde_folder": mlde_folder,
+                        "exp_name": "",
+                    })
+
+    # Run tasks in parallel using ProcessPoolExecutor
+    with ProcessPoolExecutor(max_workers=n_worker) as executor:
+        # Submit tasks
+        future_to_task = {executor.submit(run_mlde_lite, **task): task for task in tasks}
+
+        # Retrieve results as tasks are completed
+        for future in as_completed(future_to_task):
+            task = future_to_task[future]
+            try:
+                result = future.result()
+                if verbose:
+                    print(f"Task completed: {task}")
+                    print(f"Result: {result}")
+            except Exception as exc:
+                print(f"Task generated an exception: {task}")
+                print(f"Exception: {exc}")

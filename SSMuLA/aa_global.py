@@ -580,5 +580,5 @@ EMB_METHOD_COMBOS = [
 
 EMB_COMBO_LIST = deepcopy(sorted(i["combo_folder"] for i in EMB_METHOD_COMBOS))
 
-DEFAULT_LEARNED_EMB_COMBO = deepcopy([f"{DEFAULT_ESM}-{combo}" for combo in [EMB_COMBO_LIST]])
+DEFAULT_LEARNED_EMB_COMBO = deepcopy([f"{DEFAULT_ESM}-{combo}" for combo in EMB_COMBO_LIST])
 DEFAULT_LEARNED_EMB_DIR = "learned_emb"
