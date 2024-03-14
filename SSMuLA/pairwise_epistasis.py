@@ -395,22 +395,28 @@ def append_active_thresh(df: pd.DataFrame,
 
     return df.copy()
 
+epsilon = 1e-10  # A small constant to avoid log(0)
+
+def safe_log(numerator, denominator):
+    """
+    
+    """
+    if denominator == 0:
+        return np.nan  # or some other indication of an undefined result
+    ratio = numerator / (denominator + epsilon)
+    return np.log(ratio) if ratio > 0 else np.nan
+
 
 def calc_epsilon(row):
     """
     A function for calculating epsilon.
     """
 
-    # do try except 
-    try:
-        return (
-            np.log(row["fit_AB"] / row["fit_ab"])
-            - np.log(row["fit_Ab"] / row["fit_ab"])
-            - np.log(row["fit_aB"] / row["fit_ab"])
-        )
-    except:
-        print("Error in calculating epsilon for row: ", row)
-        return np.nan
+    return (
+        safe_log(row["fit_AB"], row["fit_ab"])
+        - safe_log(row["fit_Ab"], row["fit_ab"])
+        - safe_log(row["fit_aB"], row["fit_ab"])
+    )
 
 
 class VisPairwiseEpistasis:

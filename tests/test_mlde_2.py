@@ -22,6 +22,6 @@ if __name__ == "__main__":
     )
     sys.stdout = f
 
-    run_all_mlde2_parallelized(n_mut_cutoffs=[1, 2, 0], n_worker=24)
+    run_all_mlde2_parallelized(n_mut_cutoffs=[1, 2, 0], n_worker=128, n_replicate=50)
 
     f.close()

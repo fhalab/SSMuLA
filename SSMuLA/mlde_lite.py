@@ -370,14 +370,17 @@ class MLDESim(MLDEDataset):
                     self.len_n_mut_cuttoff_df,
                 )
             )
-            self._ft_libs = [
+            ft_lib_w_nums = [
                 ft_lib
                 if ft_lib <= self.len_n_mut_cuttoff_df
                 else self.len_n_mut_cuttoff_df
                 for ft_lib in ft_lib_mut_numbs
             ]
+            # use set to filter out duplicates
+            self._ft_libs = deepcopy(sorted(list(set(ft_lib_w_nums)), reverse=True))
             #  [x if x <= criteria else 0 for x in original_list]
             print(f"Valid focused training library sizes: {self._ft_libs}")
+
         else:
             self._ft_libs = [self.df_length]
 
@@ -730,33 +733,31 @@ def run_mlde_lite(
                 end = time.time()
                 print("Time: " + str(end - start))
 
-    # Record JSON config file
-    with open(config_path, "w") as f:
-        config_dict = {
-            "data_config": {
-                "input_csv": input_csv,
-                "zs_predictor": zs_predictor,
-                "encoding": encodings,
-                "ft_libs": mlde_sim.used_ft_libs,
-                "scale_fit": scale_fit,
-                "filter_min_by": filter_min_by,
-                "n_mut_cutoff": n_mut_cutoff,
-            },
-            "model_config": {
-                "model_classes": model_classes,
-            },
-            "train_config": {
-                "n_sample": n_samples,
-                "n_splits": n_split,
-                "n_replicate": n_replicate,
-                "n_worker": n_worker,
-                "global_seed": global_seed,
-                "verbose": verbose,
-                "save_model": save_model,
-            },
-            "eval_config": {"n_top": n_top},
-        }
-        json.dump(config_dict, f, indent=4)
+    config_dict = {
+        "data_config": {
+            "input_csv": input_csv,
+            "zs_predictor": zs_predictor,
+            "encoding": encodings,
+            "ft_libs": mlde_sim.used_ft_libs,
+            "scale_fit": scale_fit,
+            "filter_min_by": filter_min_by,
+            "n_mut_cutoff": n_mut_cutoff,
+        },
+        "model_config": {
+            "model_classes": model_classes,
+        },
+        "train_config": {
+            "n_sample": n_samples,
+            "n_splits": n_split,
+            "n_replicate": n_replicate,
+            "n_worker": n_worker,
+            "global_seed": global_seed,
+            "verbose": verbose,
+            "save_model": save_model,
+        },
+        "eval_config": {"n_top": n_top},
+    }
+        
 
     # put all in npy
     mlde_results = {}
@@ -783,17 +784,20 @@ def run_mlde_lite(
     )
 
     comb_exp_dets = "|".join(encodings) + "_" + "|".join(model_classes)
-    np.save(
-        os.path.join(
+    np_path = os.path.join(
             save_dir, f"{comb_exp_dets}_sample{str(n_sample)}_top{str(n_top)}.npy"
-        ),
-        mlde_results,
-    )
-    
+        )
+    print(f"Saving {np_path}...")
+    np.save(np_path,mlde_results)
+
     config_folder = checkNgen_folder(
         os.path.dirname(save_dir.replace("saved", "configs"))
     )
     config_path = os.path.join(config_folder, f"{comb_exp_dets}_{exp_name}_{n_top}.json")
+        
+    # Record JSON config file
+    with open(config_path, "w") as f:
+        json.dump(config_dict, f, indent=4)
 
     print("Config file:\t {}".format(config_path))
     for key, value in config_dict.items():
@@ -948,7 +952,6 @@ import numpy as np
 import os
 from glob import glob
 
-# Assuming DEFAULT_LEARNED_EMB_COMBO is a constant you have defined
 
 def run_all_mlde2_parallelized(
     zs_folder: str = "results/zs_comb",
