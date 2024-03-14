@@ -158,7 +158,6 @@ def de_ecdf(slice_df: pd.DataFrame, lib_name: str, plot_name: str, plot_folder: 
                 )
 
         legend_labels = {**deepcopy(sim_legend_labels), **deepcopy(lib_legend_labels)}
-        print(legend_labels)
 
         layout = overlay.opts(
             title=plot_name,

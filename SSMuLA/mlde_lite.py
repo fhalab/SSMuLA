@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from typing import Callable, Dict
 
+from concurrent.futures import ProcessPoolExecutor, as_completed
+
 import os
 import gc
 import time
@@ -627,7 +629,7 @@ def run_mlde_lite(
 
     if len(exp_name) == 0:
         exp_name = get_file_name(input_csv)
-    print(f"n_mut_cutoff {n_mut_cutoff}")
+    
     save_dir = checkNgen_folder(
         os.path.join(
             os.path.normpath(mlde_folder),
@@ -885,82 +887,6 @@ def run_all_mlde(
                     )
 
 
-### del after ###
-
-
-def run_all_mlde2(
-    zs_folder: str = "results/zs_comb",
-    filter_min_by: str = "none",
-    n_mut_cutoffs: list[int] = [0, 1, 2],
-    scale_type: str = "scale2max",
-    zs_predictors: list[str] = ["none", "Triad", "ev", "esm"],
-    ft_lib_fracs: list[float] = [0.5, 0.25, 0.125],
-    encodings: list[str] = DEFAULT_LEARNED_EMB_COMBO,
-    model_classes: list[str] = ["boosting", "ridge"],
-    n_samples: list[int] = [384],
-    n_split: int = 5,
-    n_replicate: int = 100,
-    n_tops: list[int] = [96, 384],
-    boosting_n_worker: int = 1,
-    global_seed: int = 42,
-    verbose: bool = False,
-    save_model: bool = False,
-    mlde_folder: str = "results/mlde",
-):
-    """
-    Run all MLDE give zs combined csvs
-    """
-
-    for input_csv in sorted(
-        glob(f"{os.path.normpath(zs_folder)}/{filter_min_by}/{scale_type}/*.csv")
-    ):
-
-        for n_mut_cutoff in n_mut_cutoffs:
-            for zs_predictor in zs_predictors:
-                if zs_predictor == "none":
-                    ft_libs = [1]
-                else:
-                    zs_predictor = f"{zs_predictor}_score"
-                    ft_libs = ft_lib_fracs
-
-                for n_top in n_tops:
-
-                    print(
-                        "Running MLDE for {} with {} zero-shot predictor, {} mut number, {} top output...".format(
-                            input_csv,
-                            zs_predictor,
-                            n_mut_cutoff_dict[n_mut_cutoff],
-                            n_top,
-                        )
-                    )
-
-                    run_mlde_lite(
-                        input_csv=input_csv,
-                        zs_predictor=zs_predictor,
-                        scale_fit=scale_type.split("scale2")[1],
-                        filter_min_by=filter_min_by,
-                        n_mut_cutoff=n_mut_cutoff,
-                        encodings=encodings,
-                        ft_libs=ft_libs,
-                        model_classes=model_classes,
-                        n_samples=n_samples,
-                        n_split=n_split,
-                        n_replicate=n_replicate,
-                        n_top=n_top,
-                        boosting_n_worker=boosting_n_worker,
-                        global_seed=global_seed,
-                        verbose=verbose,
-                        save_model=save_model,
-                        mlde_folder=mlde_folder,
-                        exp_name="",
-                    )
-
-from concurrent.futures import ProcessPoolExecutor, as_completed
-import numpy as np
-import os
-from glob import glob
-
-
 def run_all_mlde2_parallelized(
     zs_folder: str = "results/zs_comb",
     filter_min_by: str = "none",
@@ -1040,97 +966,3 @@ def run_all_mlde2_parallelized(
             except Exception as exc:
                 print(f"Task generated an exception: {task}")
                 print(f"Exception: {exc}")
-
-run_mlde_lite_arg_order = [
-    "input_csv",
-    "zs_predictor",
-    "scale_fit",
-    "filter_min_by",
-    "n_mut_cutoff",
-    "encodings",
-    "ft_libs",
-    "model_classes",
-    "n_samples",
-    "n_split",
-    "n_replicate",
-    "n_top",
-    "boosting_n_worker",
-    "global_seed",
-    "verbose",
-    "save_model",
-    "mlde_folder",
-    "exp_name",
-]
-
-def sort_arg_dict(arg_dict: dict, arg_order: list[str]) -> dict:
-    return {k: arg_dict[k] for k in arg_order}
-
-def run_all_mlde_pool(
-    zs_folder: str = "results/zs_comb",
-    filter_min_by: str = "none",
-    n_mut_cutoffs: list[int] = [0, 1, 2],
-    scale_type: str = "scale2max",
-    zs_predictors: list[str] = ["none", "Triad", "ev", "esm"],
-    ft_lib_fracs: list[float] = [0.5, 0.25, 0.125],
-    encodings: list[str] = DEFAULT_LEARNED_EMB_COMBO,
-    model_classes: list[str] = ["boosting", "ridge"],
-    n_samples: list[int] = [384],
-    n_split: int = 5,
-    n_replicate: int = 100,
-    n_tops: list[int] = [96, 384],
-    boosting_n_worker: int = 1,
-    n_jobs: int = 128,
-    global_seed: int = 42,
-    verbose: bool = False,
-    save_model: bool = False,
-    mlde_folder: str = "results/mlde",
-):
-    """
-    Run all MLDE give zs combined csvs
-    """
-
-    same_args = {
-        "filter_min_by": filter_min_by,
-        "scale_fit": scale_type.split("scale2")[1],
-        "encodings": encodings,
-        "model_classes": model_classes,
-        "n_samples": n_samples,
-        "n_split": n_split,
-        "n_replicate": n_replicate,
-        "boosting_n_worker": boosting_n_worker,
-        "global_seed": global_seed,
-        "verbose": verbose,
-        "save_model": save_model,
-        "mlde_folder": mlde_folder,
-        "exp_name": "",
-    }
-
-    for zs_predictor in zs_predictors:
-        if zs_predictor == "none":
-            ft_libs = [1]
-        else:
-            zs_predictor = f"{zs_predictor}_score"
-            ft_libs = ft_lib_fracs
-
-    pool_args = [
-        {
-            "input_csv": input_csv,
-            "n_mut_cutoff": n_mut_cutoff,
-            "zs_predictor": zs_predictor,
-            "ft_libs": ft_libs,
-            "n_top": n_top,
-            **same_args,
-        }
-        for input_csv in sorted(
-            glob(f"{os.path.normpath(zs_folder)}/{filter_min_by}/{scale_type}/*.csv")
-        )
-        for n_mut_cutoff in n_mut_cutoffs
-        for n_top in n_tops
-    ]
-
-    sorted_pool_args = [sort_arg_dict(arg_dict, run_mlde_lite_arg_order) for arg_dict in pool_args]
-    print(sorted_pool_args[0])
-
-    with Pool(n_jobs) as pool:
-        pool.starmap(run_mlde_lite, tqdm(sorted_pool_args))
-        # tqdm(pool.starmap(wrapper_run_mlde_lite, pool_args), total=len(pool_args))
