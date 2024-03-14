@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Callable, Dict
 
 import os
+import gc
 import time
 import json
 import random
@@ -14,6 +15,7 @@ import pandas as pd
 from glob import glob
 from copy import deepcopy
 from tqdm.auto import tqdm
+from multiprocessing import Pool
 
 import xgboost as xgb
 from scipy.stats import pearsonr
@@ -313,7 +315,7 @@ class MLDESim(MLDEDataset):
         n_split: int = 5,
         n_replicate: int = 100,
         n_top: int = 384,
-        n_worker: int = 1,
+        boosting_n_worker: int = 1,
         global_seed: int = 42,
         verbose: bool = False,
         save_model: bool = False,
@@ -339,7 +341,7 @@ class MLDESim(MLDEDataset):
         - n_split: int = 5, number of splits for cross-validation
         - n_replicate: int = 100, number of replicates
         - n_top: int = 384, number of top sequences to calculate max and mean fitness
-        - n_worker: int = 1, number of workers for parallel processing
+        - boosting_n_worker: int = 1, number of workers for parallel processing
         - global_seed: int = 42, global seed for reproducibility
         - verbose: bool = False, verbose output
         - save_model: bool = False, save models
@@ -394,7 +396,7 @@ class MLDESim(MLDEDataset):
         self._n_split = n_split
         self._n_replicate = n_replicate
         self._n_top = n_top
-        self._n_worker = n_worker
+        self._boosting_n_worker = boosting_n_worker
         self._verbose = verbose
         self._save_model = save_model
         self._save_path = checkNgen_folder(os.path.normpath(save_path))
@@ -538,7 +540,7 @@ class MLDESim(MLDEDataset):
         Returns the predictions on the training set and the trained model.
         """
         if self._model_class == "boosting":
-            clf = get_model(self._model_class, model_kwargs={"nthread": self._n_worker})
+            clf = get_model(self._model_class, model_kwargs={"nthread": self._boosting_n_worker})
             eval_set = [(X_validation, y_validation)]
             clf.fit(X_train, y_train, eval_set=eval_set, verbose=False)
         else:
@@ -603,7 +605,7 @@ def run_mlde_lite(
     n_split: int = 5,
     n_replicate: int = 100,
     n_top: int = 384,
-    n_worker: int = 1,
+    boosting_n_worker: int = 1,
     global_seed: int = 42,
     verbose: bool = False,
     save_model: bool = False,
@@ -625,7 +627,7 @@ def run_mlde_lite(
 
     if len(exp_name) == 0:
         exp_name = get_file_name(input_csv)
-
+    print(f"n_mut_cutoff {n_mut_cutoff}")
     save_dir = checkNgen_folder(
         os.path.join(
             os.path.normpath(mlde_folder),
@@ -700,7 +702,7 @@ def run_mlde_lite(
                     n_split=n_split,
                     n_replicate=n_replicate,
                     n_top=n_top,
-                    n_worker=n_worker,
+                    boosting_n_worker=boosting_n_worker,
                     global_seed=global_seed,
                     verbose=verbose,
                     save_model=save_model,
@@ -750,7 +752,7 @@ def run_mlde_lite(
             "n_sample": n_samples,
             "n_splits": n_split,
             "n_replicate": n_replicate,
-            "n_worker": n_worker,
+            "boosting_n_worker": boosting_n_worker,
             "global_seed": global_seed,
             "verbose": verbose,
             "save_model": save_model,
@@ -788,7 +790,10 @@ def run_mlde_lite(
             save_dir, f"{comb_exp_dets}_sample{str(n_sample)}_top{str(n_top)}.npy"
         )
     print(f"Saving {np_path}...")
-    np.save(np_path,mlde_results)
+    np.save(np_path, mlde_results)
+
+    # Delete the variable
+    del mlde_results
 
     config_folder = checkNgen_folder(
         os.path.dirname(save_dir.replace("saved", "configs"))
@@ -802,6 +807,9 @@ def run_mlde_lite(
     print("Config file:\t {}".format(config_path))
     for key, value in config_dict.items():
         print(f"{key}:\t {value}")
+
+    # Manually run the garbage collector to free up the memory
+    gc.collect()
 
 
 def run_all_mlde(
@@ -817,7 +825,7 @@ def run_all_mlde(
     n_split: int = 5,
     n_replicate: int = 100,
     n_tops: list[int] = [96, 384],
-    n_worker: int = 1,
+    boosting_n_worker: int = 1,
     global_seed: int = 42,
     verbose: bool = False,
     save_model: bool = False,
@@ -868,7 +876,7 @@ def run_all_mlde(
                         n_split=n_split,
                         n_replicate=n_replicate,
                         n_top=n_top,
-                        n_worker=n_worker,
+                        boosting_n_worker=boosting_n_worker,
                         global_seed=global_seed,
                         verbose=verbose,
                         save_model=save_model,
@@ -893,7 +901,7 @@ def run_all_mlde2(
     n_split: int = 5,
     n_replicate: int = 100,
     n_tops: list[int] = [96, 384],
-    n_worker: int = 1,
+    boosting_n_worker: int = 1,
     global_seed: int = 42,
     verbose: bool = False,
     save_model: bool = False,
@@ -939,7 +947,7 @@ def run_all_mlde2(
                         n_split=n_split,
                         n_replicate=n_replicate,
                         n_top=n_top,
-                        n_worker=n_worker,
+                        boosting_n_worker=boosting_n_worker,
                         global_seed=global_seed,
                         verbose=verbose,
                         save_model=save_model,
@@ -966,7 +974,8 @@ def run_all_mlde2_parallelized(
     n_split: int = 5,
     n_replicate: int = 100,
     n_tops: list[int] = [96, 384],
-    n_worker: int = 1,
+    boosting_n_worker: int = 1,
+    n_job: int = 128,
     global_seed: int = 42,
     verbose: bool = False,
     save_model: bool = False,
@@ -1007,7 +1016,7 @@ def run_all_mlde2_parallelized(
                         "n_split": n_split,
                         "n_replicate": n_replicate,
                         "n_top": n_top,
-                        "n_worker": n_worker,
+                        "boosting_n_worker": boosting_n_worker,
                         "global_seed": global_seed,
                         "verbose": verbose,
                         "save_model": save_model,
@@ -1016,7 +1025,7 @@ def run_all_mlde2_parallelized(
                     })
 
     # Run tasks in parallel using ProcessPoolExecutor
-    with ProcessPoolExecutor(max_workers=n_worker) as executor:
+    with ProcessPoolExecutor(max_workers=n_job) as executor:
         # Submit tasks
         future_to_task = {executor.submit(run_mlde_lite, **task): task for task in tasks}
 
@@ -1031,3 +1040,97 @@ def run_all_mlde2_parallelized(
             except Exception as exc:
                 print(f"Task generated an exception: {task}")
                 print(f"Exception: {exc}")
+
+run_mlde_lite_arg_order = [
+    "input_csv",
+    "zs_predictor",
+    "scale_fit",
+    "filter_min_by",
+    "n_mut_cutoff",
+    "encodings",
+    "ft_libs",
+    "model_classes",
+    "n_samples",
+    "n_split",
+    "n_replicate",
+    "n_top",
+    "boosting_n_worker",
+    "global_seed",
+    "verbose",
+    "save_model",
+    "mlde_folder",
+    "exp_name",
+]
+
+def sort_arg_dict(arg_dict: dict, arg_order: list[str]) -> dict:
+    return {k: arg_dict[k] for k in arg_order}
+
+def run_all_mlde_pool(
+    zs_folder: str = "results/zs_comb",
+    filter_min_by: str = "none",
+    n_mut_cutoffs: list[int] = [0, 1, 2],
+    scale_type: str = "scale2max",
+    zs_predictors: list[str] = ["none", "Triad", "ev", "esm"],
+    ft_lib_fracs: list[float] = [0.5, 0.25, 0.125],
+    encodings: list[str] = DEFAULT_LEARNED_EMB_COMBO,
+    model_classes: list[str] = ["boosting", "ridge"],
+    n_samples: list[int] = [384],
+    n_split: int = 5,
+    n_replicate: int = 100,
+    n_tops: list[int] = [96, 384],
+    boosting_n_worker: int = 1,
+    n_jobs: int = 128,
+    global_seed: int = 42,
+    verbose: bool = False,
+    save_model: bool = False,
+    mlde_folder: str = "results/mlde",
+):
+    """
+    Run all MLDE give zs combined csvs
+    """
+
+    same_args = {
+        "filter_min_by": filter_min_by,
+        "scale_fit": scale_type.split("scale2")[1],
+        "encodings": encodings,
+        "model_classes": model_classes,
+        "n_samples": n_samples,
+        "n_split": n_split,
+        "n_replicate": n_replicate,
+        "boosting_n_worker": boosting_n_worker,
+        "global_seed": global_seed,
+        "verbose": verbose,
+        "save_model": save_model,
+        "mlde_folder": mlde_folder,
+        "exp_name": "",
+    }
+
+    for zs_predictor in zs_predictors:
+        if zs_predictor == "none":
+            ft_libs = [1]
+        else:
+            zs_predictor = f"{zs_predictor}_score"
+            ft_libs = ft_lib_fracs
+
+    pool_args = [
+        {
+            "input_csv": input_csv,
+            "n_mut_cutoff": n_mut_cutoff,
+            "zs_predictor": zs_predictor,
+            "ft_libs": ft_libs,
+            "n_top": n_top,
+            **same_args,
+        }
+        for input_csv in sorted(
+            glob(f"{os.path.normpath(zs_folder)}/{filter_min_by}/{scale_type}/*.csv")
+        )
+        for n_mut_cutoff in n_mut_cutoffs
+        for n_top in n_tops
+    ]
+
+    sorted_pool_args = [sort_arg_dict(arg_dict, run_mlde_lite_arg_order) for arg_dict in pool_args]
+    print(sorted_pool_args[0])
+
+    with Pool(n_jobs) as pool:
+        pool.starmap(run_mlde_lite, tqdm(sorted_pool_args))
+        # tqdm(pool.starmap(wrapper_run_mlde_lite, pool_args), total=len(pool_args))
