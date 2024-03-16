@@ -17,10 +17,9 @@ if __name__ == "__main__":
     f = open(os.path.join(log_folder, f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}.out"), 'w')
     sys.stdout = f
 
+    # process_all(scale_fit="max")
 
-    process_all(scale_fit="max")
-
-    sum_ks()
+    # sum_ks()
 
     get_all_lib_stats()
 

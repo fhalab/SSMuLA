@@ -392,6 +392,8 @@ TIMEPOINT_DICT = {
     }
 }
 
+n_mut_cutoff_dict = {0: "all", 1: "single", 2: "double", 3: "triple", 4: "quadruple"}
+
 def append_active_cutoff(
     df: pd.DataFrame, fitness_cols: list = ["fitness"], def_cutoff: float | None = None
 ) -> tuple[pd.DataFrame, list[float]]:

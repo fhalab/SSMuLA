@@ -19,7 +19,7 @@ if __name__ == "__main__":
 
     run_all_lib_de_simulations(
         scale_types = ["scale2max"],
-        de_opts = ["DE-0"],
+        de_opts = ["DE-active", "DE-0", "DE-all"],
     )
     
     f.close()

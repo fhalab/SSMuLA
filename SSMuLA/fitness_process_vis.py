@@ -35,7 +35,13 @@ from SSMuLA.landscape_global import (
     LibData,
     append_active_cutoff,
 )
-from SSMuLA.vis import save_plt, save_bokeh_hv, plot_fit_dist, LIB_COLORS, LIB_COLORS_CODON
+from SSMuLA.vis import (
+    save_plt,
+    save_bokeh_hv,
+    plot_fit_dist,
+    LIB_COLORS,
+    LIB_COLORS_CODON,
+)
 from SSMuLA.util import checkNgen_folder, get_file_name
 
 
@@ -102,7 +108,6 @@ class ProcessData(LibData):
         )
 
         return df_appended.replace("", "WT")
-
 
     @property
     def output_csv(self) -> str:
@@ -460,19 +465,6 @@ class ProcessGB1(ProcessData):
             return act_fit
 
     @property
-    def df_aa_scaled(self) -> pd.DataFrame:
-
-        """Return the input dataframe renamed"""
-
-        return (
-            self.df_scale_fit.copy()
-            .rename(columns={"Variants": "AAs", "Fitness": "fitness"})[
-                ["AAs", "fitness"]
-            ]
-            .copy()
-        )
-
-    @property
     def df_split_aa_scaled(self) -> pd.DataFrame:
 
         """Return the input dataframe with amino acid translations
@@ -734,7 +726,7 @@ class PlotTrpB:
     def ks_p_list(self) -> list:
         """Return the list of KS p-values"""
         return self._ks_p_list
-    
+
 
 def process_all(
     scale_fit: str = "max",
@@ -749,8 +741,7 @@ def process_all(
 
 
 def sum_ks(
-    input_folder: str = "data", 
-    output_folder: str = "results/fitness_distribution"
+    input_folder: str = "data", output_folder: str = "results/fitness_distribution"
 ) -> dict:
     """
     Return the summary statistics from different ways of processing data
@@ -841,9 +832,11 @@ def sum_ks(
                     os.path.join(output_folder, "ks_plot", process_type)
                 ),
             )
-            csv_folder = checkNgen_folder(os.path.join(output_folder, "ks_csv", process_type))
+            csv_folder = checkNgen_folder(
+                os.path.join(output_folder, "ks_csv", process_type)
+            )
             df.to_csv(os.path.join(csv_folder, name + ".csv"))
-    
+
         output_dict[process_type]["ks"] = ks_df
         output_dict[process_type]["ks_p"] = ks_df_p
 
@@ -945,7 +938,7 @@ class LibStat(LibData):
         p = cauchy.pdf(
             x, loc=self._cauchy_dict["loc"], scale=self._cauchy_dict["scale"]
         )
-        ax.plot(x, p, "k", linewidth=1.2, linestyle="dotted", label="Cauchy fit")
+        ax.plot(x, p, "k", linewidth=1.2, linestyle="dotted", label="Cauchy estimate")
 
         kde_dict = self.kde_dict
         # Plot KDE estimate
@@ -967,17 +960,21 @@ class LibStat(LibData):
             kde_dict["peak_kde"],
             color="k",
             marker="o",
-            label="Peaks",
+            label="KDE peaks",
         )
 
         ax.set_title(title_name)
+        ax.set_xlabel("Fitness")
+        ax.set_ylabel("Density")
         ax.legend()
         save_plt(fig, plot_title=title_name, path2folder=self.stat_subfolder)
 
     @property
     def df(self) -> pd.DataFrame:
         """Returns the dataframe without stop codons"""
-        return self.input_df[~self.input_df["AAs"].str.contains("\*")].copy()
+        df = self.input_df[~self.input_df["AAs"].str.contains("\*")]
+        df["rank"] = df["fitness"].rank(ascending=False)
+        return df.copy()
 
     @property
     def numb_measured(self) -> int:
@@ -987,7 +984,7 @@ class LibStat(LibData):
     @property
     def frac_measured(self) -> float:
         """Return the fraction of complete sequences"""
-        return self.numb_measured / 20 ** self.numb_sites
+        return self.numb_measured / 20 ** self.n_site
 
     @property
     def numb_active(self) -> int:
@@ -1005,6 +1002,19 @@ class LibStat(LibData):
         return self.df["fitness"]
 
     @property
+    def active_fit_min(self) -> float:
+
+        """
+        Calculate the cutoff for active mutants based on
+        1.96 standard deviations above the mean fitness of all stop-codon-containing sequences.
+
+        Returns:
+        - float: The cutoff value for active mutants.
+        """
+
+        return self.df[self.df["active"]]["fitness"].min()
+
+    @property
     def stat_subfolder(self) -> str:
         """Return the subfolder for the statistics"""
         return checkNgen_folder(
@@ -1012,27 +1022,41 @@ class LibStat(LibData):
         )
 
     @property
-    def stat_dict(self):
-        """Get basic statistics of the data"""
-        fitness_stats = {}
-        fitness_stats["mean"] = np.mean(self.fitness)
-        fitness_stats["std"] = np.median(self.fitness)
-
-        # Variability
-        fitness_stats["range"] = np.max(self.fitness) - np.min(self.fitness)
-        fitness_stats["iqr"] = np.percentile(self.fitness, 75) - np.percentile(
-            self.fitness, 25
+    def lib_basic_dict(self):
+        """Get the basic statistics of the data"""
+        parent_row = self.df[self.df["AAs"] == self.parent_aa]
+        return deepcopy(
+            {
+                "n_site": self.n_site,
+                "numb_measured": self.numb_measured,
+                "percent_measured": self.frac_measured * 100,
+                "numb_active": self.numb_active,
+                "percent_active": self.frac_active * 100,
+                "active_fit_min": self.active_fit_min,
+                "parent_fit": parent_row["fitness"].values[0],
+                "parent_rank": parent_row["rank"].values[0],
+            }
         )
-        fitness_stats["std_dev"] = np.std(self.fitness)
-        fitness_stats["variance"] = np.var(self.fitness)
 
-        # shape
-        fitness_stats["skewness"] = skew(self.fitness)
-        fitness_stats["kurt"] = kurtosis(self.fitness)
-
-        fitness_stats["quartiles"] = self.fitness.quantile([0.25, 0.5, 0.75]).to_list()
-
-        return fitness_stats
+    @property
+    def fit_basic_dict(self):
+        """Get basic statistics of the data"""
+        return deepcopy(
+            {
+                "mean": np.mean(self.fitness),
+                "std": np.median(self.fitness),
+                # Variability
+                "range": np.max(self.fitness) - np.min(self.fitness),
+                "iqr": np.percentile(self.fitness, 75)
+                - np.percentile(self.fitness, 25),
+                "std_dev": np.std(self.fitness),
+                "variance": np.var(self.fitness),
+                # shape
+                "skewness": skew(self.fitness),
+                "kurt": kurtosis(self.fitness),
+                "quartiles": self.fitness.quantile([0.25, 0.5, 0.75]).to_list(),
+            }
+        )
 
     @property
     def cauchy_dict(self) -> dict:
@@ -1043,10 +1067,10 @@ class LibStat(LibData):
     def kde_dict(self) -> dict:
         """Return the kde fit results as a dictionary"""
         return self._kde_dict
-    
+
 
 def get_all_lib_stats(
-    input_folder: str = "data", 
+    input_folder: str = "data",
     scale_fit: str = "max",
     results_dir: str = "results/fitness_distribution",
 ):
@@ -1073,8 +1097,12 @@ def get_all_lib_stats(
         stat_df = stat_df._append(
             {
                 "lib": lib,
-                "basic_stats": lib_class.stat_dict,
+                "lib_basic_dict": lib_class.lib_basic_dict,
+                "fit_basic_dict": lib_class.fit_basic_dict,
                 "cauchy": lib_class.cauchy_dict,
                 "kde": lib_class.kde_dict,
-            }
+            },
+            ignore_index=True,
         )
+
+    stat_df.to_csv(os.path.join(lib_class.stat_subfolder, "all_lib_stats.csv"))
