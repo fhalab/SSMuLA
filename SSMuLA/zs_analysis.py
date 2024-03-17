@@ -36,7 +36,7 @@ hv.extension("bokeh")
 hv.renderer("bokeh").theme = JSON_THEME
 
 ZS_OPTS = ["Triad_score", "ev_score", "esm_score"]
-ZS_OPTS_LEGEND = {"Triad_score": "Triad", "ev_score": "EVMutation", "esm_score": "ESM"}
+ZS_OPTS_LEGEND = {"none": "No ZS","Triad_score": "Triad", "ev_score": "EVMutation", "esm_score": "ESM"}
 
 
 class ZS_Analysis(LibData):
