@@ -36,7 +36,7 @@ hv.extension("bokeh")
 
 
 from SSMuLA.landscape_global import n_mut_cutoff_dict
-from SSMuLA.util import checkNgen_folder
+from SSMuLA.util import checkNgen_folder, get_file_name
 
 
 default_metrics = ["maxes", "means", "ndcgs", "rhos"]
@@ -76,20 +76,27 @@ class MLDEParser:
 
         # get all metrics as properties
         for m in default_metrics:
-            print(m)
+            df = pd.DataFrame(
+                    {
+                        "encoding": self.encoding_index,
+                        "models": self.models_index,
+                        "n_sample": self.n_sample_index,
+                        "ft_lib": self.lib_index,
+                        "repeats": self.repeats_index,
+                        m: getattr(self, m).flatten(),
+                    }
+                )
+            
+            df['encoding'] = df['encoding'].map({i: v for i, v in enumerate(self.encoding)})
+            df['models'] = df['models'].map({i: v for i, v in enumerate(self.model_classes)})
+            df['n_sample'] = df['n_sample'].map({i: v for i, v in enumerate(self.n_sample)})
+            df['ft_lib'] = df['ft_lib'].map({i: v for i, v in enumerate(self.ft_libs)})
+            df["n_mut_cutoff"] = n_mut_cutoff_dict[self.n_mut_cutoff]
+            
             setattr(
                 self,
                 f"{m}_df",
-                pd.DataFrame(
-                    {
-                        "Encoding": self.encoding_index,
-                        "Models": self.models_index,
-                        "N_Sample": self.n_sample_index,
-                        "Ft_Lib": self.lib_index,
-                        "Repeats": self.repeats_index,
-                        m: getattr(self, m).flatten(),
-                    }
-                ),
+                df,
             )
 
     @property

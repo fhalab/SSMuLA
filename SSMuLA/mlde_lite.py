@@ -82,28 +82,38 @@ def generate_georgiev(seqs: list) -> np.ndarray:
 
 
 def generate_precomp_emb(emb_path, seqs: list) -> list:
-    """ """
+    """
+    Generate the emb from precomputed leanred embeddings
+    """
+
     X = []
 
-    emb_table = tables.open_file(emb_path)
-    emb_table.flush()
+    # Close all the open files
+    tables.file._open_files.close_all()
 
-    # Convert the list of AAs to strings
-    bseqs = [aa.encode("utf-8") for aa in seqs]
+    # Open the embeddings table
+    with tables.open_file(emb_path, mode="r") as emb_table:
 
-    # Get the AAs dataset
-    AAs_dataset = emb_table.root.AAs[:]
+        emb_table.flush()
 
-    # Iterate over each AA and find its index
-    for seq in bseqs:
-        try:
-            idx = np.where(AAs_dataset == seq)[0][0]  # Get the first occurrence
-            # Use the index to extract the corresponding embeddings
-            embedding = emb_table.root.emb[idx]
-            X.append(embedding)
-        except IndexError:
-            print(f"AA '{seq}' not found in the dataset.")
-            X.append(None)  # Append None if AA is not found
+        # Convert the list of AAs to strings
+        bseqs = [aa.encode("utf-8") for aa in seqs]
+
+        # Get the AAs dataset
+        AAs_dataset = emb_table.root.AAs[:]
+
+        # Iterate over each AA and find its index
+        for seq in bseqs:
+            try:
+                idx = np.where(AAs_dataset == seq)[0][0]  # Get the first occurrence
+                # Use the index to extract the corresponding embeddings
+                embedding = emb_table.root.emb[idx]
+                X.append(embedding)
+            except IndexError:
+                print(f"AA '{seq}' not found in the dataset.")
+                X.append(None)  # Append None if AA is not found
+
+        emb_table.close()
 
     return X
 
@@ -199,11 +209,18 @@ class MLDEDataset(LibData):
         else:
             raise NotImplementedError
 
-    def get_mask(self, seqs: list) -> list:
+    def _get_mask(self, seqs: list) -> list:
         """
         Returns an index mask for given sequences.
         """
-        return list(self.filtered_df[self.filtered_df["AAs"].isin(seqs)].index)
+        # Find indices where values in 'A' match each value in 'values_to_find'
+        indices = []
+        for seq in seqs:
+            matched_indices = self._n_mut_cuttoff_df.index[self._n_mut_cuttoff_df["AAs"] == seq].tolist()
+            assert len(matched_indices) == 1, f"{len(matched_indices)} {seq} found in the dataframe"
+            indices.append(matched_indices[0])
+        return indices
+        # return list(self._n_mut_cuttoff_df[self._n_mut_cuttoff_df["AAs"].isin(seqs)].index)
 
     def _get_n_mut_cuttoff_df(self):
         """ """
@@ -461,7 +478,7 @@ class MLDESim(MLDEDataset):
 
                         uniques = np.unique(seqs)
                         self.unique[k, j] = len(uniques)
-                        mask = self.get_mask(uniques)
+                        mask = self._get_mask(seqs)
                         self.labelled[k, j] = len(mask)
                         combos_train = []
 
@@ -495,8 +512,9 @@ class MLDESim(MLDEDataset):
                                 clf.save_model(os.path.join(save_dir, filename))
 
                             self.y_preds_all[:, j, i] = y_preds
+                            
                             pbar.update()
-
+                        
                         # TODO check if loop in the right place?
                         # it gets replaced to the correct mean at the end
                         means = np.mean(self.y_preds_all, axis=2)
@@ -508,8 +526,7 @@ class MLDESim(MLDEDataset):
                             self.top_seqs[k, j, :],
                         ) = self.get_mlde_results(y_preds)
 
-                        ndcg_value = ndcg(self.y_train_all, y_preds)
-                        self.ndcgs[k, j] = ndcg_value
+                        self.ndcgs[k, j] = ndcg(self.y_train_all, y_preds)
                         self.rhos[k, j] = pearsonr(self.y_train_all, y_preds)[0]
 
                         self.y_preds[k, j, :] = y_preds
@@ -542,7 +559,9 @@ class MLDESim(MLDEDataset):
         Returns the predictions on the training set and the trained model.
         """
         if self._model_class == "boosting":
-            clf = get_model(self._model_class, model_kwargs={"nthread": self._boosting_n_worker})
+            clf = get_model(
+                self._model_class, model_kwargs={"nthread": self._boosting_n_worker}
+            )
             eval_set = [(X_validation, y_validation)]
             clf.fit(X_train, y_train, eval_set=eval_set, verbose=False)
         else:
@@ -594,6 +613,22 @@ class MLDESim(MLDEDataset):
         return self._ft_libs
 
 
+def pad_to_shape(source_array: np.ndarray, target_shape, pad_value: float = np.nan):
+    """
+    Pads a source array with a pad_value to match the target_shape and
+    return the same if the source and target shapes match.
+
+    Args:
+    - source_array: numpy array to be padded
+    - target_shape: tuple of the desired shape
+    - pad_value: value to pad with, default is np.nan
+    """
+
+    padding = [(0, max(0, t - s)) for s, t in zip(source_array.shape, target_shape)]
+
+    return np.pad(source_array, padding, mode="constant", constant_values=pad_value)
+
+
 def run_mlde_lite(
     input_csv: str,
     zs_predictor: str,
@@ -629,7 +664,7 @@ def run_mlde_lite(
 
     if len(exp_name) == 0:
         exp_name = get_file_name(input_csv)
-    
+
     save_dir = checkNgen_folder(
         os.path.join(
             os.path.normpath(mlde_folder),
@@ -725,14 +760,30 @@ def run_mlde_lite(
                     y_preds,
                 ) = mlde_sim.train_all()
 
-                all_top_seqs[i, j, k, :, :, :] = top_seqs
-                all_ndcgs[i, j, k, :, :] = ndcgs
-                all_rhos[i, j, k, :, :] = rhos
-                all_maxes[i, j, k, :, :] = maxes
-                all_means[i, j, k, :, :] = means
-                all_unique[i, j, k, :, :] = unique
-                all_labelled[i, j, k, :, :] = labelled
-                all_y_preds[i, j, k, :, :, :] = y_preds
+                all_top_seqs[i, j, k, :, :, :] = pad_to_shape(
+                    top_seqs, (len(ft_libs), n_replicate, n_top)
+                )
+                all_ndcgs[i, j, k, :, :] = pad_to_shape(
+                    ndcgs, (len(ft_libs), n_replicate)
+                )
+                all_rhos[i, j, k, :, :] = pad_to_shape(
+                    rhos, (len(ft_libs), n_replicate)
+                )
+                all_maxes[i, j, k, :, :] = pad_to_shape(
+                    maxes, (len(ft_libs), n_replicate)
+                )
+                all_means[i, j, k, :, :] = pad_to_shape(
+                    means, (len(ft_libs), n_replicate)
+                )
+                all_unique[i, j, k, :, :] = pad_to_shape(
+                    unique, (len(ft_libs), n_replicate)
+                )
+                all_labelled[i, j, k, :, :] = pad_to_shape(
+                    labelled, (len(ft_libs), n_replicate)
+                )
+                all_y_preds[i, j, k, :, :, :] = pad_to_shape(
+                    y_preds, (len(ft_libs), n_replicate, len(pd.read_csv(input_csv)))
+                )
 
                 end = time.time()
                 print("Time: " + str(end - start))
@@ -761,7 +812,6 @@ def run_mlde_lite(
         },
         "eval_config": {"n_top": n_top},
     }
-        
 
     # put all in npy
     mlde_results = {}
@@ -789,8 +839,8 @@ def run_mlde_lite(
 
     comb_exp_dets = "|".join(encodings) + "_" + "|".join(model_classes)
     np_path = os.path.join(
-            save_dir, f"{comb_exp_dets}_sample{str(n_sample)}_top{str(n_top)}.npy"
-        )
+        save_dir, f"{comb_exp_dets}_sample{str(n_sample)}_top{str(n_top)}.npy"
+    )
     print(f"Saving {np_path}...")
     np.save(np_path, mlde_results)
 
@@ -800,8 +850,10 @@ def run_mlde_lite(
     config_folder = checkNgen_folder(
         os.path.dirname(save_dir.replace("saved", "configs"))
     )
-    config_path = os.path.join(config_folder, f"{comb_exp_dets}_{exp_name}_{n_top}.json")
-        
+    config_path = os.path.join(
+        config_folder, f"{comb_exp_dets}_{exp_name}_{n_top}.json"
+    )
+
     # Record JSON config file
     with open(config_path, "w") as f:
         json.dump(config_dict, f, indent=4)
@@ -881,7 +933,6 @@ def run_all_mlde(
                     )
 
 
-
 def run_all_mlde_parallelized(
     zs_folder: str = "results/zs_comb",
     filter_min_by: str = "none",
@@ -913,42 +964,48 @@ def run_all_mlde_parallelized(
             for zs_predictor in zs_predictors:
                 # Determine feature libraries based on the predictor
                 ft_libs = [1] if zs_predictor == "none" else ft_lib_fracs
-                zs_predictor_label = "none" if zs_predictor == "none" else f"{zs_predictor}_score"
-                
+                zs_predictor_label = (
+                    "none" if zs_predictor == "none" else f"{zs_predictor}_score"
+                )
+
                 for n_top in n_tops:
                     # Print a message if verbose is True
                     if verbose:
                         print(
-                            f"Queuing MLDE for {input_csv} with {zs_predictor_label} zero-shot predictor, " +
-                            f"{n_mut_cutoff} mut number, {n_top} top output..."
+                            f"Queuing MLDE for {input_csv} with {zs_predictor_label} zero-shot predictor, "
+                            + f"{n_mut_cutoff} mut number, {n_top} top output..."
                         )
 
                     # Append the task arguments as a tuple to the tasks list
-                    tasks.append({
-                        "input_csv": input_csv,
-                        "zs_predictor": zs_predictor_label,
-                        "scale_fit": scale_type.split("scale2")[1],
-                        "filter_min_by": filter_min_by,
-                        "n_mut_cutoff": n_mut_cutoff,
-                        "encodings": encodings,
-                        "ft_libs": ft_libs,
-                        "model_classes": model_classes,
-                        "n_samples": n_samples,
-                        "n_split": n_split,
-                        "n_replicate": n_replicate,
-                        "n_top": n_top,
-                        "boosting_n_worker": boosting_n_worker,
-                        "global_seed": global_seed,
-                        "verbose": verbose,
-                        "save_model": save_model,
-                        "mlde_folder": mlde_folder,
-                        "exp_name": "",
-                    })
+                    tasks.append(
+                        {
+                            "input_csv": input_csv,
+                            "zs_predictor": zs_predictor_label,
+                            "scale_fit": scale_type.split("scale2")[1],
+                            "filter_min_by": filter_min_by,
+                            "n_mut_cutoff": n_mut_cutoff,
+                            "encodings": encodings,
+                            "ft_libs": ft_libs,
+                            "model_classes": model_classes,
+                            "n_samples": n_samples,
+                            "n_split": n_split,
+                            "n_replicate": n_replicate,
+                            "n_top": n_top,
+                            "boosting_n_worker": boosting_n_worker,
+                            "global_seed": global_seed,
+                            "verbose": verbose,
+                            "save_model": save_model,
+                            "mlde_folder": mlde_folder,
+                            "exp_name": "",
+                        }
+                    )
 
     # Run tasks in parallel using ProcessPoolExecutor
     with ProcessPoolExecutor(max_workers=n_job) as executor:
         # Submit tasks
-        future_to_task = {executor.submit(run_mlde_lite, **task): task for task in tasks}
+        future_to_task = {
+            executor.submit(run_mlde_lite, **task): task for task in tasks
+        }
 
         # Retrieve results as tasks are completed
         for future in as_completed(future_to_task):
@@ -966,6 +1023,7 @@ def run_all_mlde_parallelized(
                 # Print the full traceback to help identify where the exception was raised
                 print("Traceback:")
                 traceback.print_tb(exc.__traceback__)
+
 
 def run_all_mlde2_parallelized(
     zs_folder: str = "results/zs_comb",
@@ -998,42 +1056,48 @@ def run_all_mlde2_parallelized(
             for zs_predictor in zs_predictors:
                 # Determine feature libraries based on the predictor
                 ft_libs = [1] if zs_predictor == "none" else ft_lib_fracs
-                zs_predictor_label = "none" if zs_predictor == "none" else f"{zs_predictor}_score"
-                
+                zs_predictor_label = (
+                    "none" if zs_predictor == "none" else f"{zs_predictor}_score"
+                )
+
                 for n_top in n_tops:
                     # Print a message if verbose is True
                     if verbose:
                         print(
-                            f"Queuing MLDE for {input_csv} with {zs_predictor_label} zero-shot predictor, " +
-                            f"{n_mut_cutoff} mut number, {n_top} top output..."
+                            f"Queuing MLDE for {input_csv} with {zs_predictor_label} zero-shot predictor, "
+                            + f"{n_mut_cutoff} mut number, {n_top} top output..."
                         )
 
                     # Append the task arguments as a tuple to the tasks list
-                    tasks.append({
-                        "input_csv": input_csv,
-                        "zs_predictor": zs_predictor_label,
-                        "scale_fit": scale_type.split("scale2")[1],
-                        "filter_min_by": filter_min_by,
-                        "n_mut_cutoff": n_mut_cutoff,
-                        "encodings": encodings,
-                        "ft_libs": ft_libs,
-                        "model_classes": model_classes,
-                        "n_samples": n_samples,
-                        "n_split": n_split,
-                        "n_replicate": n_replicate,
-                        "n_top": n_top,
-                        "boosting_n_worker": boosting_n_worker,
-                        "global_seed": global_seed,
-                        "verbose": verbose,
-                        "save_model": save_model,
-                        "mlde_folder": mlde_folder,
-                        "exp_name": "",
-                    })
+                    tasks.append(
+                        {
+                            "input_csv": input_csv,
+                            "zs_predictor": zs_predictor_label,
+                            "scale_fit": scale_type.split("scale2")[1],
+                            "filter_min_by": filter_min_by,
+                            "n_mut_cutoff": n_mut_cutoff,
+                            "encodings": encodings,
+                            "ft_libs": ft_libs,
+                            "model_classes": model_classes,
+                            "n_samples": n_samples,
+                            "n_split": n_split,
+                            "n_replicate": n_replicate,
+                            "n_top": n_top,
+                            "boosting_n_worker": boosting_n_worker,
+                            "global_seed": global_seed,
+                            "verbose": verbose,
+                            "save_model": save_model,
+                            "mlde_folder": mlde_folder,
+                            "exp_name": "",
+                        }
+                    )
 
     # Run tasks in parallel using ProcessPoolExecutor
     with ProcessPoolExecutor(max_workers=n_job) as executor:
         # Submit tasks
-        future_to_task = {executor.submit(run_mlde_lite, **task): task for task in tasks}
+        future_to_task = {
+            executor.submit(run_mlde_lite, **task): task for task in tasks
+        }
 
         # Retrieve results as tasks are completed
         for future in as_completed(future_to_task):

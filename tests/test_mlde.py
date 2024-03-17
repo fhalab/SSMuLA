@@ -7,7 +7,7 @@ from glob import glob
 
 from datetime import datetime
 
-from SSMuLA.mlde_lite import run_all_mlde
+from SSMuLA.mlde_lite import run_all_mlde2_parallelized
 from SSMuLA.util import checkNgen_folder
 
 if __name__ == "__main__":
@@ -22,6 +22,16 @@ if __name__ == "__main__":
     )
     sys.stdout = f
 
-    run_all_mlde(n_mut_cutoffs=[1, 2, 0])
+    run_all_mlde2_parallelized(encodings=["one-hot"],
+                                n_mut_cutoffs=[1],
+                               zs_predictors=["none"],
+                                n_replicate=50, 
+                                n_job=96)
+
+    run_all_mlde2_parallelized(encodings=["one-hot"],
+                                n_mut_cutoffs=[2, 0],
+                               zs_predictors=["none", "Triad", "ev", "esm"],
+                                n_replicate=50, 
+                                n_job=96)
 
     f.close()
