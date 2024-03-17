@@ -44,7 +44,7 @@ if __name__ == "__main__":
         n_mut_cutoffs = [2],
         zs_predictors = [ "Triad", "ev", "esm"],
         encodings = DEFAULT_LEARNED_EMB_COMBO,
-        n_replicate=5
+        n_replicate=50
     )
 
     f.close()

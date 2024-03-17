@@ -837,14 +837,8 @@ def run_all_mlde(
     Run all MLDE give zs combined csvs
     """
 
-    # for input_csv in sorted(
-    #     glob(f"{os.path.normpath(zs_folder)}/{filter_min_by}/{scale_type}/*.csv")
-    # ):
-    # TODO rerun smooth out patch work
     for input_csv in sorted(
-        [
-            "results/zs_comb/none/scale2max/TrpB4.csv",
-        ]
+        glob(f"{os.path.normpath(zs_folder)}/{filter_min_by}/{scale_type}/*.csv")
     ):
         for n_mut_cutoff in n_mut_cutoffs:
             for zs_predictor in zs_predictors:
