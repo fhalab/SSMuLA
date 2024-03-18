@@ -578,12 +578,10 @@ class MLDESim(MLDEDataset):
     ) -> tuple:
         """
         Calculates the MLDE results for a given set of predictions.
-        Returns the max and mean of the top 96 sequences and the top 500 sequences.
+        Returns the max and mean of the top n sequences and the top n sequences.
 
         Args:
-            data2: pandas dataframe with all sequences and fitness labels in the combinatorial space
-            y_preds: the predictions on the training data
-            unique_seqs: the unique sequences in the training data
+        - y_preds:np.array, the predictions on the training data
         """
 
         df = self.input_df.copy()

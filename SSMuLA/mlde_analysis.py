@@ -92,7 +92,7 @@ class MLDEParser:
         metric_df = pd.DataFrame(
             {
                 "encoding": self.encoding_index,
-                "models": self.models_index,
+                "model": self.models_index,
                 "n_sample": self.n_sample_index,
                 "ft_lib": self.lib_index,
                 "repeats": self.repeats_index,
@@ -102,7 +102,7 @@ class MLDEParser:
         metric_df["encoding"] = metric_df["encoding"].map(
             {i: v for i, v in enumerate(self.encoding)}
         )
-        metric_df["models"] = metric_df["models"].map(
+        metric_df["model"] = metric_df["model"].map(
             {i: v for i, v in enumerate(self.model_classes)}
         )
         metric_df["n_sample"] = metric_df["n_sample"].map(
@@ -287,9 +287,9 @@ class MLDEVis:
 
         encoding_lists = deepcopy(
             [[encoding] for encoding in self._all_df["encoding"].unique()]
-            + deepcopy(DEFAULT_LEARNED_EMB_COMBO)
+            + deepcopy([DEFAULT_LEARNED_EMB_COMBO])
         )
-        models = self._all_df["models"].unique()
+        models = self._all_df["model"].unique()
         n_tops = self._all_df["n_top"].unique()
 
         with tqdm() as pbar:
@@ -301,21 +301,33 @@ class MLDEVis:
                 * len(default_metrics)
             )
 
-            for zs in ZS_OPTS_LEGEND.keys():
-                for encoding_list in encoding_lists:
-                    print(encoding_list)
-                    for model in models:
-                        for n_top in n_tops:
-                            for metric in default_metrics:
+            for metric in default_metrics:
+                metric_subfolder = checkNgen_folder(os.path.join(self._mlde_vis_dir, metric))
+
+                for zs in ZS_OPTS_LEGEND.keys():
+
+                    zs_subfolder = checkNgen_folder(os.path.join(metric_subfolder, zs))
+
+                    for encoding_list in encoding_lists:
+                        print(encoding_list)
+                        for model in models:
+                            for n_top in n_tops:
+                                
                                 self.zs_encode_model_ntop_metirc(
-                                    zs, encoding_list, model, n_top, metric
+                                    zs, encoding_list, model, n_top, metric, zs_subfolder
                                 )
                                 pbar.update()
 
             pbar.close()
 
     def zs_encode_model_ntop_metirc(
-        self, zs: str, encoding_list: list[str], model: str, n_top: int, metric: str
+        self, 
+        zs: str, 
+        encoding_list: list[str], 
+        model: str, 
+        n_top: int, 
+        metric: str,
+        plot_path: str
     ):
 
         """
@@ -334,7 +346,7 @@ class MLDEVis:
                 self._all_df[
                     (self._all_df["zs"] == zs)
                     & (self._all_df["encoding"].isin(encoding_list))
-                    & (self._all_df["models"] == model)
+                    & (self._all_df["model"] == model)
                     & (self._all_df["n_top"] == n_top)
                 ]
                 .sort_values(["lib", "n_mut_cutoff"], ascending=[True, False])
@@ -353,7 +365,7 @@ class MLDEVis:
                 hooks=[one_decimal_x, one_decimal_y, fixmargins, lib_ncut_hook],
             ),
             plot_name=plot_name,
-            plot_path=self._mlde_vis_dir,
+            plot_path=plot_path,
         )
 
 

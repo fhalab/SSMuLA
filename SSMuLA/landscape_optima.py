@@ -438,20 +438,7 @@ def run_loc_opt(
     Run the local optima
     """
 
-    summary_df = pd.DataFrame(
-        columns=[
-            "lib",
-            "summary_type",
-            "frac_measured",
-            "numb_active",
-            "frac_active",
-            "numb_loc_opt",
-            "frac_loc_opt_active",
-            "frac_loc_opt_total",
-            "frac_loc_opt_hd2_escape_numb",
-            "frac_loc_opt_hd2_cannot_escape_numb",
-        ]
-    )
+    summary_df = pd.DataFrame()
 
     for lib in sorted(
         glob(os.path.normpath(input_folder) + "/*/" + fitness_process_type + "/*.csv")
@@ -465,7 +452,7 @@ def run_loc_opt(
             n_jobs,
         )
 
-        summary_df = summary_df.append(
+        summary_df = summary_df._append(
             {
                 "lib": opt_class.lib_name,
                 "summary_type": fitness_process_type,

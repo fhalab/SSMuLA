@@ -18,6 +18,7 @@ import numpy as np
 import pandas as pd
 from scipy.stats import ks_2samp, skew, kurtosis, cauchy, gaussian_kde
 from scipy.signal import argrelextrema
+from scipy.special import comb
 
 from Bio.Seq import Seq
 
@@ -34,6 +35,7 @@ from SSMuLA.landscape_global import (
     LIB_NAMES,
     LibData,
     append_active_cutoff,
+    n_mut_cutoff_dict
 )
 from SSMuLA.vis import (
     save_plt,
@@ -850,6 +852,7 @@ class LibStat(LibData):
         self,
         input_csv: str,
         scale_fit: str = "max",
+        n_mut_cuttoff: int = 0,
         results_dir: str = "results/fitness_distribution",
     ) -> None:
         """
@@ -860,10 +863,13 @@ class LibStat(LibData):
         - scale_fit, str: the method used to scale fitness values
             "max" = divide by the maximum fitness value
             "parent" = scale to parent = 1
+        - n_mut_cuttoff, int: the number of mutations to cutoff, 0 means all
         - results_dir, str: the directory to save the results
         """
 
         super().__init__(input_csv, scale_fit)
+
+        self._n_mut_cuttoff = n_mut_cuttoff
 
         self._results_dir = os.path.normpath(results_dir)
 
@@ -973,9 +979,21 @@ class LibStat(LibData):
     def df(self) -> pd.DataFrame:
         """Returns the dataframe without stop codons"""
         df = self.input_df[~self.input_df["AAs"].str.contains("\*")]
+        # add mut number 
+        df["n_mut"] = df["muts"].str.split(":").str.len()
+
+        # slice the single or double out
+        if self._n_mut_cuttoff > 0:
+            df = df[df["n_mut"] <= self._n_mut_cuttoff]
+
         df["rank"] = df["fitness"].rank(ascending=False)
         return df.copy()
 
+    @property
+    def numb_full_lib(self) -> int:
+        """Return the theoritical size of the library"""
+        return 20**self._n_mut_cuttoff * comb(self.n_site, self._n_mut_cuttoff, exact=True)
+        
     @property
     def numb_measured(self) -> int:
         """Return the length of the dataframe"""
@@ -984,7 +1002,7 @@ class LibStat(LibData):
     @property
     def frac_measured(self) -> float:
         """Return the fraction of complete sequences"""
-        return self.numb_measured / 20 ** self.n_site
+        return self.numb_measured / self.numb_full_lib
 
     @property
     def numb_active(self) -> int:
@@ -1018,7 +1036,7 @@ class LibStat(LibData):
     def stat_subfolder(self) -> str:
         """Return the subfolder for the statistics"""
         return checkNgen_folder(
-            os.path.join(self._results_dir, self._scale_fit, "stat")
+            os.path.join(self._results_dir, self._scale_fit, f"stat-{n_mut_cutoff_dict[self._n_mut_cuttoff]}")
         )
 
     @property
@@ -1078,7 +1096,7 @@ def get_all_lib_stats(
     Get the statistics for all libraries
     """
 
-    stat_df = pd.DataFrame(columns=["lib", "basic_stats", "cauchy", "kde"])
+    stat_df = pd.DataFrame()
 
     for lib in tqdm(LIB_NAMES):
 
@@ -1087,22 +1105,27 @@ def get_all_lib_stats(
         else:
             protein = lib
 
-        print(f"Get {lib} stats...")
+        for n_mut_cuttoff in [0, 1, 2]:
 
-        lib_class = LibStat(
-            os.path.join(input_folder, protein, f"scale2{scale_fit}", f"{lib}.csv"),
-            scale_fit=scale_fit,
-            results_dir=results_dir,
-        )
-        stat_df = stat_df._append(
-            {
-                "lib": lib,
-                "lib_basic_dict": lib_class.lib_basic_dict,
-                "fit_basic_dict": lib_class.fit_basic_dict,
-                "cauchy": lib_class.cauchy_dict,
-                "kde": lib_class.kde_dict,
-            },
-            ignore_index=True,
-        )
+            print(f"Get {lib} stats for {n_mut_cuttoff}...")
 
-    stat_df.to_csv(os.path.join(lib_class.stat_subfolder, "all_lib_stats.csv"))
+            lib_class = LibStat(
+                os.path.join(input_folder, protein, f"scale2{scale_fit}", f"{lib}.csv"),
+                scale_fit=scale_fit,
+                n_mut_cuttoff=n_mut_cuttoff,
+                results_dir=results_dir,
+            )
+
+            stat_df = stat_df._append(
+                {
+                    "lib": lib,
+                    "n_mut_cuttoff": n_mut_cuttoff,
+                    "lib_basic_dict": lib_class.lib_basic_dict,
+                    "fit_basic_dict": lib_class.fit_basic_dict,
+                    "cauchy": lib_class.cauchy_dict,
+                    "kde": lib_class.kde_dict,
+                },
+                ignore_index=True,
+            )
+
+    stat_df.to_csv(os.path.join(os.path.dirname(lib_class.stat_subfolder), "all_lib_stats.csv"))
