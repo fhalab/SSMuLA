@@ -35,7 +35,7 @@ from SSMuLA.landscape_global import (
     LIB_NAMES,
     LibData,
     append_active_cutoff,
-    n_mut_cutoff_dict
+    n_mut_cutoff_dict,
 )
 from SSMuLA.vis import (
     save_plt,
@@ -43,7 +43,7 @@ from SSMuLA.vis import (
     plot_fit_dist,
     LIB_COLORS,
     LIB_COLORS_CODON,
-    PRESENTATION_PALETTE_SATURATE
+    PRESENTATION_PALETTE_SATURATE,
 )
 from SSMuLA.util import checkNgen_folder, get_file_name
 
@@ -122,49 +122,12 @@ class ProcessData(LibData):
             axis=1,
         )
 
-        return df_appended.replace("", "WT")
-    
-    def _s_d_vs_all(self, df: pd.DataFrame):
-        """
-        Compute s2d, s2m, d2m fitness distribution ks test and
-        save fitness distribution plot
-        """
+        df_appended.replace("", "WT")
 
-        # get all signle only df
-        s_df = df[df["n_mut"] == 1]
+        # add mut number
+        df_appended["n_mut"] = df_appended["muts"].str.split(":").str.len()
 
-        # get single and doubles
-        d_df = df[df["n_mut"] <= 2]
-
-        ks_dict = {}
-
-        for ks_type, (df1, df2) in zip(["s2d", "s2m", "d2m"],[(s_df, d_df), (s_df, df), (d_df, df)]):
-            ks_dict[ks_type] = {name: val for name, val in zip(["ks_stat", "ks_p"], ks_2samp(df1["fitness"], df2["fitness"]))}
-
-        print(f"Kolmogorov-Smirnov Statistic: {ks_dict}")
-
-        # plot s2d, s2m, d2m fitness distribution
-        sdm_dist = plot_fit_dist(
-            s_df["fitness"], color=PRESENTATION_PALETTE_SATURATE["yellow"], label="single"
-        ) * plot_fit_dist(
-            d_df["fitness"], color=PRESENTATION_PALETTE_SATURATE["green"], label="double"
-        ) * plot_fit_dist(
-            df["fitness"], color=PRESENTATION_PALETTE_SATURATE["blue"], label="all"
-        ).opts(
-            legend_position="top_right",
-            title=f"{self.lib_name} fitness distribution",
-            xlabel="Fitness",
-        )
-
-        # Save the plot with the legend
-        save_bokeh_hv(
-            plot_obj=sdm_dist,
-            plot_name=f"{self.lib_name} fitness distribution single, double, and all",
-            plot_path=self.dist_dir,
-            bokehorhv="hv",
-        )
-
-        return ks_dict, sdm_dist
+        return df_appended.copy()
 
     @property
     def output_csv(self) -> str:
@@ -222,9 +185,6 @@ class ProcessDHFR(ProcessData):
 
         print("Plotting the fitness distribution...")
         self._overlay_fit_dist()
-
-        print("Plotting the single, double, and all fitness distribution...")
-        self._s_d_vs_all_ks, self._s_d_vs_all_dist = self._s_d_vs_all(self._df_avg_aa_append_scaled)
 
     def _scale_df(self, df: pd.DataFrame, codon_aa: str) -> pd.DataFrame:
         """
@@ -295,7 +255,7 @@ class ProcessDHFR(ProcessData):
         save_bokeh_hv(
             overlay_dist,
             plot_name=f"{self.lib_name} fitness distribution",
-            plot_path=self.dist_dir,
+            plot_path=checkNgen_folder(os.path.join(self.dist_dir, "by_protein")),
             bokehorhv="hv",
         )
 
@@ -316,7 +276,7 @@ class ProcessDHFR(ProcessData):
     @property
     def codon_df_scaled(self) -> pd.DataFrame:
         """Return the scaled dataframe"""
-        print(f"codon_df_scaled {self.parent_codon_fitness} before scale...")
+        print(f"parent codon {self.parent_codon_fitness} before scale...")
         return self._scale_df(self.exp_df, "codon")
 
     @property
@@ -428,16 +388,6 @@ class ProcessDHFR(ProcessData):
         return self.df_avg_aa_scaled[self.df_avg_aa_scaled["AAs"] == self.parent_aa][
             "fitness"
         ].values[0]
-    
-    @property
-    def s_d_vs_all_ks(self) -> dict:
-        """Return the ks statistics for single, double, and all"""
-        return self._s_d_vs_all_ks
-    
-    @property
-    def s_d_vs_all_dist(self) -> hv.Distribution:
-        """Return the distribution for single, double, and all"""
-        return self._s_d_vs_all_dist
 
 
 class ProcessGB1(ProcessData):
@@ -492,11 +442,9 @@ class ProcessGB1(ProcessData):
         save_bokeh_hv(
             plot_obj=self._fit_dist,
             plot_name=f"{self.lib_name} fitness distribution",
-            plot_path=self.dist_dir,
+            plot_path=checkNgen_folder(os.path.join(self.dist_dir, "by_protein")),
             bokehorhv="hv",
         )
-
-        self._s_d_vs_all_ks, self._s_d_vs_all_dist = self._s_d_vs_all(self._df_active_append_scaled)
 
     @property
     def df_aa(self) -> pd.DataFrame:
@@ -565,12 +513,12 @@ class ProcessGB1(ProcessData):
     def df_active_append_scaled(self) -> pd.DataFrame:
         """Return the active appended dataframe"""
         return self._df_active_append_scaled
-    
+
     @property
     def s_d_vs_all_ks(self) -> dict:
         """Return the ks statistics for single, double, and all"""
         return self._s_d_vs_all_ks
-    
+
     @property
     def s_d_vs_all_dist(self) -> hv.Distribution:
         """Return the distribution for single, double, and all"""
@@ -595,8 +543,6 @@ class ProcessTrpB(ProcessData):
 
         # save scaled df
         self._append_mut(self.df_scale_fit).to_csv(self.output_csv, index=False)
-
-        self._s_d_vs_all_ks, self._s_d_vs_all_dist = self._s_d_vs_all(self.df_scale_fit)
 
     @property
     def parent_aa_fitness(self) -> float:
@@ -632,16 +578,6 @@ class ProcessTrpB(ProcessData):
         return self.df_scale_fit[self.df_scale_fit["AAs"] == self.parent_aa][
             "fitness"
         ].values[0]
-    
-    @property
-    def s_d_vs_all_ks(self) -> dict:
-        """Return the ks statistics for single, double, and all"""
-        return self._s_d_vs_all_ks
-    
-    @property
-    def s_d_vs_all_dist(self) -> hv.Distribution:
-        """Return the distribution for single, double, and all"""
-        return self._s_d_vs_all_dist
 
 
 class PlotTrpB:
@@ -694,7 +630,7 @@ class PlotTrpB:
         trpb4_df = trpb4_class.df_scale_fit
         trpb4_fit = trpb4_class.scaled_fitness
 
-        dist_dir = trpb4_class.dist_dir
+        dist_dir = checkNgen_folder(os.path.join(trpb4_class.dist_dir, "by_protein"))
 
         print(
             "Plotting {} fitness distribution wtih {} {}...".format(
@@ -833,8 +769,6 @@ def process_all(
     ProcessGB1(scale_fit=scale_fit)
     PlotTrpB(scale_fit=scale_fit)
 
-    
-
 
 def sum_ks(
     input_folder: str = "data", output_folder: str = "results/fitness_distribution"
@@ -937,6 +871,173 @@ def sum_ks(
         output_dict[process_type]["ks_p"] = ks_df_p
 
     return output_dict
+
+
+class SDA(LibData):
+    """A class for analysis of single, double, and all mutations"""
+
+    def __init__(
+        self,
+        input_csv: str,
+        scale_fit: str = "max",
+        results_dir: str = "results/fitness_distribution"
+    ) -> None:
+
+        """
+        Args:
+        - input_csv, str: path to the input csv file,
+            ie. data/DHFR/fitness_landscape/DHFR.csv for preprocessed
+            data/DHFR/scale2max/DHFR.csv for scaled to max = 1
+        - scale_fit, str: ways to scale the fitness
+        - sda_dir, str: the directory to save the results
+        """
+
+        super().__init__(input_csv, scale_fit)
+
+        assert (
+            scale_fit in input_csv
+        ), "Make sure {} is processed to be scaled with {}".format(input_csv, scale_fit)
+
+        self._sda_dir = checkNgen_folder(os.path.join(os.path.normpath(results_dir), scale_fit, "sda"))
+
+        self._sda_ks_dict, self._sda_dist = self._s_d_vs_all()
+
+    def _s_d_vs_all(self):
+
+        """
+        Compute s2d, s2m, d2m fitness distribution ks test and
+        save fitness distribution plot
+        """
+
+        sda_ks_dict = {}
+
+        for ks_type, (fit1, fit2) in zip(
+            ["s2d", "s2m", "d2m"],
+            [
+                (self.s_fit, self.d_fit),
+                (self.s_fit, self.m_fit),
+                (self.d_fit, self.m_fit),
+            ],
+        ):
+            sda_ks_dict[ks_type] = {
+                name: val
+                for name, val in zip(["ks_stat", "ks_p"], ks_2samp(fit1, fit2))
+            }
+
+        print(f"Kolmogorov-Smirnov Statistic: {sda_ks_dict}")
+
+        # plot s2d, s2m, d2m fitness distribution
+        sda_dist = (
+            plot_fit_dist(
+                self.s_fit,
+                color=PRESENTATION_PALETTE_SATURATE["yellow"],
+                label="Single",
+            )
+            * plot_fit_dist(
+                self.d_fit, color=PRESENTATION_PALETTE_SATURATE["green"], label="Double"
+            )
+            * plot_fit_dist(
+                self.m_fit, color=PRESENTATION_PALETTE_SATURATE["blue"], label="All"
+            )
+        ).opts(
+                legend_position="top_right",
+                title=f"{self.lib_name} fitness distribution",
+                xlabel="Fitness",
+            )
+
+        # Save the plot with the legend
+        save_bokeh_hv(
+            plot_obj=sda_dist,
+            plot_name=f"{self.lib_name} fitness distribution",
+            plot_path=self._sda_dir,
+            bokehorhv="hv",
+        )
+
+        return sda_ks_dict, sda_dist
+
+    @property
+    def m_df(self) -> pd.DataFrame:
+        """Return the dataframe without stop codons"""
+        df = self.input_df[~self.input_df["AAs"].str.contains("\*")]
+        return df.copy()
+
+    @property
+    def m_fit(self) -> pd.Series:
+        """Return the fitness of all multi mutations"""
+        return self.m_df["fitness"]
+
+    @property
+    def s_df(self) -> pd.DataFrame:
+        """Return the single mutation dataframe"""
+        return self.m_df[self.m_df["n_mut"] == 1]
+
+    @property
+    def s_fit(self) -> pd.Series:
+        """Return the fitness of single mutations"""
+        return self.s_df["fitness"]
+
+    @property
+    def d_df(self) -> pd.DataFrame:
+        """Return the double mutation dataframe"""
+        return self.m_df[self.m_df["n_mut"] <= 2]
+
+    @property
+    def d_fit(self) -> pd.Series:
+        """Return the fitness of double mutations"""
+        return self.d_df["fitness"]
+
+    @property
+    def sda_ks_dict(self) -> dict:
+        """Return the ks statistics for single, double, and all"""
+        return self._sda_ks_dict
+
+    @property
+    def sda_dist(self) -> hv.Distribution:
+        """Return the distribution for single, double, and all"""
+        return self._sda_dist
+    
+    @property
+    def sda_dir(self) -> str:
+        """Return the path to the sda directory"""
+        return self._sda_dir
+
+
+def get_all_sda(
+    input_folder: str = "data",
+    scale_fit: str = "max",
+    results_dir: str = "results/fitness_distribution",
+) -> pd.DataFrame:
+    
+    """
+    Run SDA analysis for all libraries and save the results to a csv file
+    """
+
+    sda_df = pd.DataFrame()
+
+    for lib in tqdm(LIB_NAMES):
+
+        if "TrpB" in lib:
+            protein = "TrpB"
+        else:
+            protein = lib
+
+        sda_class = SDA(
+            input_csv=os.path.join(
+                input_folder, protein, f"scale2{scale_fit}", f"{lib}.csv"
+            ),
+            scale_fit=scale_fit,
+            results_dir=results_dir,
+        )
+        sda_dict = sda_class.sda_ks_dict
+
+        sda_df = sda_df._append(
+            {"lib": lib, **sda_dict},
+            ignore_index=True,
+        )
+
+    sda_df.to_csv(os.path.join(sda_class.sda_dir, "all_lib_sda.csv"), index=False)
+
+    return sda_df
 
 
 class LibStat(LibData):
@@ -1072,8 +1173,6 @@ class LibStat(LibData):
     def df(self) -> pd.DataFrame:
         """Returns the dataframe without stop codons"""
         df = self.input_df[~self.input_df["AAs"].str.contains("\*")]
-        # add mut number 
-        df["n_mut"] = df["muts"].str.split(":").str.len()
 
         # slice the single or double out
         if self._n_mut_cuttoff > 0:
@@ -1090,8 +1189,8 @@ class LibStat(LibData):
         else:
             numb_sites = self._n_mut_cuttoff
 
-        return 20**numb_sites * comb(self.n_site, numb_sites, exact=True)
-        
+        return 20 ** numb_sites * comb(self.n_site, numb_sites, exact=True)
+
     @property
     def numb_measured(self) -> int:
         """Return the length of the dataframe"""
@@ -1134,7 +1233,11 @@ class LibStat(LibData):
     def stat_subfolder(self) -> str:
         """Return the subfolder for the statistics"""
         return checkNgen_folder(
-            os.path.join(self._results_dir, self._scale_fit, f"stat-{n_mut_cutoff_dict[self._n_mut_cuttoff]}")
+            os.path.join(
+                self._results_dir,
+                self._scale_fit,
+                f"stat-{n_mut_cutoff_dict[self._n_mut_cuttoff]}",
+            )
         )
 
     @property
@@ -1226,4 +1329,6 @@ def get_all_lib_stats(
                 ignore_index=True,
             )
 
-    stat_df.to_csv(os.path.join(os.path.dirname(lib_class.stat_subfolder), "all_lib_stats.csv"))
+    stat_df.to_csv(
+        os.path.join(os.path.dirname(lib_class.stat_subfolder), "all_lib_stats.csv")
+    )
