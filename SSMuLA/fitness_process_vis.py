@@ -226,22 +226,39 @@ class ProcessDHFR(ProcessData):
             f"The avg_aa_active_cutoff_scaled is {self.avg_aa_active_cutoff_scaled}..."
         )
 
+        hv_dist = self.codon_fit_dist_scaled * self.avg_aa_fit_dist_scaled
+
+        # get y_range for spike height
+        y_range = (
+            hv.renderer("bokeh").instance(mode="server").get_plot(hv_dist).state.y_range
+        )
+
+        # set spike length to be 5% of the y_range
+        spike_length = (y_range.end - y_range.start) * 0.05
+
         # Overlay the two plots
         overlay_dist = (
-            self.codon_fit_dist_scaled
-            * self.avg_aa_fit_dist_scaled
+            hv_dist
             * hv.Spikes([self.parent_codon_fitness_scaled], label="Parent codon").opts(
-                color="black", line_dash="dotted", line_width=1.6
+                color="black",
+                line_dash="dotted",
+                line_width=1.6,
+                spike_length=spike_length,
             )
             * hv.Spikes(
                 [self.parent_aa_fitness_scaled], label="Averaged parent AA"
-            ).opts(color="black", line_width=1.6)
+            ).opts(color="black", line_width=1.6, spike_length=spike_length)
             * hv.Spikes(
                 [ACTIVE_THRESH_DICT[self.lib_name]], label="Defined active"
-            ).opts(color="gray", line_dash="dotted", line_width=1.6)
+            ).opts(
+                color="gray",
+                line_dash="dotted",
+                line_width=1.6,
+                spike_length=spike_length,
+            )
             * hv.Spikes(
                 [self.avg_aa_active_cutoff_scaled], label="Calculated active"
-            ).opts(color="gray", line_width=1.6)
+            ).opts(color="gray", line_width=1.6, spike_length=spike_length)
         )
 
         # Customize the plot options
@@ -420,17 +437,27 @@ class ProcessGB1(ProcessData):
             self.output_csv, index=False
         )
 
+        hv_dist = plot_fit_dist(
+            self._df_active_append_scaled["fitness"],
+            color=LIB_COLORS[self.lib_name],
+            label="GB1",
+        )
+
+        # get y_range for spike height
+        y_range = (
+            hv.renderer("bokeh").instance(mode="server").get_plot(hv_dist).state.y_range
+        )
+
+        # set spike length to be 5% of the y_range
+        spike_length = (y_range.end - y_range.start) * 0.05
+
         self._fit_dist = (
-            plot_fit_dist(
-                self._df_active_append_scaled["fitness"],
-                color=LIB_COLORS[self.lib_name],
-                label="GB1",
-            )
+            hv_dist
             * hv.Spikes([self.active_thresh_scaled], label="Active").opts(
-                color="gray", line_width=1.6
+                color="gray", line_width=1.6, spike_length=spike_length
             )
             * hv.Spikes([self.parent_aa_fitness_scaled], label="Parent AA").opts(
-                color="black", line_width=1.6
+                color="black", line_width=1.6, spike_length=spike_length
             )
         ).opts(
             legend_position="top_right",
@@ -638,15 +665,28 @@ class PlotTrpB:
             )
         )
 
+        trpb4_hv_dist = plot_fit_dist(
+            trpb4_fit, trpb4_name, LIB_COLORS[trpb4_name], ignore_line_label=True
+        )
+
+        # get y_range for spike height
+        y_range = (
+            hv.renderer("bokeh")
+            .instance(mode="server")
+            .get_plot(trpb4_hv_dist)
+            .state.y_range
+        )
+
+        # set spike length to be 5% of the y_range
+        spike_length = (y_range.end - y_range.start) * 0.05
+
         dist_list[-1] = (
-            plot_fit_dist(
-                trpb4_fit, trpb4_name, LIB_COLORS[trpb4_name], ignore_line_label=True
-            )
+            trpb4_hv_dist
             * hv.Spikes([trpb4_class.parent_aa_fitness_scaled]).opts(
-                color="black", line_width=1.6
+                color="black", line_width=1.6, spike_length=spike_length
             )
             * hv.Spikes([trpb4_df[trpb4_df["active"] == True]["fitness"].min()]).opts(
-                color="gray", line_width=1.6
+                color="gray", line_width=1.6, spike_length=spike_length
             )
         )
 
@@ -666,15 +706,28 @@ class PlotTrpB:
                 )
             )
 
+            trpb3_hv_dist = plot_fit_dist(
+                lib_fit, lib_name, LIB_COLORS[lib_name], ignore_line_label=True
+            )
+
+            # get y_range for spike height
+            y_range = (
+                hv.renderer("bokeh")
+                .instance(mode="server")
+                .get_plot(trpb3_hv_dist)
+                .state.y_range
+            )
+
+            # set spike length to be 5% of the y_range
+            spike_length = (y_range.end - y_range.start) * 0.05
+
             dist_list[i] = (
-                plot_fit_dist(
-                    lib_fit, lib_name, LIB_COLORS[lib_name], ignore_line_label=True
-                )
+                trpb3_hv_dist
                 * hv.Spikes([lib_class.parent_aa_fitness_scaled]).opts(
-                    color="black", line_width=1.6
+                    color="black", line_width=1.6, spike_length=spike_length
                 )
                 * hv.Spikes([lib_df[lib_df["active"] == True]["fitness"].min()]).opts(
-                    color="gray", line_width=1.6
+                    color="gray", line_width=1.6, spike_length=spike_length
                 )
             )
 
@@ -880,7 +933,7 @@ class SDA(LibData):
         self,
         input_csv: str,
         scale_fit: str = "max",
-        results_dir: str = "results/fitness_distribution"
+        results_dir: str = "results/fitness_distribution",
     ) -> None:
 
         """
@@ -898,7 +951,9 @@ class SDA(LibData):
             scale_fit in input_csv
         ), "Make sure {} is processed to be scaled with {}".format(input_csv, scale_fit)
 
-        self._sda_dir = checkNgen_folder(os.path.join(os.path.normpath(results_dir), scale_fit, "sda"))
+        self._sda_dir = checkNgen_folder(
+            os.path.join(os.path.normpath(results_dir), scale_fit, "sda")
+        )
 
         self._sda_ks_dict, self._sda_dist = self._s_d_vs_all()
 
@@ -940,10 +995,10 @@ class SDA(LibData):
                 self.m_fit, color=PRESENTATION_PALETTE_SATURATE["blue"], label="All"
             )
         ).opts(
-                legend_position="top_right",
-                title=f"{self.lib_name} fitness distribution",
-                xlabel="Fitness",
-            )
+            legend_position="top_right",
+            title=f"{self.lib_name} fitness distribution",
+            xlabel="Fitness",
+        )
 
         # Save the plot with the legend
         save_bokeh_hv(
@@ -995,7 +1050,7 @@ class SDA(LibData):
     def sda_dist(self) -> hv.Distribution:
         """Return the distribution for single, double, and all"""
         return self._sda_dist
-    
+
     @property
     def sda_dir(self) -> str:
         """Return the path to the sda directory"""
@@ -1007,7 +1062,7 @@ def get_all_sda(
     scale_fit: str = "max",
     results_dir: str = "results/fitness_distribution",
 ) -> pd.DataFrame:
-    
+
     """
     Run SDA analysis for all libraries and save the results to a csv file
     """

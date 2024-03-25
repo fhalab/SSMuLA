@@ -73,9 +73,7 @@ PRESENTATION_PALETTE_SATURATE = {
     "gray": "#666666",
 }
 
-LIGHT_COLORS = {
-    "yellow": "#F1D384"
-}
+LIGHT_COLORS = {"yellow": "#F1D384"}
 
 PLOTEXTENTIONS = [".svg", ".png"]
 PLOTTYPES = [t[1:] for t in PLOTEXTENTIONS]
@@ -96,20 +94,22 @@ LIB_COLORS = {
 LIB_COLORS_CODON = {"DHFR": PRESENTATION_PALETTE_SATURATE["brown"]}
 
 # define plot hooks
-def one_decimal_x(plot,element):
+def one_decimal_x(plot, element):
     plot.handles["plot"].xaxis[0].formatter = NumeralTickFormatter(format="0.0")
 
-def one_decimal_y(plot,element):
+
+def one_decimal_y(plot, element):
     plot.handles["plot"].yaxis[0].formatter = NumeralTickFormatter(format="0.0")
 
-def fixmargins(plot,element):
-    plot.handles["plot"].min_border_right=30
-    plot.handles["plot"].min_border_left=65
-    plot.handles["plot"].min_border_top=20
-    plot.handles["plot"].min_border_bottom=65
-    plot.handles["plot"].outline_line_color="black"
-    plot.handles["plot"].outline_line_alpha=1
-    plot.handles["plot"].outline_line_width=1
+
+def fixmargins(plot, element):
+    plot.handles["plot"].min_border_right = 30
+    plot.handles["plot"].min_border_left = 65
+    plot.handles["plot"].min_border_top = 20
+    plot.handles["plot"].min_border_bottom = 65
+    plot.handles["plot"].outline_line_color = "black"
+    plot.handles["plot"].outline_line_alpha = 1
+    plot.handles["plot"].outline_line_width = 1
     plot.handles["plot"].toolbar.autohide = True
 
 
@@ -130,7 +130,7 @@ def save_bokeh_hv(
 
     """
     A function for exporting bokeh plots as svg
-    
+
     Args:
     - plot_obj: hv or bokeh plot object
     - plot_name: str: name of the plot
@@ -156,7 +156,7 @@ def save_bokeh_hv(
 
     plot_obj.toolbar_location = None
     plot_obj.toolbar.logo = None
-    
+
     plot_obj.output_backend = "svg"
     export_svg(plot_obj, filename=plot_noext + ".svg", timeout=1200)
 
@@ -186,10 +186,11 @@ def save_plt(fig, plot_title: str, path2folder: str):
         plt.savefig(
             os.path.join(checkNgen_folder(path2folder), f"{plot_title_no_space}{ext}"),
             bbox_inches="tight",
-            dpi=300
+            dpi=300,
         )
 
     plt.close()
+
 
 def plot_fit_dist(
     fitness: pd.Series, label: str, color: str = "", ignore_line_label: bool = False
@@ -224,17 +225,30 @@ def plot_fit_dist(
         mean_label = {"label": f"Mean {label}"}
         median_label = {"label": f"Median {label}"}
 
+    hv_dist = hv.Distribution(fitness, label=cap_label).opts(
+        width=400,
+        height=400,
+        color=color,
+        line_color=None,
+    )
+
+    # get y_range for spike height
+    y_range = (
+        hv.renderer("bokeh").instance(mode="server").get_plot(hv_dist).state.y_range
+    )
+
+    # set spike length to be 5% of the y_range
+    spike_length = (y_range.end - y_range.start) * 0.05
+
     return (
-        hv.Distribution(fitness, label=cap_label).opts(
-            width=400,
-            height=400,
-            color=color,
-            line_color=None,
-        )
+        hv_dist
         * hv.Spikes([fitness.mean()], **mean_label).opts(
-            line_dash="dotted", line_color=color, line_width=1.6
+            line_dash="dotted",
+            line_color=color,
+            line_width=1.6,
+            spike_length=spike_length,
         )
         * hv.Spikes([fitness.median()], **median_label).opts(
-            line_color=color, line_width=1.6
+            line_color=color, line_width=1.6, spike_length=spike_length
         )
     )
