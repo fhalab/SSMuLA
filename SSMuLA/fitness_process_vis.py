@@ -43,6 +43,7 @@ from SSMuLA.vis import (
     plot_fit_dist,
     LIB_COLORS,
     LIB_COLORS_CODON,
+    PRESENTATION_PALETTE_SATURATE
 )
 from SSMuLA.util import checkNgen_folder, get_file_name
 
@@ -52,7 +53,7 @@ class ProcessData(LibData):
     A parent class to process the data
     """
 
-    def __init__(self, input_csv: str, scale_fit: str) -> None:
+    def __init__(self, input_csv: str, scale_fit: str = "max") -> None:
 
         """
         Args:
@@ -72,6 +73,12 @@ class ProcessData(LibData):
         Convert the variants sequence
         to the form of parentaa1loc1mutaa1:parentaa2loc2mutaa2
         for mut number count d2m and s2m
+
+        Args:
+        - muts, str: the variants sequence
+
+        Returns:
+        - str: the converted sequence
         """
 
         mut_seq = ""
@@ -101,6 +108,12 @@ class ProcessData(LibData):
 
         """
         Apply the convert_muts function to the dataframe
+
+        Args:
+        - df, pd.DataFrame: the input dataframe
+
+        Returns:
+        - pd.DataFrame: the appended dataframe
         """
 
         df_appended = df.copy()
@@ -110,6 +123,48 @@ class ProcessData(LibData):
         )
 
         return df_appended.replace("", "WT")
+    
+    def _s_d_vs_all(self, df: pd.DataFrame):
+        """
+        Compute s2d, s2m, d2m fitness distribution ks test and
+        save fitness distribution plot
+        """
+
+        # get all signle only df
+        s_df = df[df["n_mut"] == 1]
+
+        # get single and doubles
+        d_df = df[df["n_mut"] <= 2]
+
+        ks_dict = {}
+
+        for ks_type, (df1, df2) in zip(["s2d", "s2m", "d2m"],[(s_df, d_df), (s_df, df), (d_df, df)]):
+            ks_dict[ks_type] = {name: val for name, val in zip(["ks_stat", "ks_p"], ks_2samp(df1["fitness"], df2["fitness"]))}
+
+        print(f"Kolmogorov-Smirnov Statistic: {ks_dict}")
+
+        # plot s2d, s2m, d2m fitness distribution
+        sdm_dist = plot_fit_dist(
+            s_df["fitness"], color=PRESENTATION_PALETTE_SATURATE["yellow"], label="single"
+        ) * plot_fit_dist(
+            d_df["fitness"], color=PRESENTATION_PALETTE_SATURATE["green"], label="double"
+        ) * plot_fit_dist(
+            df["fitness"], color=PRESENTATION_PALETTE_SATURATE["blue"], label="all"
+        ).opts(
+            legend_position="top_right",
+            title=f"{self.lib_name} fitness distribution",
+            xlabel="Fitness",
+        )
+
+        # Save the plot with the legend
+        save_bokeh_hv(
+            plot_obj=sdm_dist,
+            plot_name=f"{self.lib_name} fitness distribution single, double, and all",
+            plot_path=self.dist_dir,
+            bokehorhv="hv",
+        )
+
+        return ks_dict, sdm_dist
 
     @property
     def output_csv(self) -> str:
@@ -138,7 +193,7 @@ class ProcessDHFR(ProcessData):
     def __init__(
         self,
         input_csv: str = "data/DHFR/fitness_landscape/DHFR.csv",
-        scale_fit: str = "parent",
+        scale_fit: str = "max",
     ) -> None:
 
         """
@@ -167,6 +222,9 @@ class ProcessDHFR(ProcessData):
 
         print("Plotting the fitness distribution...")
         self._overlay_fit_dist()
+
+        print("Plotting the single, double, and all fitness distribution...")
+        self._s_d_vs_all_ks, self._s_d_vs_all_dist = self._s_d_vs_all(self._df_avg_aa_append_scaled)
 
     def _scale_df(self, df: pd.DataFrame, codon_aa: str) -> pd.DataFrame:
         """
@@ -370,6 +428,16 @@ class ProcessDHFR(ProcessData):
         return self.df_avg_aa_scaled[self.df_avg_aa_scaled["AAs"] == self.parent_aa][
             "fitness"
         ].values[0]
+    
+    @property
+    def s_d_vs_all_ks(self) -> dict:
+        """Return the ks statistics for single, double, and all"""
+        return self._s_d_vs_all_ks
+    
+    @property
+    def s_d_vs_all_dist(self) -> hv.Distribution:
+        """Return the distribution for single, double, and all"""
+        return self._s_d_vs_all_dist
 
 
 class ProcessGB1(ProcessData):
@@ -381,7 +449,7 @@ class ProcessGB1(ProcessData):
     def __init__(
         self,
         input_csv: str = "data/GB1/fitness_landscape/GB1.csv",
-        scale_fit: str = "parent",
+        scale_fit: str = "max",
     ) -> None:
 
         """
@@ -427,6 +495,8 @@ class ProcessGB1(ProcessData):
             plot_path=self.dist_dir,
             bokehorhv="hv",
         )
+
+        self._s_d_vs_all_ks, self._s_d_vs_all_dist = self._s_d_vs_all(self._df_active_append_scaled)
 
     @property
     def df_aa(self) -> pd.DataFrame:
@@ -495,6 +565,16 @@ class ProcessGB1(ProcessData):
     def df_active_append_scaled(self) -> pd.DataFrame:
         """Return the active appended dataframe"""
         return self._df_active_append_scaled
+    
+    @property
+    def s_d_vs_all_ks(self) -> dict:
+        """Return the ks statistics for single, double, and all"""
+        return self._s_d_vs_all_ks
+    
+    @property
+    def s_d_vs_all_dist(self) -> hv.Distribution:
+        """Return the distribution for single, double, and all"""
+        return self._s_d_vs_all_dist
 
 
 class ProcessTrpB(ProcessData):
@@ -503,7 +583,7 @@ class ProcessTrpB(ProcessData):
     Class to clean up the TrpB data
     """
 
-    def __init__(self, input_csv: str, scale_fit: str = "parent") -> None:
+    def __init__(self, input_csv: str, scale_fit: str = "max") -> None:
 
         """
         Args:
@@ -515,6 +595,8 @@ class ProcessTrpB(ProcessData):
 
         # save scaled df
         self._append_mut(self.df_scale_fit).to_csv(self.output_csv, index=False)
+
+        self._s_d_vs_all_ks, self._s_d_vs_all_dist = self._s_d_vs_all(self.df_scale_fit)
 
     @property
     def parent_aa_fitness(self) -> float:
@@ -550,6 +632,16 @@ class ProcessTrpB(ProcessData):
         return self.df_scale_fit[self.df_scale_fit["AAs"] == self.parent_aa][
             "fitness"
         ].values[0]
+    
+    @property
+    def s_d_vs_all_ks(self) -> dict:
+        """Return the ks statistics for single, double, and all"""
+        return self._s_d_vs_all_ks
+    
+    @property
+    def s_d_vs_all_dist(self) -> hv.Distribution:
+        """Return the distribution for single, double, and all"""
+        return self._s_d_vs_all_dist
 
 
 class PlotTrpB:
@@ -561,7 +653,7 @@ class PlotTrpB:
     def __init__(
         self,
         folder: str = "data/TrpB/fitness_landscape",
-        scale_fit: str = "parent",
+        scale_fit: str = "max",
         codon_aa: str = "AA",
     ) -> None:
 
@@ -741,6 +833,8 @@ def process_all(
     ProcessGB1(scale_fit=scale_fit)
     PlotTrpB(scale_fit=scale_fit)
 
+    
+
 
 def sum_ks(
     input_folder: str = "data", output_folder: str = "results/fitness_distribution"
@@ -911,11 +1005,10 @@ class LibStat(LibData):
 
         return deepcopy(
             {
-                "kde": kde,
-                "peaks": peaks,
-                "peak_kde": kde(peaks),  # "heights" of the peaks
+                "peaks": peaks.tolist(),
+                "peak_kde": kde(peaks).tolist(),  # "heights" of the peaks
                 "percentiles": percentiles,
-                "pdf_values": pdf_values,
+                "pdf_values": pdf_values.tolist(),
             }
         )
 
@@ -992,7 +1085,12 @@ class LibStat(LibData):
     @property
     def numb_full_lib(self) -> int:
         """Return the theoritical size of the library"""
-        return 20**self._n_mut_cuttoff * comb(self.n_site, self._n_mut_cuttoff, exact=True)
+        if self._n_mut_cuttoff == 0:
+            numb_sites = self.n_site
+        else:
+            numb_sites = self._n_mut_cuttoff
+
+        return 20**numb_sites * comb(self.n_site, numb_sites, exact=True)
         
     @property
     def numb_measured(self) -> int:

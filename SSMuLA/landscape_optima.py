@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import gc
 from glob import glob
 
 import itertools
@@ -467,6 +468,12 @@ def run_loc_opt(
             },
             ignore_index=True,
         )
+
+    # Delete the variable
+    del opt_class
+
+    # Manually run the garbage collector to free up the memory
+    gc.collect()
 
     summary_df_path = os.path.join(output_folder, f"{fitness_process_type}.csv")
 

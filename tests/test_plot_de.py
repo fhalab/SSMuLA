@@ -19,7 +19,7 @@ if __name__ == "__main__":
 
     run_plot_de(
         scale_types = ["scale2max"],
-        de_opts = ["DE-0", "DE-all"]
+        de_opts = ["DE-all"]
     )
     
     f.close()
