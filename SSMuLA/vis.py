@@ -193,7 +193,11 @@ def save_plt(fig, plot_title: str, path2folder: str):
 
 
 def plot_fit_dist(
-    fitness: pd.Series, label: str, color: str = "", ignore_line_label: bool = False
+    fitness: pd.Series, 
+    label: str, 
+    color: str = "", 
+    spike_length: float | None = None,
+    ignore_line_label: bool = False
 ) -> hv.Distribution:
     """
     Plot the fitness distribution
@@ -238,7 +242,8 @@ def plot_fit_dist(
     )
 
     # set spike length to be 5% of the y_range
-    spike_length = (y_range.end - y_range.start) * 0.05
+    if spike_length is None:
+        spike_length = (y_range.end - y_range.start) * 0.05
 
     return (
         hv_dist

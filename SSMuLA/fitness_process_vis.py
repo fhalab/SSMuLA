@@ -1,11 +1,9 @@
 """
-Contains classes for dataprocessing in this work
+# Contains classes for dataprocessing in this work
 """
 from __future__ import annotations
 
 import warnings
-
-warnings.simplefilter("ignore")
 
 from functools import reduce
 
@@ -26,8 +24,6 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import holoviews as hv
 
-hv.extension("bokeh")
-
 
 from SSMuLA.landscape_global import (
     ACTIVE_THRESH_DICT,
@@ -45,7 +41,11 @@ from SSMuLA.vis import (
     LIB_COLORS_CODON,
     PRESENTATION_PALETTE_SATURATE,
 )
-from SSMuLA.util import checkNgen_folder, get_file_name
+from SSMuLA.util import checkNgen_folder
+
+warnings.simplefilter("ignore")
+
+hv.extension("bokeh")
 
 
 class ProcessData(LibData):
@@ -685,7 +685,7 @@ class PlotTrpB:
             * hv.Spikes([trpb4_class.parent_aa_fitness_scaled]).opts(
                 color="black", line_width=1.6, spike_length=spike_length
             )
-            * hv.Spikes([trpb4_df[trpb4_df["active"] == True]["fitness"].min()]).opts(
+            * hv.Spikes([trpb4_df[trpb4_df["active"]]["fitness"].min()]).opts(
                 color="gray", line_width=1.6, spike_length=spike_length
             )
         )
@@ -706,27 +706,14 @@ class PlotTrpB:
                 )
             )
 
-            trpb3_hv_dist = plot_fit_dist(
-                lib_fit, lib_name, LIB_COLORS[lib_name], ignore_line_label=True
-            )
-
-            # get y_range for spike height
-            y_range = (
-                hv.renderer("bokeh")
-                .instance(mode="server")
-                .get_plot(trpb3_hv_dist)
-                .state.y_range
-            )
-
-            # set spike length to be 5% of the y_range
-            spike_length = (y_range.end - y_range.start) * 0.05
-
             dist_list[i] = (
-                trpb3_hv_dist
+                plot_fit_dist(
+                    lib_fit, lib_name, LIB_COLORS[lib_name], ignore_line_label=True
+                )
                 * hv.Spikes([lib_class.parent_aa_fitness_scaled]).opts(
                     color="black", line_width=1.6, spike_length=spike_length
                 )
-                * hv.Spikes([lib_df[lib_df["active"] == True]["fitness"].min()]).opts(
+                * hv.Spikes([lib_df[lib_df["active"]]["fitness"].min()]).opts(
                     color="gray", line_width=1.6, spike_length=spike_length
                 )
             )
@@ -981,20 +968,32 @@ class SDA(LibData):
 
         print(f"Kolmogorov-Smirnov Statistic: {sda_ks_dict}")
 
-        # plot s2d, s2m, d2m fitness distribution
+        hv_dist = plot_fit_dist(
+                self.m_fit, color=PRESENTATION_PALETTE_SATURATE["blue"], label="All"
+            )
+
+        # get y_range for spike height
+        y_range = (
+            hv.renderer("bokeh").instance(mode="server").get_plot(hv_dist).state.y_range
+        )
+
+        spike_length = (y_range.end - y_range.start) * 0.05
+
         sda_dist = (
             plot_fit_dist(
                 self.s_fit,
                 color=PRESENTATION_PALETTE_SATURATE["yellow"],
                 label="Single",
+                spike_length=spike_length
             )
             * plot_fit_dist(
-                self.d_fit, color=PRESENTATION_PALETTE_SATURATE["green"], label="Double"
+                self.d_fit, color=PRESENTATION_PALETTE_SATURATE["green"], label="Double", spike_length=spike_length
             )
-            * plot_fit_dist(
-                self.m_fit, color=PRESENTATION_PALETTE_SATURATE["blue"], label="All"
-            )
-        ).opts(
+            * hv_dist
+        )
+
+        # plot s2d, s2m, d2m fitness distribution
+        sda_dist = sda_dist.opts(
             legend_position="top_right",
             title=f"{self.lib_name} fitness distribution",
             xlabel="Fitness",
