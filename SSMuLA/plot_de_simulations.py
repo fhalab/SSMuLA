@@ -5,24 +5,18 @@ from glob import glob
 
 import os
 from copy import deepcopy
+from tqdm import tqdm
 
 import warnings
-
-# Suppress the specific FutureWarning
-warnings.filterwarnings("ignore", category=FutureWarning)
 
 
 # Data manipulation
 import pandas as pd
 
-
 import holoviews as hv
 from holoviews import dim
 
-
-hv.extension("bokeh")
-
-from SSMuLA.landscape_global import LIB_NAMES, TrpB_names
+from SSMuLA.landscape_global import LIB_INFO_DICT, LIB_NAMES, TrpB_names, n_mut_cutoff_dict, hamming
 from SSMuLA.vis import (
     save_bokeh_hv,
     JSON_THEME,
@@ -31,9 +25,15 @@ from SSMuLA.vis import (
     one_decimal_y,
     fixmargins,
 )
-from SSMuLA.util import get_file_name, checkNgen_folder
+from SSMuLA.util import get_file_name, checkNgen_folder, ecdf_transform
 
+
+hv.extension("bokeh")
 hv.renderer("bokeh").theme = JSON_THEME
+
+# Suppress the specific FutureWarning
+warnings.filterwarnings("ignore", category=FutureWarning)
+
 
 # order of de simluation from simple to complex
 SIM_ORDER = deepcopy(["recomb_SSM", "single_step_DE", "top96_SSM"])
@@ -117,7 +117,7 @@ def de_ecdf(slice_df: pd.DataFrame, lib_name: str, plot_name: str, plot_folder: 
     - plot_folder (str): The folder to save the plot
     """
 
-    print(f"Plotting DE max fitness achieved ECDF...")
+    print("Plotting DE max fitness achieved ECDF...")
 
     # Initialize an empty HoloViews Overlay container
     overlay = hv.Overlay()
@@ -229,8 +229,9 @@ class VisDESims:
         append_title: str = "max fitness achieved",
         v_width: int = 400,
         sim_folder: str = "results/simulations",
-        de_sub_folder: str = "DE-no_stop_codon",
+        de_sub_folder: str = "DE-active",
         fit_scale_sub_folder: str = "scale2max",
+        n_mut_cutoff: int = 0,
         vis_folder: str = "results/simulations_vis",
     ) -> None:
 
@@ -251,6 +252,7 @@ class VisDESims:
         self._sim_folder = os.path.normpath(sim_folder)
         self._de_sub_folder = de_sub_folder
         self._fit_scale_sub_folder = fit_scale_sub_folder
+        self._n_mut_cutoff = n_mut_cutoff
         self._vis_folder = checkNgen_folder(os.path.normpath(vis_folder))
 
         print(
@@ -266,9 +268,9 @@ class VisDESims:
         Plot a violin plot and ecdf of the DE simulation results
 
         Args:
-        - lib_name (str): The name of the library to plot
-        - append_title (str): Additional title to append to the plot title
-        - v_width (int): Width of the violin plot
+        - lib_name: str, The name of the library to plot
+        - append_title: str, Additional title to append to the plot title
+        - v_width: int, Width of the violin plot
         """
 
         if self._lib_name == "TrpB":
@@ -285,10 +287,13 @@ class VisDESims:
                 .copy()
             )
 
-        plot_name = f"{self._lib_name} {self._append_title}"
+        plot_name = f"{self._lib_name} {self._append_title} start from {n_mut_cutoff_dict[self._n_mut_cutoff]}"
         plot_folder = checkNgen_folder(
             os.path.join(
-                self._vis_folder, self._de_sub_folder, self._fit_scale_sub_folder
+                self._vis_folder, 
+                self._de_sub_folder, 
+                self._fit_scale_sub_folder, 
+                n_mut_cutoff_dict[self._n_mut_cutoff]
             )
         )
 
@@ -313,11 +318,8 @@ class VisDESims:
         """
         Combine all DE simulation results into a single dataframe
 
-        Args:
-        - de_folder_full_path (str): Path to the DE simulation results
-
         Returns:
-        - all_df (pd.DataFrame): A dataframe containing all DE simulation results
+        - all_df: pd.DataFrame, A dataframe containing all DE simulation results
         """
 
         all_de_sim_files = sorted(glob(f"{os.path.normpath(self.de_folder_full_path)}/*.csv"))
@@ -330,8 +332,18 @@ class VisDESims:
                 lib_name, sim_name = get_file_name(res).split("-")
 
                 df = pd.read_csv(res)
+
                 df["simulation"] = sim_name
                 df["lib"] = lib_name
+
+                # slice df based on n_mut_cutoff
+                if self._n_mut_cutoff > 0:
+                    df['n_mut'] = df["start_seq"].apply(hamming, str2="".join(LIB_INFO_DICT[lib_name]["AAs"].values()))
+                    df = df[df["n_mut"] <= self._n_mut_cutoff]
+                    df["final_fitness ECDF"] = (
+                        df["final_fitness"].transform(ecdf_transform).values
+                    )
+
                 all_df = all_df._append(df)
 
         all_df = all_df.reset_index(drop=True)
@@ -383,18 +395,21 @@ def run_plot_de(
 
     for de_sub_folder in de_opts:
         for fit_scale_sub_folder in scale_types:
-            for lib in LIB_NAMES + ["TrpB"]:
-                if "TrpB" in lib:
-                    v_width = 1280
-                else:
-                    v_width = 400
+            # for n_mut in [0, 1, 2]:
+            for n_mut in [1, 2]:
+                for lib in tqdm(LIB_NAMES + ["TrpB"]):
+                    if "TrpB" in lib:
+                        v_width = 1280
+                    else:
+                        v_width = 400
 
-                vis = VisDESims(
-                    lib_name=lib,
-                    append_title="max fitness achieved",
-                    v_width=v_width,
-                    sim_folder=sim_folder,
-                    de_sub_folder=de_sub_folder,
-                    fit_scale_sub_folder=fit_scale_sub_folder,
-                    vis_folder=vis_folder,
-                )
+                    vis = VisDESims(
+                        lib_name=lib,
+                        append_title="max fitness achieved",
+                        v_width=v_width,
+                        sim_folder=sim_folder,
+                        de_sub_folder=de_sub_folder,
+                        fit_scale_sub_folder=fit_scale_sub_folder,
+                        n_mut_cutoff=n_mut,
+                        vis_folder=vis_folder,
+                    )

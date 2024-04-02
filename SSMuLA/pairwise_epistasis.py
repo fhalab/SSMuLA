@@ -17,8 +17,6 @@ from operator import itemgetter
 import holoviews as hv
 from holoviews import dim
 
-hv.extension("bokeh")
-
 from SSMuLA.aa_global import ALL_AAS
 from SSMuLA.landscape_global import LIB_NAMES, LIB_POS_MAP, make_new_sequence, hamming
 from SSMuLA.util import checkNgen_folder, get_file_name, get_dir_name
@@ -30,6 +28,7 @@ from SSMuLA.vis import (
     LIB_COLORS,
 )
 
+hv.extension("bokeh")
 hv.renderer("bokeh").theme = JSON_THEME
 
 

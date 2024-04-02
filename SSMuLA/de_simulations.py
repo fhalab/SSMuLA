@@ -18,7 +18,7 @@ from tqdm import tqdm
 
 from SSMuLA.aa_global import ALL_AAS, ALL_AA_STR
 from SSMuLA.landscape_global import LIB_INFO_DICT
-from SSMuLA.util import checkNgen_folder, get_file_name
+from SSMuLA.util import checkNgen_folder, get_file_name, ecdf_transform
 
 
 def make_new_sequence(input_seq: str, new_AA: str, position: int) -> str:
@@ -38,21 +38,6 @@ def make_new_sequence(input_seq: str, new_AA: str, position: int) -> str:
     seq_list = list(input_seq)
     seq_list[position] = new_AA
     return "".join(seq_list)
-
-
-def ecdf_transform(data: pd.Series) -> pd.Series:
-
-    """
-    Transform a series of fitness values into an empirical cumulative distribution function
-
-    Args:
-    - data: pd.Series, the fitness values
-
-    Returns:
-    - pd.Series, the ECDF
-    """
-
-    return data.rank(method="first") / len(data)
 
 
 def simulate_single_step_DE(
@@ -407,7 +392,7 @@ def sample_SSM_test_top_N(
 
     AAs = df.sample(frac=1)["AAs"].values
 
-    if max_samples is not None and type(max_samples) == int:
+    if max_samples is not None and isinstance(max_samples, int):
         AAs = AAs[:max_samples]
 
     fitness_dict = {}
@@ -526,7 +511,7 @@ def run_all_de_simulations(
     save_dir = checkNgen_folder(save_dir)
 
     ######## Simulate a single step directed evolution walk ########
-    print(f"Simulate a single step directed evolution walk")
+    print("Simulate a single step directed evolution walk")
     fitness_array, single_step_DE = simulate_single_step_DE(
         df=df,
         seq_col=seq_col,
@@ -647,7 +632,7 @@ def run_all_lib_de_simulations(
                 elif de_det == "DE-0":
                     select_df = df[df["fitness"] >= 0].copy()
                 elif de_det == "DE-active":
-                    select_df = df[df["active"] == True].copy()
+                    select_df = df[df["active"]].copy()
 
                 save_dir = f"results/simulations/{de_det}/{scale_type}"
 

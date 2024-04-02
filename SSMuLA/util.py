@@ -121,3 +121,18 @@ def ndcg_scale(true: np.ndarray, pred: np.ndarray):
     if min(true) < 0:
         true = true - min(true)
     return ndcg_score(true[None, :], pred[None, :])
+
+
+def ecdf_transform(data: pd.Series) -> pd.Series:
+
+    """
+    Transform a series of fitness values into an empirical cumulative distribution function
+
+    Args:
+    - data: pd.Series, the fitness values
+
+    Returns:
+    - pd.Series, the ECDF
+    """
+
+    return data.rank(method="first") / len(data)
