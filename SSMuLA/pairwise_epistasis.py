@@ -18,7 +18,14 @@ import holoviews as hv
 from holoviews import dim
 
 from SSMuLA.aa_global import ALL_AAS
-from SSMuLA.landscape_global import LIB_NAMES, LIB_POS_MAP, make_new_sequence, hamming
+from SSMuLA.landscape_global import (
+    LIB_INFO_DICT,
+    LIB_NAMES,
+    LIB_POS_MAP,
+    n_mut_cutoff_dict,
+    make_new_sequence,
+    hamming,
+)
 from SSMuLA.util import checkNgen_folder, get_file_name, get_dir_name
 from SSMuLA.vis import (
     JSON_THEME,
@@ -113,11 +120,11 @@ class PairwiseEpistasis:
         print(f"Calculating pairwise epistasis for {self.lib_name}...")
 
         epistasis_df = gen_epistasis_df(
-            self.df, 
-            activestart=self._activestart, 
-            seq_col="AAs", 
-            fitness_col="fitness", 
-            n_jobs=self._n_jobs
+            self.df,
+            activestart=self._activestart,
+            seq_col="AAs",
+            fitness_col="fitness",
+            n_jobs=self._n_jobs,
         )
 
         # add epsilon
@@ -125,11 +132,15 @@ class PairwiseEpistasis:
 
         # now append the active threshold with append_active_thresh
         for onesuborall in ["onesub", "all"]:
-            for fit_min, fit_min_type in zip([self.active_fit_min, 0], ["active_min", "0_min"]):
-                epistasis_df = append_active_thresh(epistasis_df, 
-                                                    onesuborall=onesuborall, 
-                                                    fit_min=fit_min, 
-                                                    fit_min_type=fit_min_type)
+            for fit_min, fit_min_type in zip(
+                [self.active_fit_min, 0], ["active_min", "0_min"]
+            ):
+                epistasis_df = append_active_thresh(
+                    epistasis_df,
+                    onesuborall=onesuborall,
+                    fit_min=fit_min,
+                    fit_min_type=fit_min_type,
+                )
 
         return epistasis_df.copy()
 
@@ -295,13 +306,13 @@ def calc_pairwise_epistasis(seq_ab: str, data_dict: dict) -> pd.DataFrame:
 
 
 def gen_epistasis_df(
-    full_df: pd.DataFrame, 
-    activestart: bool, 
-    seq_col: str, 
-    fitness_col: str, 
-    n_jobs: int
+    full_df: pd.DataFrame,
+    activestart: bool,
+    seq_col: str,
+    fitness_col: str,
+    n_jobs: int,
 ) -> pd.DataFrame:
-    
+
     """
     A function to calc pairwise epistasis.
 
@@ -322,7 +333,7 @@ def gen_epistasis_df(
     # filter out active ones if needed
     if activestart:
         print("Only running pairwise epistasis on ACTIVE mutants...")
-        sliced_df = full_df[full_df["active"] == True].copy()
+        sliced_df = full_df[full_df["active"]].copy()
     else:
         print("Running pairwise epistasis on ALL sequences...")
         sliced_df = full_df.copy()
@@ -364,13 +375,15 @@ def gen_epistasis_df(
     return all_epistasis_results
 
 
-def append_active_thresh(df: pd.DataFrame, 
-                            onesuborall: str, 
-                            fit_min: float=0,
-                            fit_min_type: str="active_min") -> pd.DataFrame:
+def append_active_thresh(
+    df: pd.DataFrame,
+    onesuborall: str,
+    fit_min: float = 0,
+    fit_min_type: str = "active_min",
+) -> pd.DataFrame:
     """
-    A function for appending a column, 
-    with a name combining threshold type and fit_min_type, and 
+    A function for appending a column,
+    with a name combining threshold type and fit_min_type, and
     a True/False value for each row if passing the fit_min threshold.
 
     Args:
@@ -385,20 +398,28 @@ def append_active_thresh(df: pd.DataFrame,
 
     if onesuborall == "onesub":
         df[f"{onesuborall}_{fit_min_type}_active"] = (
-            (df[["fit_ab", "fit_Ab", "fit_aB"]] >= fit_min).all(axis=1)
-        )
+            df[["fit_ab", "fit_Ab", "fit_aB"]] >= fit_min
+        ).all(axis=1)
     elif onesuborall == "all":
         df[f"{onesuborall}_{fit_min_type}_active"] = (
-            (df[["fit_ab", "fit_Ab", "fit_aB", "fit_AB"]] >= fit_min).all(axis=1)
-        )
+            df[["fit_ab", "fit_Ab", "fit_aB", "fit_AB"]] >= fit_min
+        ).all(axis=1)
 
     return df.copy()
 
-epsilon = 1e-10  # A small constant to avoid log(0)
 
-def safe_log(numerator, denominator):
+def safe_log(numerator: float, denominator: float, epsilon: float = 1e-10) -> float:
     """
-    
+    A function for calculating the log of a ratio with
+    a small constant to avoid log(0).
+
+    Args:
+    - numerator: float, the numerator.
+    - denominator: float, the denominator.
+    - epsilon: float, a small constant.
+
+    Returns:
+    - float: The log of the ratio.
     """
     if denominator == 0:
         return np.nan  # or some other indication of an undefined result
@@ -428,21 +449,39 @@ class VisPairwiseEpistasis:
         dets_folder: str = "results/pairwise_epistasis_dets",
         vis_folder: str = "results/pairwise_epistasis_vis",
         pos_calc_filter_min: str = "none",
+        n_mut_cutoff: int = 0,
     ):
 
         """
         Args:
-        - pairwise_csv: The path to the pairwise epistasis data.
-            ie. results/pairwise_epistasis/DHFR/scale2max/DHFR.csv
-        - dets_folder: The folder to save the processed dataframe with more details.
-        - vis_folder: The folder to save the visualizations.
-        - pos_calc_filter_min: The minimum fitness to filter by.
+        - pairwise_csv: str, The path to the pairwise epistasis data.
+            ie. results/pairwise_epistasis/scale2max/active_start/DHFR.csv, with columns
+                start_seq
+                positions
+                res1_AA
+                res2_AA
+                fit_ab
+                fit_Ab
+                fit_aB
+                fit_AB
+                epistasis_type
+                epsilon
+                active
+                onesub_active_min_active
+                onesub_0_min_active
+                all_active_min_active
+                all_0_min_active
+        - dets_folder: str, The folder to save the processed dataframe with more details.
+        - vis_folder: str, The folder to save the visualizations.
+        - pos_calc_filter_min: str, The minimum fitness to filter by.
+        - n_mut_cutoff: int, The number of mutations to filter by.
         """
 
         self._pairwise_csv = pairwise_csv
         self._vis_folder = checkNgen_folder(vis_folder)
         self._dets_folder = checkNgen_folder(dets_folder)
         self._pos_calc_filter_min = pos_calc_filter_min
+        self._n_mut_cutoff = n_mut_cutoff
 
         print(
             "Visulizing pairwise epistasis for {} saved to {}".format(
@@ -463,12 +502,12 @@ class VisPairwiseEpistasis:
             "Visulizing pairwise epistasis with details for {} saved to {}".format(
                 self.lib_name, self.dets_subfolder
             )
-        )     
+        )
 
-        self.df_quartiles.to_csv(    
+        self.df_quartiles.to_csv(
             os.path.join(self.dets_subfolder, f"{self.lib_name}.csv")
         )
-        self.df_quartile_grouped.to_csv(    
+        self.df_quartile_grouped.to_csv(
             os.path.join(self.dets_subfolder, f"{self.lib_name}_grouped.csv")
         )
 
@@ -576,7 +615,7 @@ class VisPairwiseEpistasis:
         vis = hv.Violin(
             df.sort_values(["positions", "epistasis_type"]),
             kdims=["positions", "epistasis_type"],
-            vdims=["frac_epistasis_type"]
+            vdims=["frac_epistasis_type"],
         ).opts(
             height=400,
             width=600,
@@ -605,7 +644,7 @@ class VisPairwiseEpistasis:
         df = self.df_quartile_grouped.copy()
 
         vis = hv.Violin(
-            self.df_quartile_grouped.sort_values(["epistasis_type", "quartile"]),
+            df.sort_values(["epistasis_type", "quartile"]),
             kdims=["epistasis_type", "quartile"],
             vdims=["frac_epistasis_type"],
         ).opts(
@@ -642,10 +681,11 @@ class VisPairwiseEpistasis:
             os.path.join(
                 self._dets_folder,
                 self._pos_calc_filter_min,
-                self.fitness_process_type
+                self.fitness_process_type,
+                n_mut_cutoff_dict[self._n_mut_cutoff],
             )
         )
-    
+
     @property
     def vis_subfolder(self) -> str:
         """The subfolder to save visualizations."""
@@ -654,6 +694,7 @@ class VisPairwiseEpistasis:
                 self._vis_folder,
                 self._pos_calc_filter_min,
                 self.fitness_process_type,
+                n_mut_cutoff_dict[self._n_mut_cutoff],
                 self.lib_name,
             )
         )
@@ -664,8 +705,18 @@ class VisPairwiseEpistasis:
 
         # map int pos to real
         df = pd.read_csv(self._pairwise_csv).dropna()
+
+        # slice df based on n_mut_cutoff
+        if self._n_mut_cutoff > 0:
+            df["n_mut"] = df["start_seq"].apply(
+                hamming, str2="".join(LIB_INFO_DICT[self.lib_name]["AAs"].values())
+            )
+            df = df[df["n_mut"] <= self._n_mut_cutoff]
+
         df["positions"] = df["positions"].map(LIB_POS_MAP[self.lib_name])
-        df["epistasis_type"] = pd.Categorical(df["epistasis_type"], categories=EPISTASIS_TYPE, ordered=True)
+        df["epistasis_type"] = pd.Categorical(
+            df["epistasis_type"], categories=EPISTASIS_TYPE, ordered=True
+        )
 
         return df.copy()
 
@@ -697,7 +748,9 @@ class VisPairwiseEpistasis:
         self.df["epistasis_type"] = self.df["epistasis_type"].astype("category")
 
         grouped_epistasis_df = pd.DataFrame(
-            self.df.groupby(["positions", "start_seq", "epistasis_type"], observed=False).size()
+            self.df.groupby(
+                ["positions", "start_seq", "epistasis_type"], observed=False
+            ).size()
         ).rename(columns={0: "count"})
 
         grouped_epistasis_df["total"] = grouped_epistasis_df.groupby(
@@ -744,10 +797,14 @@ class VisPairwiseEpistasis:
         temp["epistasis_type"] = temp["epistasis_type"].astype("category")
 
         df = pd.DataFrame(
-            temp.groupby(["start_seq", "quartile", "epistasis_type"], observed=False).size()
+            temp.groupby(
+                ["start_seq", "quartile", "epistasis_type"], observed=False
+            ).size()
         ).rename(columns={0: "count"})
 
-        df["total"] = df.groupby(["start_seq", "quartile"], observed=False)["count"].transform("sum")
+        df["total"] = df.groupby(["start_seq", "quartile"], observed=False)[
+            "count"
+        ].transform("sum")
         df["frac_epistasis_type"] = df["count"] / df["total"]
 
         df = df[df["total"] > 0].copy()
@@ -797,17 +854,19 @@ def calc_all_pairwise_epistasis(
     - n_jobs, int: The number of jobs to run in parallel.
     """
 
-    for lib in sorted(glob(
-        os.path.normpath(input_folder) + "/*/" + fitness_process_type + "/*.csv"
+    for lib in tqdm(sorted(
+        glob(os.path.normpath(input_folder) + "/*/" + fitness_process_type + "/*.csv")
     )):
         print(f"Processing {lib}...")
         PairwiseEpistasis(
             lib, activestart=activestart, output_folder=output_folder, n_jobs=n_jobs
         )
 
+
 def plot_pairwise_epistasis(
     fitness_process_type: str = "scale2max",
     pos_calc_filter_min: str = "none",
+    activestart: bool = True,
     input_folder: str = "results/pairwise_epistasis",
     output_folder: str = "results/pairwise_epistasis_vis",
     dets_folder: str = "results/pairwise_epistasis_dets",
@@ -818,59 +877,72 @@ def plot_pairwise_epistasis(
 
     Args:
     - fitness_process_type, str: The fitness process type.
+    - pos_calc_filter_min, str: The minimum fitness to filter by.
+    - activestart, bool: Whether to only calculate pairwise epistasis for active mutants.
     - input_folder, str: The input folder.
     - output_folder, str: The output folder.
     - dets_folder, str: The folder to save the processed dataframe with more details.
     """
 
-    summary_df = pd.DataFrame(columns=["lib", "summary_type", *EPISTASIS_TYPE])
+    summary_df = pd.DataFrame(columns=["lib", "n_mut", "pos_calc_filter_min", "summary_type", *EPISTASIS_TYPE])
 
-    for lib in sorted(
+    active_subfolder = "active_start" if activestart else "all_start"
+
+    # paths to be plotted ie
+    # results/pairwise_epistasis/scale2max/active_start/DHFR.csv
+
+    for lib in tqdm(sorted(
         glob(
             os.path.join(
-                os.path.normpath(input_folder), pos_calc_filter_min, fitness_process_type
+                os.path.normpath(input_folder),
+                fitness_process_type,
+                active_subfolder
             )
             + "/*.csv"
         )
-    ):
+    )):
 
         print(f"Plotting {lib}...")
 
-        vis_class = VisPairwiseEpistasis(
-            lib,
-            pos_calc_filter_min=pos_calc_filter_min,
-            dets_folder=dets_folder,
-            vis_folder=output_folder
+        for n_mut_cutoff, n_mut_det in n_mut_cutoff_dict.items():
+
+            vis_class = VisPairwiseEpistasis(
+                lib,
+                pos_calc_filter_min=pos_calc_filter_min,
+                dets_folder=dets_folder,
+                vis_folder=output_folder,
+                n_mut_cutoff=n_mut_cutoff,
             )
 
-        count_dict = vis_class.epistasis_type_counts
-        fract_dict = vis_class.epistasis_type_fraction
+            count_dict = vis_class.epistasis_type_counts
+            fract_dict = vis_class.epistasis_type_fraction
 
-        for et, ed in zip(["count", "fraction"], [count_dict, fract_dict]):  
+            for et, ed in zip(["count", "fraction"], [count_dict, fract_dict]):
 
-            summary_df = summary_df._append(
-                {
-                    "lib": vis_class.lib_name,
-                    "summary_type": et,
-                    "magnitude": ed.get("magnitude", 0),
-                    "sign": ed.get("sign", 0),
-                    "reciprocal sign": ed.get("reciprocal sign", 0),
-                },
-                ignore_index=True,
-            )
+                summary_df = summary_df._append(
+                    {
+                        "lib": vis_class.lib_name,
+                        "n_mut": n_mut_det,
+                        "pos_calc_filter_min": pos_calc_filter_min,
+                        "summary_type": et,
+                        "magnitude": ed.get("magnitude", 0),
+                        "sign": ed.get("sign", 0),
+                        "reciprocal sign": ed.get("reciprocal sign", 0),
+                    },
+                    ignore_index=True,
+                )
 
     summary_df_melt = pd.melt(
         summary_df,
-        id_vars=["lib", "summary_type"],
+        id_vars=["lib", "n_mut", "pos_calc_filter_min", "summary_type"],
         value_vars=["magnitude", "sign", "reciprocal sign"],
         var_name="epistasis_type",
         value_name="value",
     ).sort_values(["lib", "summary_type"])
 
-    summary_df_path = os.path.join(
-        output_folder, pos_calc_filter_min, f"{fitness_process_type}.csv"
-    )
-
+    summary_df_path = os.path.join(output_folder, pos_calc_filter_min, f"{fitness_process_type}.csv")
+    
+    # check and gen the folder
     checkNgen_folder(summary_df_path)
 
     print("Saving summary_df_melt at {}...".format(summary_df_path))
@@ -883,24 +955,28 @@ def plot_pairwise_epistasis(
             (lib, epistasis) for lib in LIB_NAMES for epistasis in EPISTASIS_TYPE
         ]
 
-    # Create the Holoviews Bars element
-    save_bokeh_hv(
-        hv.Bars(
-            summary_df_melt[summary_df_melt["summary_type"] == "fraction"],
-            kdims=["lib", "epistasis_type"],
-            vdims="value",
-        ).opts(
-            width=1200,
-            height=400,
-            show_legend=True,
-            legend_position="top",
-            legend_offset=(0, 5),
-            ylabel="Fraction",
-            multi_level=False,
-            title="Fraction of pairwise epistasis types",
-            xlabel="Library",
-            hooks=[fixmargins, one_decimal_y, hook],
-        ),
-        plot_name=fitness_process_type,
-        plot_path=os.path.join(output_folder, pos_calc_filter_min),
-    )
+    df = summary_df_melt[summary_df_melt["summary_type"] == "fraction"]
+
+    for n_mut_cutoff, n_mut_det in n_mut_cutoff_dict.items():
+
+        # Create the Holoviews Bars element
+        save_bokeh_hv(
+            hv.Bars(
+                df[df["n_mut"] == n_mut_det],
+                kdims=["lib", "epistasis_type"],
+                vdims="value",
+            ).opts(
+                width=1200,
+                height=400,
+                show_legend=True,
+                legend_position="top",
+                legend_offset=(0, 5),
+                ylabel="Fraction",
+                multi_level=False,
+                title="Fraction of pairwise epistasis types",
+                xlabel="Library",
+                hooks=[fixmargins, one_decimal_y, hook],
+            ),
+            plot_name=f"{fitness_process_type}_{n_mut_det}",
+            plot_path=os.path.join(output_folder, pos_calc_filter_min),
+        )

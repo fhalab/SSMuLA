@@ -22,14 +22,16 @@ if __name__ == "__main__":
     f = open(os.path.join(log_folder, f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}.out"), 'w')
     sys.stdout = f
     
-    calc_all_pairwise_epistasis()
+    # calc_all_pairwise_epistasis()
+    fitness_process_type = "scale2max"
+    pos_calc_filter_min = "none"
 
-    # plot_pairwise_epistasis(
-    #     fitness_process_type=fitness_process_type,
-    #     filter_min_by=filter_min_by,
-    #     input_folder="results/pairwise_epistasis",
-    #     output_folder="results/pairwise_epistasis_vis",
-    #     dets_folder="results/pairwise_epistasis_dets",
-    # )
+    plot_pairwise_epistasis(
+        fitness_process_type=fitness_process_type,
+        pos_calc_filter_min=pos_calc_filter_min,
+        input_folder="results/pairwise_epistasis",
+        output_folder="results/pairwise_epistasis_vis",
+        dets_folder="results/pairwise_epistasis_dets",
+    )
 
     f.close()
