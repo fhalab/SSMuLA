@@ -6,11 +6,13 @@ import os
 from glob import glob
 from copy import deepcopy
 
+import warnings
+
 import pandas as pd
 import numpy as np
 
 import itertools
-from tqdm.auto import tqdm
+from tqdm import tqdm
 from multiprocessing import Pool
 from operator import itemgetter
 
@@ -37,6 +39,8 @@ from SSMuLA.vis import (
 
 hv.extension("bokeh")
 hv.renderer("bokeh").theme = JSON_THEME
+
+warnings.filterwarnings("ignore", category=FutureWarning)
 
 
 EPISTASIS_TYPE = deepcopy(["magnitude", "sign", "reciprocal sign"])
@@ -904,7 +908,7 @@ def plot_pairwise_epistasis(
 
         print(f"Plotting {lib}...")
 
-        for n_mut_cutoff, n_mut_det in n_mut_cutoff_dict.items():
+        for n_mut_cutoff in [0, 1, 2]:
 
             vis_class = VisPairwiseEpistasis(
                 lib,
@@ -922,7 +926,7 @@ def plot_pairwise_epistasis(
                 summary_df = summary_df._append(
                     {
                         "lib": vis_class.lib_name,
-                        "n_mut": n_mut_det,
+                        "n_mut": n_mut_cutoff_dict[n_mut_cutoff],
                         "pos_calc_filter_min": pos_calc_filter_min,
                         "summary_type": et,
                         "magnitude": ed.get("magnitude", 0),
@@ -957,7 +961,9 @@ def plot_pairwise_epistasis(
 
     df = summary_df_melt[summary_df_melt["summary_type"] == "fraction"]
 
-    for n_mut_cutoff, n_mut_det in n_mut_cutoff_dict.items():
+    for n_mut_cutoff in [0, 1, 2]:
+
+        n_mut_det = n_mut_cutoff_dict[n_mut_cutoff]
 
         # Create the Holoviews Bars element
         save_bokeh_hv(

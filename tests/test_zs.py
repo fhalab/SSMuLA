@@ -22,7 +22,7 @@ if __name__ == "__main__":
     )
     sys.stdout = f
 
-    # run_zs_analysis(scale_types=["max", "parent"], filter_min_by="none")
+    run_zs_analysis(scale_types=["max"], filter_min_by="none")
     run_zs_analysis(scale_types=["max"], filter_min_by="min0")
 
     f.close()

@@ -5,7 +5,6 @@ from __future__ import annotations
 import os
 from glob import glob
 from tqdm import tqdm
-from copy import deepcopy
 
 import numpy as np
 import pandas as pd
@@ -21,7 +20,7 @@ from sklearn.metrics import roc_curve, auc
 # Large data plotting
 from holoviews.operation.datashader import rasterize
 
-from SSMuLA.landscape_global import LibData
+from SSMuLA.landscape_global import LibData, n_mut_cutoff_dict
 from SSMuLA.vis import (
     JSON_THEME,
     LIGHT_COLORS,
@@ -49,6 +48,7 @@ class ZS_Analysis(LibData):
         self,
         input_csv: str,
         scale_fit: str,
+        n_mut_cutoff: int = 0,
         ev_esm_folder: str = "ev_esm",
         triad_folder: str = "triad",
         filter_min_by: str = "none",
@@ -62,6 +62,7 @@ class ZS_Analysis(LibData):
         - scale_fit, str: ways to scale the fitness
             'parent' means the parent fitness = 1
             'max' means max fitness = 1
+        - n_mut_cutoff, int: the number of mutations cutoff
         - ev_esm_folder, str: the folder for the ev and esm scores
         - triad_folder, str: the folder for the triad scores
         - filter_min_by, str: the filter for the minimum fitness
@@ -71,6 +72,7 @@ class ZS_Analysis(LibData):
 
         super().__init__(input_csv, scale_fit)
 
+        self._n_mut_cutoff = n_mut_cutoff
         self._ev_esm_folder = os.path.normpath(ev_esm_folder)
         self._triad_folder = os.path.normpath(triad_folder)
         self._filter_min_by = filter_min_by
@@ -83,6 +85,11 @@ class ZS_Analysis(LibData):
 
         print(f"Save combed zs data to {self.zf_comb_path}...")
         self.zs_df.to_csv(self.zf_comb_path, index=False)
+
+        if self._n_mut_cutoff > 0:
+            self._n_mut_subdir = n_mut_cutoff_dict[self._n_mut_cutoff]
+        else:
+            self._n_mut_subdir = "all"
 
         self._roc, self._zs_coord_dict = self._plot_roc()
         self._zs_fit_plot_dict = self._plot_zs_vs_fitness()
@@ -255,7 +262,7 @@ class ZS_Analysis(LibData):
         if self._filter_min_by in ["none", "", None]:
             return df.copy()
         elif self._filter_min_by == "active":
-            return df[df["active"] == True].copy()
+            return df[df["active"]].copy()
         elif self._filter_min_by == "0":
             return df[df["fitness"] >= 0].copy()
         elif self._filter_min_by == "min0":
@@ -297,7 +304,10 @@ class ZS_Analysis(LibData):
         if "active" in df.columns:
             df = df.drop(columns=["active"])
 
-        return df.drop(columns=["fit", "combo"]).copy()
+        if "n_mut" in df.columns:
+            return df.drop(columns=["fit", "combo", "n_mut"]).copy()
+        else:
+            return df.drop(columns=["fit", "combo"]).copy()
 
     @property
     def triad_path(self) -> pd.DataFrame:
@@ -326,11 +336,17 @@ class ZS_Analysis(LibData):
         """
         Returns the dataframe with the ZS scores
         """
-        return pd.merge(
-            pd.merge(self.df_no_stop, self.ev_esm_df, on="muts"),
-            self.triad_df,
-            on="AAs",
-        ).copy()
+
+        df = pd.merge(
+                pd.merge(self.df_no_stop, self.ev_esm_df, on="muts"),
+                self.triad_df,
+                on="AAs",
+            )
+
+        if self._n_mut_cutoff > 0:
+            return df[df["n_mut"] <= self._n_mut_cutoff].copy()
+        else:
+            return df.copy()
 
     @property
     def zf_comb_folder(self) -> str:
@@ -354,7 +370,7 @@ class ZS_Analysis(LibData):
         Returns the folder path to the ROC curve
         """
         return checkNgen_folder(
-            os.path.join(self._zs_vis_dir, "roc", self._filter_min_by, self.scale_type)
+            os.path.join(self._zs_vis_dir, "roc", self._filter_min_by, self.scale_type, self._n_mut_subdir)
         )
 
     @property
@@ -378,7 +394,7 @@ class ZS_Analysis(LibData):
         """
         return checkNgen_folder(
             os.path.join(
-                self._zs_vis_dir, "vs_fitness", self._filter_min_by, self.scale_type
+                self._zs_vis_dir, "vs_fitness", self._filter_min_by, self.scale_type, self._n_mut_subdir
             )
         )
 
@@ -396,7 +412,9 @@ def run_zs_analysis(
     ev_esm_folder: str = "ev_esm",
     triad_folder: str = "triad",
     filter_min_by: str = "none",
-    zs_sum_dir="results/zs_sum",
+    zs_comb_dir: str = "results/zs_comb",
+    zs_vis_dir: str = "results/zs_vis",
+    zs_sum_dir: str = "results/zs_sum",
 ) -> None:
 
     """
@@ -408,28 +426,39 @@ def run_zs_analysis(
     - ev_esm_folder, str: the folder for the ev and esm scores
     - triad_folder, str: the folder for the triad scores
     - filter_min_by, str: the filter for the minimum fitness
+    - zs_comb_dir, str: the folder for the ZS combed with fitness outputs
+    - zs_vis_dir, str: the folder for the ZS vis outputs
+    - zs_sum_dir, str: the folder for the ZS summary outputs
     """
 
     for scale_type in scale_types:
 
         zs_stat_df = pd.DataFrame()
 
-        for lib_path in tqdm(sorted(
-            glob(f"{os.path.normpath(data_folder)}/*/scale2{scale_type}/*.csv")
-        )):
+        for n_mut_cutoff in [0, 1, 2]:
 
-            zs = ZS_Analysis(
-                input_csv=lib_path,
-                scale_fit=scale_type,
-                ev_esm_folder=ev_esm_folder,
-                triad_folder=triad_folder,
-                filter_min_by=filter_min_by,
-            )
+            for lib_path in tqdm(sorted(
+                glob(f"{os.path.normpath(data_folder)}/*/scale2{scale_type}/*.csv")
+            )):
 
-            zs_stat_df = zs_stat_df._append(
-                {"lib": zs.lib_name, "scale_type": scale_type, **zs.zs_coord_dict},
-                ignore_index=True,
-            )
+                zs = ZS_Analysis(
+                    input_csv=lib_path,
+                    scale_fit=scale_type,
+                    n_mut_cutoff=n_mut_cutoff,
+                    ev_esm_folder=ev_esm_folder,
+                    triad_folder=triad_folder,
+                    filter_min_by=filter_min_by,
+                    zs_comb_dir=zs_comb_dir,
+                    zs_vis_dir=zs_vis_dir,
+                )
+
+                zs_stat_df = zs_stat_df._append(
+                    {"lib": zs.lib_name, 
+                    "n_mut": n_mut_cutoff_dict[n_mut_cutoff], 
+                    "scale_type": scale_type, 
+                    **zs.zs_coord_dict},
+                    ignore_index=True,
+                )
 
         zs_stat_df.to_csv(
             f"{checkNgen_folder(os.path.join(zs_sum_dir, filter_min_by))}/zs_stat_scale2{scale_type}.csv",

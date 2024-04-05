@@ -22,7 +22,22 @@ if __name__ == "__main__":
     )
     sys.stdout = f
 
-    run_zs_analysis(scale_types=["max", "parent"], filter_min_by="none")
-    run_zs_analysis(scale_types=["max"], filter_min_by="min0")
+    run_zs_analysis(
+        scale_types=["max"], 
+        ev_esm_folder="zs", 
+        filter_min_by="none", 
+        zs_comb_dir = "results/zs_comb_2",
+        zs_vis_dir = "results/zs_vis_2",
+        zs_sum_dir = "results/zs_sum_2",
+        )
+
+    run_zs_analysis(
+        scale_types=["max"], 
+        ev_esm_folder="zs", 
+        filter_min_by="min0", 
+        zs_comb_dir = "results/zs_comb_2",
+        zs_vis_dir = "results/zs_vis_2",
+        zs_sum_dir = "results/zs_sum_2",
+        )
 
     f.close()
