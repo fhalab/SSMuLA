@@ -15,17 +15,16 @@ import pandas as pd
 # Basic plotting
 import holoviews as hv
 
-hv.extension("bokeh")
-
-
 from SSMuLA.aa_global import DEFAULT_LEARNED_EMB_COMBO
 from SSMuLA.landscape_global import n_mut_cutoff_dict, LIB_NAMES
 from SSMuLA.zs_analysis import ZS_OPTS_LEGEND
 from SSMuLA.vis import save_bokeh_hv, one_decimal_x, one_decimal_y, fixmargins
 from SSMuLA.util import checkNgen_folder, get_file_name
 
+hv.extension("bokeh")
 
-default_metrics = ["maxes", "means", "ndcgs", "rhos"]
+
+DEFAULT_MLDE_METRICS = ["maxes", "means", "ndcgs", "rhos"]
 
 
 class MLDEParser:
@@ -59,7 +58,6 @@ class MLDEParser:
             'verbose': False,
             'save_model': False},
             'eval_config': {'n_top': 96}}
-
         """
 
         self._mlde_npy_path = mlde_npy_path
@@ -117,17 +115,18 @@ class MLDEParser:
         metric_df["n_top"] = self.n_top
 
         # get all metrics as properties
-        for m in default_metrics:
+        for m in DEFAULT_MLDE_METRICS:
             m_array = getattr(self, m)
             # get rid of nan col
             try:
                 metric_df[m] = m_array[:, ~np.isnan(m_array).any(axis=0)].flatten()
-            except:
+            except Exception as e:
                 print(
                     self._mlde_npy_path,
                     m_array.shape,
                     m_array[:, ~np.isnan(m_array).any(axis=0)].shape,
                 )
+                print(str(e))
 
         return metric_df
 
@@ -298,10 +297,10 @@ class MLDEVis:
                 * len(encoding_lists)
                 * len(models)
                 * len(n_tops)
-                * len(default_metrics)
+                * len(DEFAULT_MLDE_METRICS)
             )
 
-            for metric in default_metrics:
+            for metric in DEFAULT_MLDE_METRICS:
                 metric_subfolder = checkNgen_folder(os.path.join(self._mlde_vis_dir, metric))
 
                 for zs in ZS_OPTS_LEGEND.keys():

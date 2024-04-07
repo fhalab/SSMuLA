@@ -22,7 +22,14 @@ from holoviews import dim
 
 
 from SSMuLA.aa_global import ALL_AAS, ALL_AA_STR
-from SSMuLA.landscape_global import LIB_INFO_DICT, LIB_NAMES, TrpB_names, n_mut_cutoff_dict, make_new_sequence, hamming
+from SSMuLA.landscape_global import (
+    LIB_INFO_DICT,
+    LIB_NAMES,
+    TrpB_names,
+    n_mut_cutoff_dict,
+    make_new_sequence,
+    hamming,
+)
 from SSMuLA.vis import (
     save_bokeh_hv,
     JSON_THEME,
@@ -42,16 +49,15 @@ warnings.filterwarnings("ignore", category=FutureWarning)
 
 
 # order of de simluation from simple to complex
-SIM_ORDER = deepcopy(["recomb_SSM", "single_step_DE", "top96_SSM"])
+DE_TYPES = deepcopy(["recomb_SSM", "single_step_DE", "top96_SSM"])
 
-SIM_LINE_STYLES = deepcopy(
+DE_LINE_STYLES = deepcopy(
     {
         "recomb_SSM": "solid",
         "single_step_DE": "dashed",
         "top96_SSM": "dotted",
     }
 )
-
 
 
 def simulate_single_step_DE(
@@ -583,18 +589,21 @@ def run_all_de_simulations(
         ["single_step_DE", "recomb_SSM", f"top{N}_SSM"],
         [single_step_DE_char, recomb_SSM_char, top96_SSM_char],
     ):
-        print({
+        print(
+            {
                 "lib": lib_name,
                 "de_type": de_sim_name,
                 **de_sim_char,
-            })
-        
+            }
+        )
+
         char_sum_df = char_sum_df._append(
             {
                 "lib": lib_name,
                 "de_type": de_sim_name,
                 **de_sim_char,
-            }, ignore_index=True
+            },
+            ignore_index=True,
         )
 
     return {
@@ -726,11 +735,13 @@ def de_violin(
     return violin
 
 
-def de_ecdf(slice_df: pd.DataFrame, 
-            lib_name: str,
-            plot_name: str, 
-            plot_folder: str,
-            skippng: bool = False):
+def de_ecdf(
+    slice_df: pd.DataFrame,
+    lib_name: str,
+    plot_name: str,
+    plot_folder: str,
+    skippng: bool = False,
+):
 
     """
     A function to plot an ECDF of the DE simulation results
@@ -754,14 +765,16 @@ def de_ecdf(slice_df: pd.DataFrame,
         lib_legend_labels = {}
 
         # Iterate over simulation types and libraries, create individual traces, and overlay them
-        for sim, style in SIM_LINE_STYLES.items():
+        for sim, style in DE_LINE_STYLES.items():
             for lib_name in TrpB_names:
                 selection = slice_df[
                     (slice_df["simulation"] == sim) & (slice_df["lib"] == lib_name)
                 ]
                 if not selection.empty:
                     curve = hv.Curve(
-                        selection.sort_values(["simulation", "lib", "final_fitness", "final_fitness ECDF"]),
+                        selection.sort_values(
+                            ["simulation", "lib", "final_fitness", "final_fitness ECDF"]
+                        ),
                         kdims="final_fitness",
                         vdims=["final_fitness ECDF", "lib", "simulation"],
                     )
@@ -796,14 +809,16 @@ def de_ecdf(slice_df: pd.DataFrame,
         legend_labels = {}
 
         # Iterate over simulation types and libraries, create individual traces, and overlay them
-        for sim, style in SIM_LINE_STYLES.items():
+        for sim, style in DE_LINE_STYLES.items():
             # for lib_name, lib_color in LIB_COLORS.items():
             selection = slice_df[
                 (slice_df["simulation"] == sim) & (slice_df["lib"] == lib_name)
             ]
             if not selection.empty:
                 curve = hv.Curve(
-                    selection.sort_values(["simulation", "lib", "final_fitness", "final_fitness ECDF"]),
+                    selection.sort_values(
+                        ["simulation", "lib", "final_fitness", "final_fitness ECDF"]
+                    ),
                     kdims="final_fitness",
                     vdims=["final_fitness ECDF", "lib", "simulation"],
                 )
@@ -829,7 +844,7 @@ def de_ecdf(slice_df: pd.DataFrame,
     )
 
     if skippng:
-        skippng = (lib_name == "GB1" or lib_name == "TrpB")
+        skippng = lib_name == "GB1" or lib_name == "TrpB"
     else:
         skippng = False
 
@@ -922,10 +937,10 @@ class VisDESims:
         plot_name = f"{self._lib_name} {self._append_title} start from {n_mut_cutoff_dict[self._n_mut_cutoff]}"
         plot_folder = checkNgen_folder(
             os.path.join(
-                self._vis_folder, 
-                self._de_sub_folder, 
-                self._fit_scale_sub_folder, 
-                n_mut_cutoff_dict[self._n_mut_cutoff]
+                self._vis_folder,
+                self._de_sub_folder,
+                self._fit_scale_sub_folder,
+                n_mut_cutoff_dict[self._n_mut_cutoff],
             )
         )
 
@@ -942,7 +957,7 @@ class VisDESims:
             lib_name=self._lib_name,
             plot_name=plot_name,
             plot_folder=plot_folder,
-            skippng=(self._n_mut_cutoff==0 and self._de_sub_folder=="DE-all"),
+            skippng=(self._n_mut_cutoff == 0 and self._de_sub_folder == "DE-all"),
         )
 
     @property
@@ -955,7 +970,9 @@ class VisDESims:
         - all_df: pd.DataFrame, A dataframe containing all DE simulation results
         """
 
-        all_de_sim_files = sorted(glob(f"{os.path.normpath(self.de_folder_full_path)}/*.csv"))
+        all_de_sim_files = sorted(
+            glob(f"{os.path.normpath(self.de_folder_full_path)}/*.csv")
+        )
 
         all_df = pd.DataFrame()
 
@@ -971,7 +988,9 @@ class VisDESims:
 
                 # slice df based on n_mut_cutoff
                 if self._n_mut_cutoff > 0:
-                    df["n_mut"] = df["start_seq"].apply(hamming, str2="".join(LIB_INFO_DICT[lib_name]["AAs"].values()))
+                    df["n_mut"] = df["start_seq"].apply(
+                        hamming, str2="".join(LIB_INFO_DICT[lib_name]["AAs"].values())
+                    )
                     df = df[df["n_mut"] <= self._n_mut_cutoff]
                     df["final_fitness ECDF"] = (
                         df["final_fitness"].transform(ecdf_transform).values
@@ -984,7 +1003,7 @@ class VisDESims:
 
         # sort sim to be in custom order from easy to hard
         all_df["simulation"] = pd.Categorical(
-            all_df["simulation"], categories=SIM_ORDER, ordered=True
+            all_df["simulation"], categories=DE_TYPES, ordered=True
         )
 
         return all_df.sort_values("simulation")
@@ -1036,7 +1055,7 @@ def run_plot_de(
                     else:
                         v_width = 400
 
-                    vis = VisDESims(
+                    _ = VisDESims(
                         lib_name=lib,
                         append_title="max fitness achieved",
                         v_width=v_width,

@@ -241,7 +241,7 @@ class MLDEDataset(LibData):
         if self._filter_min_by in ["none", "", None]:
             return df.copy()
         elif self._filter_min_by == "active":
-            return df[df["active"] == True].copy()
+            return df[df["active"]].copy()
         elif self._filter_min_by == "0":
             return df[df["fitness"] >= 0].copy()
         elif self._filter_min_by == "min0":
