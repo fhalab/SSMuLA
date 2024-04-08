@@ -83,7 +83,11 @@ class MLDEParser:
         #  'labelled',
         #  'y_preds']
         for attr, val in self.npy_item.items():
-            setattr(self, attr, val)
+            # need to specify what the rhos are from the oringal run 
+            if attr != "rhos":
+                setattr(self, attr, val)
+            else:
+                setattr(self, "rhos_pearson", val)
 
         if not hasattr(self, "config"):
             print(f"no config found for {self._mlde_npy_path}")
