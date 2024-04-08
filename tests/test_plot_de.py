@@ -5,9 +5,8 @@ import os
 
 from datetime import datetime
 
-from SSMuLA.plot_de_simulations import run_plot_de
+from SSMuLA.de_simulations import run_plot_de
 from SSMuLA.util import checkNgen_folder
-
 
 if __name__ == "__main__":
 
@@ -19,7 +18,7 @@ if __name__ == "__main__":
 
     run_plot_de(
         scale_types = ["scale2max"],
-        de_opts = ["DE-active", "DE-all"]
+        de_opts = ["DE-active", "DE-all"] # "DE-0"
     )
     
     f.close()

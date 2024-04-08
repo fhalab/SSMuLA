@@ -467,6 +467,7 @@ def calc_char(
 
     characteristics = {}
 
+    characteristics["max"] = np.max(df[col_name].values)
     characteristics["mean_all"] = np.mean(df[col_name].values)
     characteristics["median_all"] = np.median(df[col_name].values)
 
@@ -485,6 +486,7 @@ def calc_char(
     characteristics["fraction_max"] = sum(df[col_name].values == 1) / len(
         df[col_name].values
     )
+    characteristics["numb_path"] = len(df[col_name].values)
 
     print("Output dict:")
     for key, value in characteristics.items():
@@ -934,7 +936,8 @@ class VisDESims:
                 .copy()
             )
 
-        plot_name = f"{self._lib_name} {self._append_title} start from {n_mut_cutoff_dict[self._n_mut_cutoff]}"
+        plot_name = f"{self._lib_name} {self._append_title} \
+            start from {n_mut_cutoff_dict[self._n_mut_cutoff]}"
         plot_folder = checkNgen_folder(
             os.path.join(
                 self._vis_folder,
@@ -1047,8 +1050,7 @@ def run_plot_de(
 
     for de_sub_folder in de_opts:
         for fit_scale_sub_folder in scale_types:
-            # for n_mut in [0, 1, 2]:
-            for n_mut in [1, 2]:
+            for n_mut in [0, 1, 2]:
                 for lib in tqdm(LIB_NAMES + ["TrpB"]):
                     if "TrpB" in lib:
                         v_width = 1280

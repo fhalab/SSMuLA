@@ -25,8 +25,10 @@ hv.extension("bokeh")
 
 
 DEFAULT_MLDE_METRICS = [
-    "maxes",
-    "means",
+    "maxes_all",
+    "means_all", 
+    "maxes", # topn
+    "means", # topn
     "ndcgs",
     "rhos",
     "iftruemax",
@@ -71,17 +73,28 @@ class MLDEParser:
 
         # get all npy keys as properties
         # should be
-        # ['config',
-        #  'top_seqs',
+        # [
+        #  'config',
         #  'maxes',
         #  'means',
         #  'ndcgs',
         #  'rhos',
+        #  'if_truemaxa',
+        #  'truemax_inds',
         #  'unique',
         #  'labelled',
-        #  'y_preds']
+        #  'top_seqs',
+        #  'y_preds',
+        #  'y_trues',
+        # ]
         for attr, val in self.npy_item.items():
             setattr(self, attr, val)
+
+        if attr == "maxes_all":
+            setattr(self, "maxes", np.max(self.y_preds, axis=-1))
+
+        if attr == "means_all":
+            setattr(self, "means", np.mean(self.y_preds, axis=-1))
 
         if not hasattr(self, "config"):
             print(f"no config found for {self._mlde_npy_path}")
@@ -137,21 +150,9 @@ class MLDEParser:
         metric_df["zs"] = self.zs_predictor
         metric_df["n_top"] = self.n_top
 
-        # calc if true max in topn
-        self.iftruemax = np.any(self.top_seqs == self.max_fit_seq, axis=-1).astype(int)
-
-        # calc spearman rho that is the same shape as the ndcg and pearson rho
-        # in the shape of
-        # (
-        #     self.encoding_len,
-        #     self.model_classes_len,
-        #     self.n_sample_len,
-        #     self.ft_libs_len,
-        #     self.n_replicate,
-        # )
-
         # get all metrics as properties
         for m in DEFAULT_MLDE_METRICS:
+
             m_array = getattr(self, m)
             # get rid of nan col
             try:
