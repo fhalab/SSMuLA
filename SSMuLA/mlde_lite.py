@@ -22,7 +22,7 @@ from tqdm.auto import tqdm
 from multiprocessing import Pool
 
 import xgboost as xgb
-from scipy.stats import pearsonr
+from scipy.stats import spearmanr
 from sklearn import linear_model
 from sklearn.metrics import ndcg_score
 from sklearn.model_selection import train_test_split
@@ -135,7 +135,7 @@ class MLDEDataset(LibData):
         """
         Args:
         - input_csv, str: path to the input csv file WITH ZS,
-            ie. results/zs_comb/none/scale2max/DHFR.csv
+            ie. results/zs_comb/none/scale2max/all/DHFR.csv
         - n_mut_cutoff: number of mutations cutoff, default 0 meaning no cutoff
         """
 
@@ -166,15 +166,15 @@ class MLDEDataset(LibData):
         df = self._n_mut_cuttoff_df.copy()
 
         if len(df) <= cutoff or self._zs_predictor not in df.columns:
-            sorted = df.copy()
+            df_sorted = df.copy()
         else:
-            sorted = (
+            df_sorted = (
                 df.sort_values(by=self._zs_predictor, ascending=False)
                 .copy()[:cutoff]
                 .copy()
             )
 
-        options = sorted["AAs"].values
+        options = df_sorted["AAs"].values
 
         n_choice = (
             min(n_sample, len(options)) if len(options) > n_sample else len(options)
@@ -223,7 +223,9 @@ class MLDEDataset(LibData):
         # return list(self._n_mut_cuttoff_df[self._n_mut_cuttoff_df["AAs"].isin(seqs)].index)
 
     def _get_n_mut_cuttoff_df(self):
-        """ """
+        """
+        Get the dataframe with n_mut cutoff
+        """
         if self._n_mut_cutoff > 0:
             df = self.filtered_df[self.filtered_df["n_mut"] <= self._n_mut_cutoff]
             print(f"All {n_mut_cutoff_dict[self._n_mut_cutoff]} total {len(df)}")
@@ -252,6 +254,10 @@ class MLDEDataset(LibData):
             return df.copy()
 
     @property
+    def len_filtered_df(self):
+        return len(self.filtered_df)
+    
+    @property
     def all_combos(self):
         return self.filtered_df["AAs"].values.copy()
 
@@ -261,6 +267,11 @@ class MLDEDataset(LibData):
         Return all the fitness values
         """
         return self.filtered_df["fitness"].copy()
+
+    @property
+    def max_fit_seq(self) -> np.ndarray:
+        """Return the max fit seq"""
+        return self.filtered_df.loc[self.filtered_df["fitness"].idxmax()]["AAs"]
 
     @property
     def n_mut_cuttoff_df(self):
@@ -282,7 +293,7 @@ def build_linear_model(model_kwargs):
         "ridge_alpha": 1.0,
         "ridge_fit_intercept": True,
     }
-    kwargs = default_kwargs.copy()
+    kwargs = deepcopy(default_kwargs)
     for key in default_kwargs.keys():
         if key in model_kwargs:
             kwargs[key] = model_kwargs[key]
@@ -297,7 +308,7 @@ def build_boosting_model(model_kwargs):
         "early_stopping_rounds": 10,
         "nthread": -1,
     }
-    kwargs = default_kwargs.copy()
+    kwargs = deepcopy(default_kwargs)
     for key in default_kwargs.keys():
         if key in model_kwargs:
             kwargs[key] = model_kwargs[key]
@@ -306,7 +317,7 @@ def build_boosting_model(model_kwargs):
     return model
 
 
-def get_model(model_name, model_kwargs: Dict):
+def get_model(model_name: str, model_kwargs: dict):
     """Returns model, flatten_inputs."""
     if model_name == "ridge":
         return build_linear_model(model_kwargs)
@@ -316,7 +327,10 @@ def get_model(model_name, model_kwargs: Dict):
         raise NotImplementedError
 
 
-def ndcg(y_true, y_pred):
+def ndcg(y_true, y_pred) -> float:
+    """
+    Calculate the NDCG score for a given set of true and predicted values.
+    """
     y_true_normalized = y_true - min(y_true)
     return ndcg_score(y_true_normalized.reshape(1, -1), y_pred.reshape(1, -1))
 
@@ -348,7 +362,7 @@ class MLDESim(MLDEDataset):
         """
         Args:
         - input_csv: str, path to the input csv file WITH ZS,
-            ie. 'results/zs_comb/none/scale2max/DHFR.csv'
+            ie. 'results/zs_comb/none/scale2max/all/DHFR.csv'
         - zs_predictor: str, name of the ZS predictor
         - encoding: str, encoding type,
             ie `one-hot`, or `esm2_t33_650M_UR50D-flatten_site`
@@ -375,7 +389,7 @@ class MLDESim(MLDEDataset):
         )
 
         assert (
-            len(self.input_df[self.input_df["AAs"].str.contains("\*")]) == 0
+            len(self.filtered_df[self.filtered_df["AAs"].str.contains("\*")]) == 0
         ), "Make sure there are no stop codons in the input data"
 
         self._encoding = encoding
@@ -426,12 +440,18 @@ class MLDESim(MLDEDataset):
             "".join(["n"] * self.n_site),
         )
         self.ndcgs = np.zeros((self._n_solution, self._n_replicate))
-        self.rhos = np.copy(self.ndcgs)
-        self.maxes = np.copy(self.ndcgs)
-        self.means = np.copy(self.ndcgs)
-        self.unique = np.copy(self.ndcgs)
-        self.labelled = np.copy(self.ndcgs)
+        self.rhos = np.zeros(self.ndcgs.shape)
+        self.maxes = np.zeros(self.ndcgs.shape)
+        self.means = np.zeros(self.ndcgs.shape)
+
+        self.if_truemaxs = np.zeros(self.ndcgs.shape)
+        self.truemax_inds = np.zeros(self.ndcgs.shape)
+
+        self.unique = np.zeros(self.ndcgs.shape)
+        self.labelled = np.zeros(self.ndcgs.shape)
+
         self.y_preds = np.zeros((self._n_solution, self._n_replicate, self.df_length))
+        self.y_trues = np.zeros(self.y_preds.shape)
 
         # set up all random seeds
         np.random.seed(global_seed)
@@ -446,7 +466,7 @@ class MLDESim(MLDEDataset):
         self.y_train_all = np.array(self.y)
 
         # init for all the predictions for taking avg over n_splits
-        self.y_preds_all = np.zeros((self.df_length, self._n_replicate, self._n_split))
+        self.y_preds_nsplits = np.zeros((self.df_length, self._n_replicate, self._n_split))
 
     def train_all(self):
         """
@@ -483,7 +503,7 @@ class MLDESim(MLDEDataset):
                         combos_train = []
 
                         if self._save_model:
-                            save_dir = checkNgen_folder(
+                            save_model_dir = checkNgen_folder(
                                 os.path.join(self._save_path, str(k), str(j))
                             )
 
@@ -506,30 +526,32 @@ class MLDESim(MLDEDataset):
                                 X_train, y_train, X_validation, y_validation
                             )
 
-                            # remove this if you don't want to save the model
                             if self._save_model:
                                 filename = "split" + str(i) + ".model"
-                                clf.save_model(os.path.join(save_dir, filename))
+                                clf.save_model(os.path.join(save_model_dir, filename))
 
-                            self.y_preds_all[:, j, i] = y_preds
+                            self.y_preds_nsplits[:, j, i] = y_preds
                             
                             pbar.update()
                         
                         # TODO check if loop in the right place?
                         # it gets replaced to the correct mean at the end
-                        means = np.mean(self.y_preds_all, axis=2)
+                        means = np.mean(self.y_preds_nsplits, axis=2)
                         y_preds = means[:, j]
 
                         (
                             self.maxes[k, j],
                             self.means[k, j],
+                            self.if_truemaxs[k, j],
+                            self.truemax_inds[k, j],
                             self.top_seqs[k, j, :],
                         ) = self.get_mlde_results(y_preds)
 
                         self.ndcgs[k, j] = ndcg(self.y_train_all, y_preds)
-                        self.rhos[k, j] = pearsonr(self.y_train_all, y_preds)[0]
+                        self.rhos[k, j] = spearmanr(self.y_train_all, y_preds)[0]
 
                         self.y_preds[k, j, :] = y_preds
+                        self.y_trues[k, j, :] = self.y_train_all
 
             else:
                 print("No valid focused training library sizes. No output updates.")
@@ -537,14 +559,17 @@ class MLDESim(MLDEDataset):
         pbar.close
 
         return (
-            self.top_seqs,
             self.maxes,
             self.means,
             self.ndcgs,
             self.rhos,
+            self.if_truemaxs,
+            self.truemax_inds,
+            self.top_seqs,
             self.unique,
             self.labelled,
             self.y_preds,
+            self.y_trues,
         )
 
     def train_single(
@@ -582,28 +607,42 @@ class MLDESim(MLDEDataset):
 
         Args:
         - y_preds:np.array, the predictions on the training data
+
+        Returns:
+        - max_fit: float, the max fitness in the top n sequences
+        - mean_fit: float, the mean fitness in the top n sequences
+        - if_truemax: int, if the top n sequences contain the max fitness sequence
+        - truemax_ind: int, the index of the max fitness sequence
+        - top_seqs: list, the top n sequences
         """
 
-        df = self.input_df.copy()
+        df = self.filtered_df.copy()
         df["y_preds"] = y_preds
 
         ##optionally filter out the sequences in the training set
-        # data2 = data2[~data2['Combo'].isin(unique_seqs)]
+        # data2 = data2[~data2['AAs'].isin(unique_seqs)]
 
-        sorted = df.sort_values(by=["y_preds"], ascending=False)
 
-        top_fit = sorted.iloc[: self._n_top, :]["fitness"]
+        df_sorted = df.sort_values(by=["y_preds"], ascending=False)
+
+        top_fit = df_sorted.iloc[: self._n_top, :]["fitness"]
         max_fit = np.max(top_fit)
         mean_fit = np.mean(top_fit)
 
-        # save the top
-        top_seqs = sorted.iloc[: self._n_top, :]["AAs"].astype(str).values
+        # get the ind of the true max from df_sorted
+        truemax_ind = df_sorted[df_sorted["AAs"] == self.max_fit_seq].index[0]
+
+        # save the top seq
+        top_seqs = df_sorted.iloc[: self._n_top, :]["AAs"].astype(str).values
+
+        #  if true max in topn
+        if_truemax = int(self.max_fit_seq in top_seqs)
 
         ##for checking how many predictions are in the training set
-        # top_seqs_96 = sorted.iloc[:96,:]['Combo'].values
+        # top_seqs_96 = df_sorted.iloc[:96,:]['Combo'].values
         # print(len(np.intersect1d(np.array(unique_seqs), top_seqs_96)))
 
-        return max_fit, mean_fit, top_seqs
+        return max_fit, mean_fit, if_truemax, truemax_ind, top_seqs
 
     @property
     def used_ft_libs(self):
@@ -638,7 +677,7 @@ def run_mlde_lite(
     model_classes: list[str] = ["boosting", "ridge"],
     n_samples: list[int] = [384],
     n_split: int = 5,
-    n_replicate: int = 100,
+    n_replicate: int = 50,
     n_top: int = 384,
     boosting_n_worker: int = 1,
     global_seed: int = 42,
@@ -653,11 +692,10 @@ def run_mlde_lite(
 
     Args:
     - input_csv: str, path to the input csv file WITH ZS,
-            ie. 'results/zs_comb/none/scale2max/DHFR.csv'
+            ie. 'results/zs_comb/none/scale2max/all/DHFR.csv'
     - zs_predictor: str, name of the ZS predictor
     - ft_libs: list[float] = [1], list of percent of focused training libraries
             ie. [1, 0.5, 0.25, 0.125]
-
     """
 
     if len(exp_name) == 0:
@@ -665,13 +703,17 @@ def run_mlde_lite(
 
     save_dir = checkNgen_folder(
         os.path.join(
-            os.path.normpath(mlde_folder),
+            checkNgen_folder(os.path.normpath(mlde_folder)),
             "saved",
             zs_predictor,
             f"{filter_min_by}-{n_mut_cutoff_dict[n_mut_cutoff]}",
             f"scale2{scale_fit}",
             exp_name,
         )
+    )
+
+    config_folder = checkNgen_folder(
+        os.path.dirname(save_dir.replace("saved", "configs"))
     )
 
     print("Save directory:\t {}".format(save_dir))
@@ -686,11 +728,13 @@ def run_mlde_lite(
             n_replicate,
         )
     )
-    all_rhos = np.copy(all_ndcgs)
-    all_maxes = np.copy(all_ndcgs)
-    all_means = np.copy(all_ndcgs)
-    all_unique = np.copy(all_ndcgs)
-    all_labelled = np.copy(all_ndcgs)
+    all_rhos = np.zeros(all_ndcgs.shape)
+    all_maxes = np.zeros(all_ndcgs.shape)
+    all_means = np.zeros(all_ndcgs.shape)
+    all_unique = np.zeros(all_ndcgs.shape)
+    all_labelled = np.zeros(all_ndcgs.shape)
+    all_if_truemaxs = np.zeros(all_ndcgs.shape)
+    all_truemax_inds = np.zeros(all_ndcgs.shape)
 
     all_top_seqs = np.full(
         (
@@ -703,6 +747,7 @@ def run_mlde_lite(
         ),
         "".join(["n"] * len(LIB_INFO_DICT[get_file_name(input_csv)]["positions"])),
     )
+
     all_y_preds = np.zeros(
         (
             len(encodings),
@@ -713,6 +758,8 @@ def run_mlde_lite(
             len(pd.read_csv(input_csv)),
         )
     )
+
+    all_y_trues = np.zeros(all_y_preds.shape)
 
     for i, encoding in enumerate(encodings):
         for j, model_class in enumerate(model_classes):
@@ -748,18 +795,24 @@ def run_mlde_lite(
                 )
 
                 (
-                    top_seqs,
                     maxes,
                     means,
                     ndcgs,
                     rhos,
+                    if_truemaxs,
+                    truemax_inds,
+                    top_seqs,
                     unique,
                     labelled,
                     y_preds,
+                    y_trues,
                 ) = mlde_sim.train_all()
 
-                all_top_seqs[i, j, k, :, :, :] = pad_to_shape(
-                    top_seqs, (len(ft_libs), n_replicate, n_top)
+                all_maxes[i, j, k, :, :] = pad_to_shape(
+                    maxes, (len(ft_libs), n_replicate)
+                )
+                all_means[i, j, k, :, :] = pad_to_shape(
+                    means, (len(ft_libs), n_replicate)
                 )
                 all_ndcgs[i, j, k, :, :] = pad_to_shape(
                     ndcgs, (len(ft_libs), n_replicate)
@@ -767,11 +820,14 @@ def run_mlde_lite(
                 all_rhos[i, j, k, :, :] = pad_to_shape(
                     rhos, (len(ft_libs), n_replicate)
                 )
-                all_maxes[i, j, k, :, :] = pad_to_shape(
-                    maxes, (len(ft_libs), n_replicate)
+                all_if_truemaxs[i, j, k, :, :] = pad_to_shape(
+                    if_truemaxs, (len(ft_libs), n_replicate)
                 )
-                all_means[i, j, k, :, :] = pad_to_shape(
-                    means, (len(ft_libs), n_replicate)
+                all_truemax_inds[i, j, k, :, :] = pad_to_shape(
+                    truemax_inds, (len(ft_libs), n_replicate)
+                )
+                all_top_seqs[i, j, k, :, :, :] = pad_to_shape(
+                    top_seqs, (len(ft_libs), n_replicate, n_top)
                 )
                 all_unique[i, j, k, :, :] = pad_to_shape(
                     unique, (len(ft_libs), n_replicate)
@@ -780,7 +836,10 @@ def run_mlde_lite(
                     labelled, (len(ft_libs), n_replicate)
                 )
                 all_y_preds[i, j, k, :, :, :] = pad_to_shape(
-                    y_preds, (len(ft_libs), n_replicate, len(pd.read_csv(input_csv)))
+                    y_preds, (len(ft_libs), n_replicate, mlde_sim.len_filtered_df)
+                )
+                all_y_trues[i, j, k, :, :, :] = pad_to_shape(
+                    y_trues, (len(ft_libs), n_replicate, mlde_sim.len_filtered_df)
                 )
 
                 end = time.time()
@@ -791,10 +850,13 @@ def run_mlde_lite(
             "input_csv": input_csv,
             "zs_predictor": zs_predictor,
             "encoding": encodings,
+            "n_site": mlde_sim.n_site,
+            "len_filtered_df": mlde_sim.len_filtered_df,
             "ft_libs": mlde_sim.used_ft_libs,
             "scale_fit": scale_fit,
             "filter_min_by": filter_min_by,
             "n_mut_cutoff": n_mut_cutoff,
+            "max_fit_seq": mlde_sim.max_fit_seq,
         },
         "model_config": {
             "model_classes": model_classes,
@@ -813,26 +875,33 @@ def run_mlde_lite(
 
     # put all in npy
     mlde_results = {}
+
     (
         mlde_results["config"],
-        mlde_results["top_seqs"],
         mlde_results["maxes"],
         mlde_results["means"],
         mlde_results["ndcgs"],
         mlde_results["rhos"],
+        mlde_results["if_truemaxs"],
+        mlde_results["truemax_inds"],
+        mlde_results["top_seqs"],
         mlde_results["unique"],
         mlde_results["labelled"],
         mlde_results["y_preds"],
+        mlde_results["y_trues"],
     ) = (
         config_dict,
-        all_top_seqs,
         all_maxes,
         all_means,
         all_ndcgs,
         all_rhos,
+        all_if_truemaxs,
+        all_truemax_inds,
+        all_top_seqs,
         all_unique,
         all_labelled,
         all_y_preds,
+        all_y_trues,
     )
 
     comb_exp_dets = "|".join(encodings) + "_" + "|".join(model_classes)
@@ -845,9 +914,6 @@ def run_mlde_lite(
     # Delete the variable
     del mlde_results
 
-    config_folder = checkNgen_folder(
-        os.path.dirname(save_dir.replace("saved", "configs"))
-    )
     config_path = os.path.join(
         config_folder, f"{comb_exp_dets}_{exp_name}_{n_top}.json"
     )
@@ -875,7 +941,7 @@ def run_all_mlde(
     model_classes: list[str] = ["boosting", "ridge"],
     n_samples: list[int] = [384],
     n_split: int = 5,
-    n_replicate: int = 100,
+    n_replicate: int = 50,
     n_tops: list[int] = [96, 384],
     boosting_n_worker: int = 1,
     global_seed: int = 42,
@@ -884,11 +950,13 @@ def run_all_mlde(
     mlde_folder: str = "results/mlde",
 ):
     """
-    Run all MLDE give zs combined csvs
+    Run all MLDE give zs combined csv
     """
 
+    mlde_folder = checkNgen_folder(os.path.normpath(mlde_folder))
+
     for input_csv in sorted(
-        glob(f"{os.path.normpath(zs_folder)}/{filter_min_by}/{scale_type}/*.csv")
+        glob(f"{os.path.normpath(zs_folder)}/{filter_min_by}/{scale_type}/all/*.csv")
     ):
         for n_mut_cutoff in n_mut_cutoffs:
             for zs_predictor in zs_predictors:
@@ -901,7 +969,8 @@ def run_all_mlde(
                 for n_top in n_tops:
 
                     print(
-                        "Running MLDE for {} with {} zero-shot predictor, {} mut number, {} top output...".format(
+                        "Running MLDE for {} with {} zero-shot predictor, \
+                            {} mut number, {} top output...".format(
                             input_csv,
                             zs_predictor,
                             n_mut_cutoff_dict[n_mut_cutoff],
@@ -938,7 +1007,7 @@ def run_all_mlde_parallelized(
     scale_type: str = "scale2max",
     zs_predictors: list[str] = ["none", "Triad", "ev", "esm"],
     ft_lib_fracs: list[float] = [0.5, 0.25, 0.125],
-    encodings: list[str] = DEFAULT_LEARNED_EMB_COMBO,
+    encodings: list[str] = ["one-hot"] + DEFAULT_LEARNED_EMB_COMBO,
     model_classes: list[str] = ["boosting", "ridge"],
     n_samples: list[int] = [384],
     n_split: int = 5,
@@ -951,127 +1020,64 @@ def run_all_mlde_parallelized(
     save_model: bool = False,
     mlde_folder: str = "results/mlde",
 ):
+    
+    """
+    Run all MLDE give zs combined csv
+    
+    """
+
+    mlde_folder = checkNgen_folder(os.path.normpath(mlde_folder))
+
     # Create a list to hold tasks for parallel execution
     tasks = []
 
     # Iterate over each combination of parameters to create tasks
     for input_csv in sorted(
-        glob(f"{os.path.normpath(zs_folder)}/{filter_min_by}/{scale_type}/*.csv")
+        glob(f"{os.path.normpath(zs_folder)}/{filter_min_by}/{scale_type}/all/*.csv")
     ):
         for n_mut_cutoff in n_mut_cutoffs:
             for zs_predictor in zs_predictors:
                 # Determine feature libraries based on the predictor
-                ft_libs = [1] if zs_predictor == "none" else ft_lib_fracs
-                zs_predictor_label = (
-                    "none" if zs_predictor == "none" else f"{zs_predictor}_score"
-                )
+                if zs_predictor == "none":
+                    ft_libs = [1]
+                else:
+                    zs_predictor = f"{zs_predictor}_score"
+                    ft_libs = ft_lib_fracs
 
                 for n_top in n_tops:
                     # Print a message if verbose is True
                     if verbose:
                         print(
-                            f"Queuing MLDE for {input_csv} with {zs_predictor_label} zero-shot predictor, "
+                            f"Queuing MLDE for {input_csv} with {zs_predictor} zero-shot predictor, "
                             + f"{n_mut_cutoff} mut number, {n_top} top output..."
                         )
 
-                    # Append the task arguments as a tuple to the tasks list
-                    tasks.append(
-                        {
-                            "input_csv": input_csv,
-                            "zs_predictor": zs_predictor_label,
-                            "scale_fit": scale_type.split("scale2")[1],
-                            "filter_min_by": filter_min_by,
-                            "n_mut_cutoff": n_mut_cutoff,
-                            "encodings": encodings,
-                            "ft_libs": ft_libs,
-                            "model_classes": model_classes,
-                            "n_samples": n_samples,
-                            "n_split": n_split,
-                            "n_replicate": n_replicate,
-                            "n_top": n_top,
-                            "boosting_n_worker": boosting_n_worker,
-                            "global_seed": global_seed,
-                            "verbose": verbose,
-                            "save_model": save_model,
-                            "mlde_folder": mlde_folder,
-                            "exp_name": "",
-                        }
+                    exp_name = get_file_name(input_csv)
+                    scale_fit = scale_type.split("scale2")[1]
+
+                    # need to make and check all subfolders before running...
+                    mlde_save_sub_dir = checkNgen_folder(
+                        os.path.join(
+                            checkNgen_folder(os.path.normpath(mlde_folder)),
+                            "saved",
+                            zs_predictor,
+                            f"{filter_min_by}-{n_mut_cutoff_dict[n_mut_cutoff]}",
+                            f"scale2{scale_fit}",
+                            exp_name,
+                        )
                     )
 
-    # Run tasks in parallel using ProcessPoolExecutor
-    with ProcessPoolExecutor(max_workers=n_job) as executor:
-        # Submit tasks
-        future_to_task = {
-            executor.submit(run_mlde_lite, **task): task for task in tasks
-        }
-
-        # Retrieve results as tasks are completed
-        for future in as_completed(future_to_task):
-            task = future_to_task[future]
-            try:
-                result = future.result()
-                if verbose:
-                    print(f"Task completed: {task}")
-                    print(f"Result: {result}")
-            except Exception as exc:
-                # Print the task details and exception info
-                print(f"Task generated an exception: {task}")
-                print(f"Exception type: {type(exc).__name__}")
-                print(f"Exception message: {exc}")
-                # Print the full traceback to help identify where the exception was raised
-                print("Traceback:")
-                traceback.print_tb(exc.__traceback__)
-
-
-def run_all_mlde2_parallelized(
-    zs_folder: str = "results/zs_comb",
-    filter_min_by: str = "none",
-    n_mut_cutoffs: list[int] = [0, 1, 2],
-    scale_type: str = "scale2max",
-    zs_predictors: list[str] = ["none", "Triad", "ev", "esm"],
-    ft_lib_fracs: list[float] = [0.5, 0.25, 0.125],
-    encodings: list[str] = DEFAULT_LEARNED_EMB_COMBO,
-    model_classes: list[str] = ["boosting", "ridge"],
-    n_samples: list[int] = [384],
-    n_split: int = 5,
-    n_replicate: int = 100,
-    n_tops: list[int] = [96, 384],
-    boosting_n_worker: int = 1,
-    n_job: int = 128,
-    global_seed: int = 42,
-    verbose: bool = False,
-    save_model: bool = False,
-    mlde_folder: str = "results/mlde",
-):
-    # Create a list to hold tasks for parallel execution
-    tasks = []
-
-    # Iterate over each combination of parameters to create tasks
-    for input_csv in sorted(
-        glob(f"{os.path.normpath(zs_folder)}/{filter_min_by}/{scale_type}/*.csv")
-    ):
-        for n_mut_cutoff in n_mut_cutoffs:
-            for zs_predictor in zs_predictors:
-                # Determine feature libraries based on the predictor
-                ft_libs = [1] if zs_predictor == "none" else ft_lib_fracs
-                zs_predictor_label = (
-                    "none" if zs_predictor == "none" else f"{zs_predictor}_score"
-                )
-
-                for n_top in n_tops:
-                    # Print a message if verbose is True
-                    if verbose:
-                        print(
-                            f"Queuing MLDE for {input_csv} with {zs_predictor_label} zero-shot predictor, "
-                            + f"{n_mut_cutoff} mut number, {n_top} top output..."
-                        )
+                    # do the same for config
+                    checkNgen_folder(
+                        os.path.dirname(mlde_save_sub_dir.replace("saved", "configs"))
+                    )
 
                     # Append the task arguments as a tuple to the tasks list
                     tasks.append(
                         {
                             "input_csv": input_csv,
-                            "zs_predictor": zs_predictor_label,
-                            "scale_fit": scale_type.split("scale2")[1],
+                            "zs_predictor": zs_predictor,
+                            "scale_fit": scale_fit,
                             "filter_min_by": filter_min_by,
                             "n_mut_cutoff": n_mut_cutoff,
                             "encodings": encodings,

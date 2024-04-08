@@ -11,7 +11,6 @@ from copy import deepcopy
 
 import numpy as np
 import pandas as pd
-from scipy.stats import spearmanr
 
 # Basic plotting
 import holoviews as hv
@@ -29,8 +28,7 @@ DEFAULT_MLDE_METRICS = [
     "maxes",
     "means",
     "ndcgs",
-    "rhos_pearson",
-    "rhos_spearman",
+    "rhos",
     "iftruemax",
 ]
 
@@ -78,16 +76,12 @@ class MLDEParser:
         #  'maxes',
         #  'means',
         #  'ndcgs',
-        #  'rhos_pearson',
+        #  'rhos',
         #  'unique',
         #  'labelled',
         #  'y_preds']
         for attr, val in self.npy_item.items():
-            # need to specify what the rhos are from the oringal run 
-            if attr != "rhos":
-                setattr(self, attr, val)
-            else:
-                setattr(self, "rhos_pearson", val)
+            setattr(self, attr, val)
 
         if not hasattr(self, "config"):
             print(f"no config found for {self._mlde_npy_path}")
@@ -156,26 +150,6 @@ class MLDEParser:
         #     self.n_replicate,
         # )
 
-        rho_spearman = np.full(self.output_shape, np.nan)
-
-        # Iterate over the tensor to calculate Spearman correlation for each slice
-        for i in range(self.encoding_len):
-            for j in range(self.model_classes_len):
-                for k in range(self.n_sample_len):
-                    for n in range(self.ft_libs_len):
-                        for m in range(self.n_replicate):
-                            # Extract the current slice
-                            y_pred = self.y_preds[i, j, k, n, m, :]
-
-                            # Calculate the Spearman correlation coefficient
-                            # Note: spearmanr returns a tuple (correlation, p-value), so we select [0] to get the correlation
-                            rho_spearman[i, j, k, n, m] = spearmanr(
-                                y_pred, self.true_ys
-                            )[0]
-
-        # set the rho_spearman as a property
-        self.rhos_spearman = deepcopy(rho_spearman)
-
         # get all metrics as properties
         for m in DEFAULT_MLDE_METRICS:
             m_array = getattr(self, m)
@@ -207,7 +181,7 @@ class MLDEParser:
 
         """
         Return the shape of the output for
-        maxes, means, ndcgs, rhos_pearson, rhos_spearman, true_max, unique, and labelled
+        maxes, means, ndcgs, rhos, true_max, unique, and labelled
 
             len(encodings),
             len(model_classes),

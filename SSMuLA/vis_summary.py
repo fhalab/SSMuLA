@@ -140,7 +140,7 @@ class DESumVis(SumVis):
         return self.df
 
 
-class ZSVis(SumVis):
+class ZSSSumVis(SumVis):
     """A class to visualize the summary of ZS simulations."""
 
     def __init__(
