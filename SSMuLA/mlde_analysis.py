@@ -11,6 +11,7 @@ from copy import deepcopy
 
 import numpy as np
 import pandas as pd
+from scipy.stats import spearmanr
 
 # Basic plotting
 import holoviews as hv
@@ -24,7 +25,14 @@ from SSMuLA.util import checkNgen_folder, get_file_name
 hv.extension("bokeh")
 
 
-DEFAULT_MLDE_METRICS = ["maxes", "means", "ndcgs", "rhos"]
+DEFAULT_MLDE_METRICS = [
+    "maxes",
+    "means",
+    "ndcgs",
+    "rhos_pearson",
+    "rhos_spearman",
+    "iftruemax",
+]
 
 
 class MLDEParser:
@@ -42,7 +50,7 @@ class MLDEParser:
 
         Note:
 
-        {'data_config': {'input_csv': 'results/zs_comb/none/scale2max/GB1.csv',
+        {'data_config': {'input_csv': 'results/zs_comb/none/scale2max/all/GB1.csv',
             'zs_predictor': 'none',
             'encoding': ['one-hot'],
             'ft_libs': [149361],
@@ -64,7 +72,16 @@ class MLDEParser:
         self._mlde_results_dir = mlde_results_dir
 
         # get all npy keys as properties
-        # should be ['config', 'top_seqs', 'maxes', 'means', 'ndcgs', 'rhos', 'unique', 'labelled', 'y_preds']
+        # should be
+        # ['config',
+        #  'top_seqs',
+        #  'maxes',
+        #  'means',
+        #  'ndcgs',
+        #  'rhos_pearson',
+        #  'unique',
+        #  'labelled',
+        #  'y_preds']
         for attr, val in self.npy_item.items():
             setattr(self, attr, val)
 
@@ -80,6 +97,14 @@ class MLDEParser:
                 setattr(self, k, v)
                 if isinstance(v, list):
                     setattr(self, f"{k}_len", len(v))
+
+        # TODO:
+        # in the process of transfering all ZS to all, double, single folder
+
+        if "all" not in self.input_csv:
+            self.input_csv = os.path.join(
+                os.path.dirname(self.input_csv), "all", os.path.basename(self.input_csv)
+            )
 
         self._metric_df = self._get_metric_df()
 
@@ -114,6 +139,39 @@ class MLDEParser:
         metric_df["zs"] = self.zs_predictor
         metric_df["n_top"] = self.n_top
 
+        # calc if true max in topn
+        self.iftruemax = np.any(self.top_seqs == self.max_fit_seq, axis=-1).astype(int)
+
+        # calc spearman rho that is the same shape as the ndcg and pearson rho
+        # in the shape of
+        # (
+        #     self.encoding_len,
+        #     self.model_classes_len,
+        #     self.n_sample_len,
+        #     self.ft_libs_len,
+        #     self.n_replicate,
+        # )
+
+        rho_spearman = np.full(self.output_shape, np.nan)
+
+        # Iterate over the tensor to calculate Spearman correlation for each slice
+        for i in range(self.encoding_len):
+            for j in range(self.model_classes_len):
+                for k in range(self.n_sample_len):
+                    for n in range(self.ft_libs_len):
+                        for m in range(self.n_replicate):
+                            # Extract the current slice
+                            y_pred = self.y_preds[i, j, k, n, m, :]
+
+                            # Calculate the Spearman correlation coefficient
+                            # Note: spearmanr returns a tuple (correlation, p-value), so we select [0] to get the correlation
+                            rho_spearman[i, j, k, n, m] = spearmanr(
+                                y_pred, self.true_ys
+                            )[0]
+
+        # set the rho_spearman as a property
+        self.rhos_spearman = deepcopy(rho_spearman)
+
         # get all metrics as properties
         for m in DEFAULT_MLDE_METRICS:
             m_array = getattr(self, m)
@@ -144,7 +202,8 @@ class MLDEParser:
     def output_shape(self) -> tuple:
 
         """
-        Return the shape of the output for maxes, means, ndcgs, rhos, unique, and labelled
+        Return the shape of the output for
+        maxes, means, ndcgs, rhos_pearson, rhos_spearman, true_max, unique, and labelled
 
             len(encodings),
             len(model_classes),
@@ -253,6 +312,40 @@ class MLDEParser:
         """Return the metric df"""
         return self._metric_df
 
+    @property
+    def input_df(self) -> str:
+        """Return the input csv"""
+        return pd.read_csv(self.input_csv)
+
+    @property
+    def filtered_df(self) -> pd.DataFrame:
+        """Return the filtered df"""
+        # make sure no stop codon
+        df = self.input_df[~self.input_df["AAs"].str.contains("\*")].copy()
+
+        if self.filter_min_by in ["none", "", None]:
+            return df.copy()
+        elif self.filter_min_by == "active":
+            return df[df["active"]].copy()
+        elif self.filter_min_by == "0":
+            return df[df["fitness"] >= 0].copy()
+        elif self.filter_min_by == "min0":
+            df["fitness"] = df["fitness"].apply(lambda x: max(0, x))
+            return df.copy()
+        else:
+            print(f"{self.filter_min_by} not valid -> no filter beyond no stop codon")
+            return df.copy()
+
+    @property
+    def max_fit_seq(self) -> np.ndarray:
+        """Return the max fit seq"""
+        return self.input_df.loc[self.input_df["fitness"].idxmax()]["AAs"]
+
+    @property
+    def true_ys(self) -> np.ndarray:
+        """Return the true ys"""
+        return self.filtered_df["fitness"].copy()
+
 
 def get_all_metric_df(mlde_results_dir: str = "results/mlde/saved") -> pd.DataFrame:
     """Return the metric df for all mlde results"""
@@ -301,7 +394,9 @@ class MLDEVis:
             )
 
             for metric in DEFAULT_MLDE_METRICS:
-                metric_subfolder = checkNgen_folder(os.path.join(self._mlde_vis_dir, metric))
+                metric_subfolder = checkNgen_folder(
+                    os.path.join(self._mlde_vis_dir, metric)
+                )
 
                 for zs in ZS_OPTS_LEGEND.keys():
 
@@ -311,22 +406,27 @@ class MLDEVis:
                         print(encoding_list)
                         for model in models:
                             for n_top in n_tops:
-                                
+
                                 self.zs_encode_model_ntop_metirc(
-                                    zs, encoding_list, model, n_top, metric, zs_subfolder
+                                    zs,
+                                    encoding_list,
+                                    model,
+                                    n_top,
+                                    metric,
+                                    zs_subfolder,
                                 )
                                 pbar.update()
 
             pbar.close()
 
     def zs_encode_model_ntop_metirc(
-        self, 
-        zs: str, 
-        encoding_list: list[str], 
-        model: str, 
-        n_top: int, 
+        self,
+        zs: str,
+        encoding_list: list[str],
+        model: str,
+        n_top: int,
         metric: str,
-        plot_path: str
+        plot_path: str,
     ):
 
         """

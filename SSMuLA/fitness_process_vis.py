@@ -122,7 +122,7 @@ class ProcessData(LibData):
             axis=1,
         )
 
-        df_appended.replace("", "WT")
+        df_appended["muts"] = df_appended["muts"].replace("", "WT")
 
         # add mut number
         df_appended["n_mut"] = df_appended["muts"].str.split(":").str.len()

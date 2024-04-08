@@ -9,13 +9,11 @@ from tqdm import tqdm
 import numpy as np
 import pandas as pd
 
-
 from scipy.stats import spearmanr
+from sklearn.metrics import roc_curve, auc
 
 # Basic plotting
 import holoviews as hv
-
-from sklearn.metrics import roc_curve, auc
 
 # Large data plotting
 from holoviews.operation.datashader import rasterize
@@ -35,7 +33,12 @@ hv.extension("bokeh")
 hv.renderer("bokeh").theme = JSON_THEME
 
 ZS_OPTS = ["Triad_score", "ev_score", "esm_score"]
-ZS_OPTS_LEGEND = {"none": "No ZS","Triad_score": "Triad", "ev_score": "EVMutation", "esm_score": "ESM"}
+ZS_OPTS_LEGEND = {
+    "none": "No ZS",
+    "Triad_score": "Triad",
+    "ev_score": "EVMutation",
+    "esm_score": "ESM",
+}
 
 
 class ZS_Analysis(LibData):
@@ -79,17 +82,17 @@ class ZS_Analysis(LibData):
         self._zs_comb_dir = checkNgen_folder(zs_comb_dir)
         self._zs_vis_dir = checkNgen_folder(zs_vis_dir)
 
+        if self._n_mut_cutoff > 0:
+            self._n_mut_subdir = n_mut_cutoff_dict[self._n_mut_cutoff]
+        else:
+            self._n_mut_subdir = "all"
+
         print(f"Get fitness data without stop codon from {self._input_csv}...")
         print(f"Get ev esm data from {self.ev_esm_path}...")
         print(f"Get triad data from {self.triad_path}...")
 
         print(f"Save combed zs data to {self.zf_comb_path}...")
         self.zs_df.to_csv(self.zf_comb_path, index=False)
-
-        if self._n_mut_cutoff > 0:
-            self._n_mut_subdir = n_mut_cutoff_dict[self._n_mut_cutoff]
-        else:
-            self._n_mut_subdir = "all"
 
         self._roc, self._zs_coord_dict = self._plot_roc()
         self._zs_fit_plot_dict = self._plot_zs_vs_fitness()
@@ -338,10 +341,10 @@ class ZS_Analysis(LibData):
         """
 
         df = pd.merge(
-                pd.merge(self.df_no_stop, self.ev_esm_df, on="muts"),
-                self.triad_df,
-                on="AAs",
-            )
+            pd.merge(self.df_no_stop, self.ev_esm_df, on="muts"),
+            self.triad_df,
+            on="AAs",
+        )
 
         if self._n_mut_cutoff > 0:
             return df[df["n_mut"] <= self._n_mut_cutoff].copy()
@@ -354,7 +357,12 @@ class ZS_Analysis(LibData):
         Returns the path to the ZF combined with fitness
         """
         return checkNgen_folder(
-            os.path.join(self._zs_comb_dir, self._filter_min_by, self.scale_type)
+            os.path.join(
+                self._zs_comb_dir,
+                self._filter_min_by,
+                self.scale_type,
+                self._n_mut_subdir,
+            )
         )
 
     @property
@@ -370,7 +378,13 @@ class ZS_Analysis(LibData):
         Returns the folder path to the ROC curve
         """
         return checkNgen_folder(
-            os.path.join(self._zs_vis_dir, "roc", self._filter_min_by, self.scale_type, self._n_mut_subdir)
+            os.path.join(
+                self._zs_vis_dir,
+                "roc",
+                self._filter_min_by,
+                self.scale_type,
+                self._n_mut_subdir,
+            )
         )
 
     @property
@@ -394,7 +408,11 @@ class ZS_Analysis(LibData):
         """
         return checkNgen_folder(
             os.path.join(
-                self._zs_vis_dir, "vs_fitness", self._filter_min_by, self.scale_type, self._n_mut_subdir
+                self._zs_vis_dir,
+                "vs_fitness",
+                self._filter_min_by,
+                self.scale_type,
+                self._n_mut_subdir,
             )
         )
 
@@ -437,9 +455,11 @@ def run_zs_analysis(
 
         for n_mut_cutoff in [0, 1, 2]:
 
-            for lib_path in tqdm(sorted(
-                glob(f"{os.path.normpath(data_folder)}/*/scale2{scale_type}/*.csv")
-            )):
+            for lib_path in tqdm(
+                sorted(
+                    glob(f"{os.path.normpath(data_folder)}/*/scale2{scale_type}/*.csv")
+                )
+            ):
 
                 zs = ZS_Analysis(
                     input_csv=lib_path,
@@ -453,10 +473,12 @@ def run_zs_analysis(
                 )
 
                 zs_stat_df = zs_stat_df._append(
-                    {"lib": zs.lib_name, 
-                    "n_mut": n_mut_cutoff_dict[n_mut_cutoff], 
-                    "scale_type": scale_type, 
-                    **zs.zs_coord_dict},
+                    {
+                        "lib": zs.lib_name,
+                        "n_mut": n_mut_cutoff_dict[n_mut_cutoff],
+                        "scale_type": scale_type,
+                        **zs.zs_coord_dict,
+                    },
                     ignore_index=True,
                 )
 

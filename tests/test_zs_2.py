@@ -3,8 +3,6 @@
 import sys
 import os
 
-from glob import glob
-
 from datetime import datetime
 
 from SSMuLA.zs_analysis import run_zs_analysis
