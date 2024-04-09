@@ -3,8 +3,6 @@
 from __future__ import annotations
 
 import os
-import re
-import itertools
 from glob import glob
 from tqdm import tqdm
 from copy import deepcopy
@@ -31,7 +29,8 @@ DEFAULT_MLDE_METRICS = [
     "means", # topn
     "ndcgs",
     "rhos",
-    "iftruemax",
+    "if_truemaxs",
+    "truemax_inds",
 ]
 
 
@@ -90,12 +89,13 @@ class MLDEParser:
         for attr, val in self.npy_item.items():
             setattr(self, attr, val)
 
-        if attr == "maxes_all":
-            setattr(self, "maxes", np.max(self.y_preds, axis=-1))
-
-        if attr == "means_all":
-            setattr(self, "means", np.mean(self.y_preds, axis=-1))
-
+        # TODO CLEAN UP WITH NEW MLDE
+        if not hasattr(self, "maxes_all"):
+            setattr(self, "maxes_all", np.max(self.y_preds, axis=-1))
+        
+        if not hasattr(self, "means_all"):
+            setattr(self, "means_all", np.mean(self.y_preds, axis=-1))
+        
         if not hasattr(self, "config"):
             print(f"no config found for {self._mlde_npy_path}")
             pass
@@ -108,6 +108,24 @@ class MLDEParser:
                 setattr(self, k, v)
                 if isinstance(v, list):
                     setattr(self, f"{k}_len", len(v))
+
+        if not hasattr(self, "max_fit_seq"):
+            setattr(self, 
+                "max_fit_seq", 
+                self.filtered_df.loc[self.filtered_df["fitness"].idxmax()]["AAs"]
+                )
+
+        if not hasattr(self, "if_truemaxs"):
+            setattr(self, 
+                "if_truemaxs", 
+                np.any(self.top_seqs == self.max_fit_seq, axis=-1).astype(int)
+                )
+
+        if not hasattr(self, "truemax_inds"):
+            setattr(self, 
+                "truemax_inds", 
+                np.where(self.top_seqs == self.max_fit_seq)[1]
+                )
 
         # TODO:
         # in the process of transfering all ZS to all, double, single folder
@@ -314,16 +332,6 @@ class MLDEParser:
         else:
             print(f"{self.filter_min_by} not valid -> no filter beyond no stop codon")
             return df.copy()
-
-    @property
-    def max_fit_seq(self) -> np.ndarray:
-        """Return the max fit seq"""
-        return self.input_df.loc[self.input_df["fitness"].idxmax()]["AAs"]
-
-    @property
-    def true_ys(self) -> np.ndarray:
-        """Return the true ys"""
-        return self.filtered_df["fitness"].copy()
 
 
 def get_all_metric_df(mlde_results_dir: str = "results/mlde/saved") -> pd.DataFrame:

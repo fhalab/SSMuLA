@@ -6,6 +6,7 @@ import os
 from datetime import datetime
 
 from SSMuLA.mlde_lite import run_all_mlde_parallelized
+from SSMuLA.aa_global import DEFAULT_LEARNED_EMB_COMBO
 from SSMuLA.util import checkNgen_folder
 
 if __name__ == "__main__":
@@ -20,19 +21,35 @@ if __name__ == "__main__":
     )
     sys.stdout = f
 
+    # run_all_mlde_parallelized(
+    #     encodings=["one-hot"],
+    #     n_mut_cutoffs=[0, 2, 1],
+    #     zs_predictors=["none"],
+    #     n_replicate=100,
+    #     n_job=256,
+    # )
+
+    # run_all_mlde_parallelized(
+    #     encodings=["one-hot"],
+    #     n_mut_cutoffs=[0, 2, 1],
+    #     zs_predictors=["Triad", "ev", "esm"],
+    #     n_replicate=100,
+    #     n_job=256,
+    # )
+
     run_all_mlde_parallelized(
-        encodings=["one-hot"],
+        encodings=DEFAULT_LEARNED_EMB_COMBO,
         n_mut_cutoffs=[0, 2, 1],
         zs_predictors=["none"],
-        n_replicate=100,
+        n_replicate=50,
         n_job=256,
     )
 
     run_all_mlde_parallelized(
-        encodings=["one-hot"],
+        encodings=DEFAULT_LEARNED_EMB_COMBO,
         n_mut_cutoffs=[0, 2, 1],
         zs_predictors=["Triad", "ev", "esm"],
-        n_replicate=100,
+        n_replicate=50,
         n_job=256,
     )
 

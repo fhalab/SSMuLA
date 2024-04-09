@@ -20,15 +20,27 @@ if __name__ == "__main__":
     )
     sys.stdout = f
 
+    # run_all_mlde_parallelized(
+    #     encodings=["esm2_t33_650M_UR50D-flatten_site"],
+    #     model_classes= ["ridge"],
+    #     n_mut_cutoffs=[0, 2, 1],
+    #     zs_predictors=["none", "Triad", "ev", "esm"],
+    #     n_replicate=50,
+    #     n_job=96,
+    # )
+
     run_all_mlde_parallelized(
-        encodings=["esm2_t33_650M_UR50D-flatten_site"],
-        model_classes= ["ridge"],
+        encodings=["esm2_t33_650M_UR50D-mean_site"],
+        model_classes= ["boosting"],
         n_mut_cutoffs=[0, 2, 1],
         zs_predictors=["none", "Triad", "ev", "esm"],
         n_replicate=50,
         n_job=96,
+        mlde_folder="results/mlde_old"
     )
 
+    # TODO - MOVE THEM TO MLDE_OLD
+    # OR REGEN EVERYTHING
 
     """
     run_all_mlde_parallelized
