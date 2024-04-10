@@ -22,14 +22,14 @@ if __name__ == "__main__":
     )
     sys.stdout = f
 
-    # MLDEVis(
-    #     mlde_results_dir = "results/mlde/saved",
-    #     mlde_vis_dir = "results/mlde/vis"
-    # )
-
     MLDEVis(
-        mlde_results_dir = "results/mlde_old/saved",
-        mlde_vis_dir = "results/mlde_old/vis"
+        mlde_results_dir = "results/mlde/saved",
+        mlde_vis_dir = "results/mlde/vis"
     )
+
+    # MLDEVis(
+    #     mlde_results_dir = "results/mlde_old/saved",
+    #     mlde_vis_dir = "results/mlde_old/vis"
+    # )
 
     f.close()
