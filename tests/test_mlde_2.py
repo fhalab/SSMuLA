@@ -26,7 +26,7 @@ if __name__ == "__main__":
         n_mut_cutoffs=[0, 2, 1],
         zs_predictors=["none"],
         n_replicate=100,
-        n_job=256,
+        n_job=96,
     )
 
     run_all_mlde_parallelized(
@@ -34,7 +34,7 @@ if __name__ == "__main__":
         n_mut_cutoffs=[0, 2, 1],
         zs_predictors=["Triad", "ev", "esm"],
         n_replicate=100,
-        n_job=256,
+        n_job=96,
     )
 
     # run_all_mlde_parallelized(
