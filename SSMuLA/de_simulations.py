@@ -359,7 +359,8 @@ def try_start_seq(start_seq: str, df_dict: dict, ALL_AAS: list, n_sites: int, N:
             best_seq = variant_seq
             best_fitness = variant_fit
 
-    # add a step where I also look at all the SSM variants and see if any of them are better than the top predicted
+    # add a step where I also look at all the SSM variants and 
+    # see if any of them are better than the top predicted
     for pos, temp_fit_dict in SSM_data.items():
         for SSM_seq, SSM_fit in temp_fit_dict.items():
 
@@ -1031,7 +1032,7 @@ class VisDESims:
 
 def run_plot_de(
     scale_types: list = ["scale2max", "scale2parent"],
-    de_opts: list = ["DE-active", "DE-all"],
+    de_opts: list = ["DE-active"],
     sim_folder: str = "results/simulations",
     vis_folder: str = "results/simulations_vis",
     v_width: int = 400,
