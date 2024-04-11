@@ -436,10 +436,17 @@ class MLDESim(MLDEDataset):
             (self._n_solution, self._n_replicate, self._n_top),
             "".join(["n"] * self.n_site),
         )
+
         self.ndcgs = np.zeros((self._n_solution, self._n_replicate))
         self.rhos = np.zeros(self.ndcgs.shape)
-        self.maxes = np.zeros(self.ndcgs.shape)
-        self.means = np.zeros(self.ndcgs.shape)
+
+        # for all
+        self.all_maxes = np.zeros(self.ndcgs.shape)
+        self.all_means = np.zeros(self.ndcgs.shape)
+
+        # for the top n
+        self.top_maxes = np.zeros(self.ndcgs.shape)
+        self.top_means = np.zeros(self.ndcgs.shape)
 
         self.if_truemaxs = np.zeros(self.ndcgs.shape)
         self.truemax_inds = np.zeros(self.ndcgs.shape)
@@ -465,7 +472,7 @@ class MLDESim(MLDEDataset):
         # init for all the predictions for taking avg over n_splits
         self.y_preds_nsplits = np.zeros((self.df_length, self._n_replicate, self._n_split))
 
-    def train_all(self):
+    def train_all(self) -> dict:
         """
         Loops through all libraries to be sampled from (n_solutions) and
         for each solution trains n_subsets of models.
@@ -536,9 +543,12 @@ class MLDESim(MLDEDataset):
                         means = np.mean(self.y_preds_nsplits, axis=2)
                         y_preds = means[:, j]
 
+                        self.all_maxes[k, j] = np.max(y_preds)
+                        self.all_means[k, j] = np.mean(y_preds)
+
                         (
-                            self.maxes[k, j],
-                            self.means[k, j],
+                            self.top_maxes[k, j],
+                            self.top_means[k, j],
                             self.if_truemaxs[k, j],
                             self.truemax_inds[k, j],
                             self.top_seqs[k, j, :],
@@ -555,20 +565,22 @@ class MLDESim(MLDEDataset):
 
         pbar.close
 
-        return (
-            self.maxes,
-            self.means,
-            self.ndcgs,
-            self.rhos,
-            self.if_truemaxs,
-            self.truemax_inds,
-            self.top_seqs,
-            self.unique,
-            self.labelled,
-            self.y_preds,
-            self.y_trues,
-        )
-
+        return {
+            "all_maxes": self.all_maxes,
+            "all_means": self.all_means,
+            "ndcgs": self.ndcgs,
+            "rhos": self.rhos,
+            "if_truemaxs": self.if_truemaxs,
+            "truemax_inds": self.truemax_inds,
+            "top_maxes": self.top_maxes,
+            "top_means": self.top_means,
+            "top_seqs": self.top_seqs,
+            "unique": self.unique,
+            "labelled": self.labelled,
+            "y_preds": self.y_preds,
+            "y_trues": self.y_trues,
+        }
+            
     def train_single(
         self,
         X_train: np.ndarray,
@@ -619,8 +631,7 @@ class MLDESim(MLDEDataset):
         ##optionally filter out the sequences in the training set
         # data2 = data2[~data2['AAs'].isin(unique_seqs)]
 
-
-        df_sorted = df.sort_values(by=["y_preds"], ascending=False)
+        df_sorted = df.sort_values(by=["y_preds"], ascending=False).reset_index(drop=True)
 
         top_fit = df_sorted.iloc[: self._n_top, :]["fitness"]
         max_fit = np.max(top_fit)
@@ -726,8 +737,10 @@ def run_mlde_lite(
         )
     )
     all_rhos = np.zeros(all_ndcgs.shape)
-    all_maxes = np.zeros(all_ndcgs.shape)
-    all_means = np.zeros(all_ndcgs.shape)
+    all_all_maxes = np.zeros(all_ndcgs.shape)
+    all_all_means = np.zeros(all_ndcgs.shape)
+    all_top_maxes = np.zeros(all_ndcgs.shape)
+    all_top_means = np.zeros(all_ndcgs.shape)
     all_unique = np.zeros(all_ndcgs.shape)
     all_labelled = np.zeros(all_ndcgs.shape)
     all_if_truemaxs = np.zeros(all_ndcgs.shape)
@@ -791,52 +804,48 @@ def run_mlde_lite(
                     save_path=save_dir,
                 )
 
-                (
-                    maxes,
-                    means,
-                    ndcgs,
-                    rhos,
-                    if_truemaxs,
-                    truemax_inds,
-                    top_seqs,
-                    unique,
-                    labelled,
-                    y_preds,
-                    y_trues,
-                ) = mlde_sim.train_all()
+                mlde_sim_dict = mlde_sim.train_all()
 
-                all_maxes[i, j, k, :, :] = pad_to_shape(
-                    maxes, (len(ft_libs), n_replicate)
+                all_all_maxes[i, j, k, :, :] = pad_to_shape(
+                    mlde_sim_dict["all_maxes"], (len(ft_libs), n_replicate)
                 )
-                all_means[i, j, k, :, :] = pad_to_shape(
-                    means, (len(ft_libs), n_replicate)
+                all_all_means[i, j, k, :, :] = pad_to_shape(
+                    mlde_sim_dict["all_means"], (len(ft_libs), n_replicate)
                 )
                 all_ndcgs[i, j, k, :, :] = pad_to_shape(
-                    ndcgs, (len(ft_libs), n_replicate)
+                    mlde_sim_dict["ndcgs"], (len(ft_libs), n_replicate)
                 )
                 all_rhos[i, j, k, :, :] = pad_to_shape(
-                    rhos, (len(ft_libs), n_replicate)
+                    mlde_sim_dict["rhos"], (len(ft_libs), n_replicate)
                 )
+                
                 all_if_truemaxs[i, j, k, :, :] = pad_to_shape(
-                    if_truemaxs, (len(ft_libs), n_replicate)
+                    mlde_sim_dict["if_truemaxs"], (len(ft_libs), n_replicate)
                 )
                 all_truemax_inds[i, j, k, :, :] = pad_to_shape(
-                    truemax_inds, (len(ft_libs), n_replicate)
+                    mlde_sim_dict["truemax_inds"], (len(ft_libs), n_replicate)
+                )
+
+                all_top_maxes[i, j, k, :, :] = pad_to_shape(
+                    mlde_sim_dict["top_maxes"], (len(ft_libs), n_replicate)
+                )
+                all_top_means[i, j, k, :, :] = pad_to_shape(
+                    mlde_sim_dict["top_means"], (len(ft_libs), n_replicate)
                 )
                 all_top_seqs[i, j, k, :, :, :] = pad_to_shape(
-                    top_seqs, (len(ft_libs), n_replicate, n_top)
+                    mlde_sim_dict["top_seqs"], (len(ft_libs), n_replicate, n_top)
                 )
                 all_unique[i, j, k, :, :] = pad_to_shape(
-                    unique, (len(ft_libs), n_replicate)
+                    mlde_sim_dict["unique"], (len(ft_libs), n_replicate)
                 )
                 all_labelled[i, j, k, :, :] = pad_to_shape(
-                    labelled, (len(ft_libs), n_replicate)
+                    mlde_sim_dict["labelled"], (len(ft_libs), n_replicate)
                 )
                 all_y_preds[i, j, k, :, :, :] = pad_to_shape(
-                    y_preds, (len(ft_libs), n_replicate, mlde_sim.len_filtered_df)
+                    mlde_sim_dict["y_preds"], (len(ft_libs), n_replicate, mlde_sim.len_filtered_df)
                 )
                 all_y_trues[i, j, k, :, :, :] = pad_to_shape(
-                    y_trues, (len(ft_libs), n_replicate, mlde_sim.len_filtered_df)
+                    mlde_sim_dict["y_trues"], (len(ft_libs), n_replicate, mlde_sim.len_filtered_df)
                 )
 
                 end = time.time()
@@ -875,12 +884,14 @@ def run_mlde_lite(
 
     (
         mlde_results["config"],
-        mlde_results["maxes"],
-        mlde_results["means"],
+        mlde_results["all_maxes"],
+        mlde_results["all_means"],
         mlde_results["ndcgs"],
         mlde_results["rhos"],
         mlde_results["if_truemaxs"],
         mlde_results["truemax_inds"],
+        mlde_results["top_maxes"],
+        mlde_results["top_means"],
         mlde_results["top_seqs"],
         mlde_results["unique"],
         mlde_results["labelled"],
@@ -888,12 +899,14 @@ def run_mlde_lite(
         mlde_results["y_trues"],
     ) = (
         config_dict,
-        all_maxes,
-        all_means,
+        all_all_maxes,
+        all_all_means,
         all_ndcgs,
         all_rhos,
         all_if_truemaxs,
         all_truemax_inds,
+        all_top_maxes,
+        all_top_means,
         all_top_seqs,
         all_unique,
         all_labelled,

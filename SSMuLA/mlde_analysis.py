@@ -23,10 +23,10 @@ hv.extension("bokeh")
 
 
 DEFAULT_MLDE_METRICS = [
-    "maxes_all",
-    "means_all", 
-    "maxes", # topn
-    "means", # topn
+    "maxes_all", # change to all_maxes
+    "means_all", # change to all_means
+    "maxes",  # topn
+    "means",  # topn
     "ndcgs",
     "rhos",
     "if_truemaxs",
@@ -35,7 +35,250 @@ DEFAULT_MLDE_METRICS = [
 
 
 class MLDEParser:
-    """A class for parsing EACH mlde result npy file"""
+    """
+    A class for parsing EACH mlde result npy file with indexing
+    """
+
+    def __init__(
+        self, mlde_npy_path: str, mlde_results_dir: str = "results/mlde/saved"
+    ):
+
+        """
+        Args:
+        - mlde_npy: str, the path to the mlde npy file
+            ie. 'results/mlde/saved/none/none-double/scale2max/GB1/one-hot_boosting|ridge_sample384_top96.npy'
+        - mlde_results_dir: str, the directory where the mlde results are saved
+
+        Note:
+
+        {'data_config': {'input_csv': 'results/zs_comb/none/scale2max/all/GB1.csv',
+            'zs_predictor': 'none',
+            'encoding': ['one-hot'],
+            'ft_libs': [149361],
+            'scale_fit': 'max',
+            'filter_min_by': 'none',
+            'n_mut_cutoff': 2},
+            'model_config': {'model_classes': ['boosting', 'ridge']},
+            'train_config': {'n_sample': [384],
+            'n_splits': 5,
+            'n_replicate': 100,
+            'n_worker': 1,
+            'global_seed': 42,
+            'verbose': False,
+            'save_model': False},
+            'eval_config': {'n_top': 96}}
+        """
+
+        self._mlde_npy_path = mlde_npy_path
+        self._mlde_results_dir = mlde_results_dir
+
+        # get all npy keys as properties
+        # should be
+        # [
+        #  'config',
+        #  'maxes',
+        #  'means',
+        #  'ndcgs',
+        #  'rhos',
+        #  'if_truemaxa',
+        #  'truemax_inds',
+        #  'top_seqs',
+        #  'unique',
+        #  'labelled',
+        #  'y_preds',
+        #  'y_trues',
+        # ]
+
+        for attr, val in self.npy_item.items():
+            setattr(self, attr, val)
+
+        # TODO CLEAN UP WITH NEW MLDE
+        if not hasattr(self, "maxes_all"):
+            setattr(self, "maxes_all", np.max(self.y_preds, axis=-1))
+
+        if not hasattr(self, "means_all"):
+            setattr(self, "means_all", np.mean(self.y_preds, axis=-1))
+
+        if not hasattr(self, "config"):
+            print(f"no config found for {self._mlde_npy_path}")
+            pass
+
+        # set all config_dict keys as properties
+        # should be ['data_config', 'model_config', 'train_config', 'eval_config']
+        for attr, val in self.config.items():
+            setattr(self, attr, val)
+            for k, v in val.items():
+                setattr(self, k, v)
+                if isinstance(v, list):
+                    setattr(self, f"{k}_len", len(v))
+
+        if not hasattr(self, "max_fit_seq"):
+            setattr(
+                self,
+                "max_fit_seq",
+                self.filtered_df.loc[self.filtered_df["fitness"].idxmax()]["AAs"],
+            )
+
+        if not hasattr(self, "if_truemaxs"):
+            setattr(
+                self,
+                "if_truemaxs",
+                np.any(self.top_seqs == self.max_fit_seq, axis=-1).astype(int),
+            )
+
+
+        # TODO FIX truemax_inds
+        # if not hasattr(self, "truemax_inds"):
+        # init with nan
+        truemax_inds = np.full(self.top_seqs.shape[:-1], np.nan)
+
+        # Iterate over all possible indices of the first 5 dimensions
+        for i in range(self.top_seqs.shape[0]):
+            for j in range(self.top_seqs.shape[1]):
+                for k in range(self.top_seqs.shape[2]):
+                    for n in range(self.top_seqs.shape[3]):
+                        for m in range(self.top_seqs.shape[4]):
+                            # Find the index in the last dimension where the element is max_fit_seq
+                            match_indices = np.where(self.top_seqs[i, j, k, n, m] == self.max_fit_seq)[0]
+                            if match_indices.size > 0:
+                                # If there is at least one match, take the first one
+                                truemax_inds[i, j, k, n, m] = match_indices[0]
+        setattr(
+            self, "truemax_inds", truemax_inds
+        )
+
+        # TODO:
+        # in the process of transfering all ZS to all, double, single folder
+
+        if "all" not in self.input_csv:
+            self.input_csv = os.path.join(
+                os.path.dirname(self.input_csv), "all", os.path.basename(self.input_csv)
+            )
+
+        self._metric_df = self._get_metric_df()
+
+    def _get_metric_df(self) -> pd.DataFrame:
+        """Return the metric df"""
+
+        # set up df for all metrics
+        metric_df = pd.DataFrame()
+
+        # Fill the DataFrame using nested loops
+        for i, encoding in enumerate(self.encoding):
+            for j, model_class in enumerate(self.model_classes):
+                for k, n_sample in enumerate(self.n_sample):
+                    for n, ft_lib in enumerate(self.ft_libs):
+                        for m in range(self.n_replicate):  # Replicate index
+                            row = {
+                                "encoding": encoding,
+                                "model": model_class,
+                                "n_sample": n_sample,
+                                "ft_lib": ft_lib,
+                                "rep": m,
+                            }
+                            # Adding metric values to the row
+                            for metric in DEFAULT_MLDE_METRICS:
+                                row[metric] = getattr(self, metric)[i, j, k, n, m]
+                            # Append the row to the DataFrame
+                            metric_df = metric_df._append(row, ignore_index=True)
+
+        # add other details as additional columns
+        metric_df["n_mut_cutoff"] = n_mut_cutoff_dict[self.n_mut_cutoff]
+        metric_df["lib"] = get_file_name(self.input_csv)
+        metric_df["zs"] = self.zs_predictor
+        metric_df["n_top"] = self.n_top
+
+        return metric_df
+
+    @property
+    def npy_item(self) -> dict:
+        """Return the npy item"""
+        return np.load(self._mlde_npy_path, allow_pickle=True).item()
+
+    @property
+    def npy_item_keys(self) -> list[str]:
+        """Return the keys of the npy item"""
+        return deepcopy(list(self.npy_item.keys()))
+
+    @property
+    def output_shape(self) -> tuple:
+
+        """
+        Return the shape of the output for
+        maxes, means, ndcgs, rhos, true_max, unique, and labelled
+
+            len(encodings),
+            len(model_classes),
+            len(n_samples),
+            len(ft_libs),
+            n_replicate,
+        """
+
+        return (
+            self.encoding_len,
+            self.model_classes_len,
+            self.n_sample_len,
+            self.ft_libs_len,
+            self.n_replicate,
+        )
+
+    @property
+    def top_seq_output_shape(self) -> tuple:
+
+        """
+        Return the shape of the output for top_seqs
+
+            len(encodings),
+            len(model_classes),
+            len(n_samples),
+            len(ft_libs),
+            n_replicate,
+            n_top,
+        """
+
+        return (
+            self.encoding_len,
+            self.model_classes_len,
+            self.n_sample_len,
+            self.ft_libs_len,
+            self.n_replicate,
+            self.n_top,
+        )
+
+    @property
+    def metric_df(self) -> pd.DataFrame:
+        """Return the metric df"""
+        return self._metric_df
+
+    @property
+    def input_df(self) -> str:
+        """Return the input csv"""
+        return pd.read_csv(self.input_csv)
+
+    @property
+    def filtered_df(self) -> pd.DataFrame:
+        """Return the filtered df"""
+        # make sure no stop codon
+        df = self.input_df[~self.input_df["AAs"].str.contains("\*")].copy()
+
+        if self.filter_min_by in ["none", "", None]:
+            return df.copy()
+        elif self.filter_min_by == "active":
+            return df[df["active"]].copy()
+        elif self.filter_min_by == "0":
+            return df[df["fitness"] >= 0].copy()
+        elif self.filter_min_by == "min0":
+            df["fitness"] = df["fitness"].apply(lambda x: max(0, x))
+            return df.copy()
+        else:
+            print(f"{self.filter_min_by} not valid -> no filter beyond no stop codon")
+            return df.copy()
+
+
+class MLDEParserIndex:
+    """
+    A class for parsing EACH mlde result npy file with indexing
+    """
 
     def __init__(
         self, mlde_npy_path: str, mlde_results_dir: str = "results/mlde/saved"
@@ -92,10 +335,10 @@ class MLDEParser:
         # TODO CLEAN UP WITH NEW MLDE
         if not hasattr(self, "maxes_all"):
             setattr(self, "maxes_all", np.max(self.y_preds, axis=-1))
-        
+
         if not hasattr(self, "means_all"):
             setattr(self, "means_all", np.mean(self.y_preds, axis=-1))
-        
+
         if not hasattr(self, "config"):
             print(f"no config found for {self._mlde_npy_path}")
             pass
@@ -110,22 +353,23 @@ class MLDEParser:
                     setattr(self, f"{k}_len", len(v))
 
         if not hasattr(self, "max_fit_seq"):
-            setattr(self, 
-                "max_fit_seq", 
-                self.filtered_df.loc[self.filtered_df["fitness"].idxmax()]["AAs"]
-                )
+            setattr(
+                self,
+                "max_fit_seq",
+                self.filtered_df.loc[self.filtered_df["fitness"].idxmax()]["AAs"],
+            )
 
         if not hasattr(self, "if_truemaxs"):
-            setattr(self, 
-                "if_truemaxs", 
-                np.any(self.top_seqs == self.max_fit_seq, axis=-1).astype(int)
-                )
+            setattr(
+                self,
+                "if_truemaxs",
+                np.any(self.top_seqs == self.max_fit_seq, axis=-1).astype(int),
+            )
 
         if not hasattr(self, "truemax_inds"):
-            setattr(self, 
-                "truemax_inds", 
-                np.where(self.top_seqs == self.max_fit_seq)[1]
-                )
+            setattr(
+                self, "truemax_inds", np.where(self.top_seqs == self.max_fit_seq)[1]
+            )
 
         # TODO:
         # in the process of transfering all ZS to all, double, single folder
