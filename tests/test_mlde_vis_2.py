@@ -28,8 +28,8 @@ if __name__ == "__main__":
     # )
 
     MLDEVis(
-        mlde_results_dir = "results/mlde_old/saved",
-        mlde_vis_dir = "results/mlde_old/vis"
+        mlde_results_dir = "results/mlde/saved",
+        mlde_vis_dir = "results/mlde/vis_2"
     )
 
     f.close()

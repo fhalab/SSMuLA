@@ -23,10 +23,10 @@ hv.extension("bokeh")
 
 
 DEFAULT_MLDE_METRICS = [
-    "maxes_all", # change to all_maxes
-    "means_all", # change to all_means
-    "maxes",  # topn
-    "means",  # topn
+    "all_maxes", # change to all_maxes
+    "all_means", # change to all_means
+    "top_maxes",  # topn
+    "top_means",  # topn
     "ndcgs",
     "rhos",
     "if_truemaxs",
