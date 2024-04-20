@@ -919,7 +919,7 @@ def run_mlde_lite(
         save_dir, f"{comb_exp_dets}_sample{str(n_sample)}_top{str(n_top)}.npy"
     )
     print(f"Saving {np_path}...")
-    np.save(np_path, mlde_results)
+    np.save(np_path, mlde_results, allow_pickle=True)
 
     # Delete the variable
     del mlde_results
@@ -1042,9 +1042,13 @@ def run_all_mlde_parallelized(
     tasks = []
 
     # Iterate over each combination of parameters to create tasks
-    for input_csv in sorted(
-        glob(f"{os.path.normpath(zs_folder)}/{filter_min_by}/{scale_type}/all/*.csv")
-    ):
+    # for input_csv in sorted(
+    #     glob(f"{os.path.normpath(zs_folder)}/{filter_min_by}/{scale_type}/all/*.csv")
+    # ):
+    for input_csv in [
+        "results/zs_comb/none/scale2max/all/GB1.csv", 
+        "results/zs_comb/none/scale2max/all/TrpB4.csv"
+    ]:
         for n_mut_cutoff in n_mut_cutoffs:
             for zs_predictor in zs_predictors:
                 # Determine feature libraries based on the predictor

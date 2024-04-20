@@ -116,17 +116,18 @@ class ZS_Analysis(LibData):
             print(f"number of nan in {self.lib_name} {zs}: {np.sum(np.isnan(df[zs]))}")
 
             df = df.dropna(subset=[zs])
-            y_true = df["active"].values
+            y_true_active = df["active"].values
+            y_true_fitness = df["fitness"].values
             y_score = df[zs].values
 
             # calc rho and ndcg
-            zs_coord_dict[zs]["rho"] = spearmanr(y_true, y_score)[0]
-            zs_coord_dict[zs]["ndcg"] = ndcg_scale(y_true, y_score)
+            zs_coord_dict[zs]["rho"] = spearmanr(y_true_fitness, y_score)[0]
+            zs_coord_dict[zs]["ndcg"] = ndcg_scale(y_true_fitness, y_score)
 
             # roc curves
             roc_name = f"{self.lib_name} active variant zero-shot predictor ROC curves"
 
-            fpr, tpr, _ = roc_curve(y_true, y_score, pos_label=True)
+            fpr, tpr, _ = roc_curve(y_true_active, y_score, pos_label=True)
             temp = pd.DataFrame({"False Positive Rate": fpr, "True Positive Rate": tpr})
 
             roc_plots.append(

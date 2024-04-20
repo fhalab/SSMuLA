@@ -126,26 +126,25 @@ class MLDEParser:
                 np.any(self.top_seqs == self.max_fit_seq, axis=-1).astype(int),
             )
 
+        if not hasattr(self, "truemax_inds"):
+            
+            # init with nan
+            truemax_inds = np.full(self.top_seqs.shape[:-1], np.nan)
 
-        # TODO FIX truemax_inds
-        # if not hasattr(self, "truemax_inds"):
-        # init with nan
-        truemax_inds = np.full(self.top_seqs.shape[:-1], np.nan)
-
-        # Iterate over all possible indices of the first 5 dimensions
-        for i in range(self.top_seqs.shape[0]):
-            for j in range(self.top_seqs.shape[1]):
-                for k in range(self.top_seqs.shape[2]):
-                    for n in range(self.top_seqs.shape[3]):
-                        for m in range(self.top_seqs.shape[4]):
-                            # Find the index in the last dimension where the element is max_fit_seq
-                            match_indices = np.where(self.top_seqs[i, j, k, n, m] == self.max_fit_seq)[0]
-                            if match_indices.size > 0:
-                                # If there is at least one match, take the first one
-                                truemax_inds[i, j, k, n, m] = match_indices[0]
-        setattr(
-            self, "truemax_inds", truemax_inds
-        )
+            # Iterate over all possible indices of the first 5 dimensions
+            for i in range(self.top_seqs.shape[0]):
+                for j in range(self.top_seqs.shape[1]):
+                    for k in range(self.top_seqs.shape[2]):
+                        for n in range(self.top_seqs.shape[3]):
+                            for m in range(self.top_seqs.shape[4]):
+                                # Find the index in the last dimension where the element is max_fit_seq
+                                match_indices = np.where(self.top_seqs[i, j, k, n, m] == self.max_fit_seq)[0]
+                                if match_indices.size > 0:
+                                    # If there is at least one match, take the first one
+                                    truemax_inds[i, j, k, n, m] = match_indices[0]
+            setattr(
+                self, "truemax_inds", truemax_inds
+            )
 
         # TODO:
         # in the process of transfering all ZS to all, double, single folder
@@ -614,12 +613,14 @@ class MLDEVis:
         )
         models = self._all_df["model"].unique()
         n_tops = self._all_df["n_top"].unique()
+        n_samples = self._all_df["n_sample"].unique()
 
         with tqdm() as pbar:
             pbar.reset(
                 len(ZS_OPTS_LEGEND)
                 * len(encoding_lists)
                 * len(models)
+                * len(n_samples)
                 * len(n_tops)
                 * len(DEFAULT_MLDE_METRICS)
             )
@@ -634,19 +635,20 @@ class MLDEVis:
                     zs_subfolder = checkNgen_folder(os.path.join(metric_subfolder, zs))
 
                     for encoding_list in encoding_lists:
-                        print(encoding_list)
                         for model in models:
-                            for n_top in n_tops:
+                            for n_sample in n_samples:
+                                for n_top in n_tops:
 
-                                self.zs_encode_model_ntop_metirc(
-                                    zs,
-                                    encoding_list,
-                                    model,
-                                    n_top,
-                                    metric,
-                                    zs_subfolder,
-                                )
-                                pbar.update()
+                                    self.zs_encode_model_ntop_metirc(
+                                        zs,
+                                        encoding_list,
+                                        model,
+                                        n_sample,
+                                        n_top,
+                                        metric,
+                                        zs_subfolder,
+                                    )
+                                    pbar.update()
 
             pbar.close()
 
@@ -655,6 +657,7 @@ class MLDEVis:
         zs: str,
         encoding_list: list[str],
         model: str,
+        n_sample: int,
         n_top: int,
         metric: str,
         plot_path: str,
@@ -669,7 +672,7 @@ class MLDEVis:
         else:
             encoding = encoding_list[0]
 
-        plot_name = f"{ZS_OPTS_LEGEND[zs]} {encoding} {model} {n_top} {metric}"
+        plot_name = "{} {} {} {} sample top {} {}".format(ZS_OPTS_LEGEND[zs], encoding, model, n_sample, n_top, metric)
 
         save_bokeh_hv(
             hv.Violin(
@@ -677,6 +680,7 @@ class MLDEVis:
                     (self._all_df["zs"] == zs)
                     & (self._all_df["encoding"].isin(encoding_list))
                     & (self._all_df["model"] == model)
+                    & (self._all_df["n_sample"] == n_sample)
                     & (self._all_df["n_top"] == n_top)
                 ]
                 .sort_values(["lib", "n_mut_cutoff"], ascending=[True, False])

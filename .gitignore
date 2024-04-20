@@ -3,6 +3,10 @@ data
 data/
 data/*
 
+add_data
+add_data/
+add_data/*
+
 results
 results/
 results/*

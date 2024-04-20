@@ -21,23 +21,44 @@ if __name__ == "__main__":
     )
     sys.stdout = f
 
-    run_all_mlde_parallelized(
-        encodings=["one-hot"],
-        n_mut_cutoffs=[0, 2, 1],
-        zs_predictors=["none"],
-        n_samples=[96, 192, 288, 480, 576],
-        n_replicate=50,
-        n_job=96,
-    )
+    # run_all_mlde_parallelized(
+    #     encodings=["one-hot"],
+    #     n_mut_cutoffs=[0, 2, 1],
+    #     zs_predictors=["none"],
+    #     n_samples=[96, 192, 288, 480, 576],
+    #     n_replicate=50,
+    #     n_job=96,
+    # )
+
+    # run_all_mlde_parallelized(
+    #     encodings=["one-hot"],
+    #     n_mut_cutoffs=[0, 2, 1],
+    #     zs_predictors=["Triad", "ev", "esm"],
+    #     n_samples=[96, 192, 288, 480, 576],
+    #     n_replicate=50,
+    #     n_job=96,
+    # )
+
+
+
+    # run_all_mlde_parallelized(
+    #     encodings=DEFAULT_LEARNED_EMB_COMBO,
+    #     n_mut_cutoffs=[0, 2, 1],
+    #     zs_predictors=["none"],
+    #     n_samples=[96, 192, 288, 480, 576],
+    #     n_replicate=50,
+    #     n_job=256,
+    # )
 
     run_all_mlde_parallelized(
-        encodings=["one-hot"],
+        encodings=DEFAULT_LEARNED_EMB_COMBO,
         n_mut_cutoffs=[0, 2, 1],
         zs_predictors=["Triad", "ev", "esm"],
         n_samples=[96, 192, 288, 480, 576],
         n_replicate=50,
-        n_job=96,
+        n_job=256,
     )
+
 
 
     # run_all_mlde_parallelized(
