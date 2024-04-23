@@ -55,24 +55,33 @@ def de_sum_hook(plot, element):
 class SumVis:
     """A class to visualize the summary of simulations."""
 
-    def __init__(self, input_csv) -> None:
+    def __init__(self, input_csv: str, output_folder: str = "") -> None:
 
         """
         Args:
         - input_csv: str, The input csv file path for the summary df
+        - output_folder: str, The output folder for the plots
         """
 
         self._input_csv = input_csv
+        self._output_folder = output_folder
 
+    @property
+    def input_csv(self):
+        return self._input_csv
+    
     @property
     def input_df(self):
         return pd.read_csv(self._input_csv)
 
     @property
     def output_folder(self):
-        return checkNgen_folder(
-            os.path.join(os.path.dirname(self._input_csv), "summary")
-        )
+        if self._output_folder == "":
+            return checkNgen_folder(
+                os.path.join(os.path.dirname(self._input_csv), "summary")
+            )
+        else:
+            return checkNgen_folder(self._output_folder)
 
 
 class DESumVis(SumVis):
@@ -80,15 +89,18 @@ class DESumVis(SumVis):
 
     def __init__(
         self,
-        input_csv="results/simulations/DE-active/scale2max/all_landscape_de_summary.csv",
+        input_csv: str = "results/simulations/DE-active/scale2max/all_landscape_de_summary.csv",
+        output_folder: str = ""
     ) -> None:
 
         """
         Args:
         - input_csv: str, The input csv file path for the summary df
+            ie 'results/simulations/DE-active/scale2max/all_landscape_de_summary.csv'
+        - output_folder: str, The output folder for the plots
         """
 
-        super().__init__(input_csv)
+        super().__init__(input_csv, output_folder)
 
         for metric, metric_dets in DE_METRIC_MAP.items():
 
@@ -137,7 +149,7 @@ class DESumVis(SumVis):
         df["mean_top384"] = df["mean_top384"].fillna(df["mean_top96"])
         df["median_top384"] = df["median_top384"].fillna(df["median_top96"])
 
-        return self.df
+        return df
 
 
 class ZSSSumVis(SumVis):
@@ -146,13 +158,17 @@ class ZSSSumVis(SumVis):
     def __init__(
         self,
         input_csv="results/zs_sum/none/zs_stat_scale2max.csv",
+        output_folder="",
     ) -> None:
 
         """
         Args:
         - input_csv: str, The input csv file path for the summary df
             ie 'results/zs_sum/none/zs_stat_scale2max.csv'
+        - output_folder: str, The output folder for the plots
         """
+
+        super().__init__(input_csv, output_folder)
 
         self._zs_df = self._get_zs_df()
  
@@ -285,7 +301,7 @@ class ZSSSumVis(SumVis):
         Return the directory of the ZS simulations.
             ie 'results/zs_sum/none/'
         """
-        return os.path.dirname(self._input_csv)
+        return os.path.dirname(self.input_csv)
 
     @property
     def zs_dets(self):
@@ -293,7 +309,7 @@ class ZSSSumVis(SumVis):
         Return the details of the ZS simulations.
             ie 'zs_stat_scale2max'
         """
-        return get_file_name(self._input_csv)
+        return get_file_name(self.input_csv)
 
     @property
     def zs_df(self):
