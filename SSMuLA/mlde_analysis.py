@@ -186,6 +186,7 @@ class MLDEParser:
         metric_df["lib"] = get_file_name(self.input_csv)
         metric_df["zs"] = self.zs_predictor
         metric_df["n_top"] = self.n_top
+        metric_df["scale_fit"] = self.scale_fit
 
         return metric_df
 
