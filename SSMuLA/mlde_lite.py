@@ -915,8 +915,10 @@ def run_mlde_lite(
     )
 
     comb_exp_dets = "|".join(encodings) + "_" + "|".join(model_classes)
+    sample_dets = "|".join([str(n) for n in n_samples])
+    comb_full_dets = f"{comb_exp_dets}_sample{sample_dets}_top{str(n_top)}"
     np_path = os.path.join(
-        save_dir, f"{comb_exp_dets}_sample{str(n_sample)}_top{str(n_top)}.npy"
+        save_dir, f"{comb_full_dets}.npy"
     )
     print(f"Saving {np_path}...")
     np.save(np_path, mlde_results, allow_pickle=True)
@@ -925,7 +927,7 @@ def run_mlde_lite(
     del mlde_results
 
     config_path = os.path.join(
-        config_folder, f"{comb_exp_dets}_{exp_name}_{n_top}.json"
+        config_folder, f"{comb_full_dets}.json"
     )
 
     # Record JSON config file
