@@ -86,14 +86,20 @@ class LocOpt:
         self._loc_opt_df = self._find_loc_opt()
 
         self._hd2_escape_df, self._loc_opt_escape_df = self._append_escape()
+        print("after append escape")
+        print(self._hd2_escape_df.head(), len(self._hd2_escape_df))
+        print(self._loc_opt_escape_df.head(), len(self._loc_opt_escape_df))
 
         self._merged_escape_df = pd.merge(
             self.hd2_escape_df, self.loc_opt_escape_df, on="AAs"
         )
+        print("after merge")
 
         # do the plottings
         self._loc_opt_scatter = self._plot_loc_opt()
+        print("after plot loc opt")
         self._escape_hist = self._plot_escape()
+        print("after plot escape")
 
         print("Calculating and analyzing local optima for {}...".format(self.lib_name))
         print(
@@ -469,11 +475,11 @@ def run_loc_opt(
             ignore_index=True,
         )
 
-    # Delete the variable
-    del opt_class
+        # Delete the variable
+        del opt_class
 
-    # Manually run the garbage collector to free up the memory
-    gc.collect()
+        # Manually run the garbage collector to free up the memory
+        gc.collect()
 
     summary_df_path = os.path.join(output_folder, f"{fitness_process_type}.csv")
 
