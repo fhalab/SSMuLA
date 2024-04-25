@@ -15,12 +15,12 @@ import pandas as pd
 
 import holoviews as hv
 
-hv.extension("bokeh")
 
 from SSMuLA.landscape_global import LIB_INFO_DICT, make_new_sequence, hamming
 from SSMuLA.vis import save_bokeh_hv, JSON_THEME
 from SSMuLA.util import get_file_name, checkNgen_folder
 
+hv.extension("bokeh")
 hv.renderer("bokeh").theme = JSON_THEME
 
 
@@ -50,12 +50,13 @@ def determine_optima(active_variant: str, df: pd.DataFrame, fit_col: str) -> int
         ]
         .sort_values(fit_col, ascending=False)
         .reset_index(drop=True)
-        .copy()
     )
 
     # determine the rank of the active variant or
     # how many variants are more active than it (0 is the best)
     variant_rank = temp[temp["AAs"] == active_variant].index[0]
+
+    del temp
 
     return variant_rank
 
@@ -84,10 +85,11 @@ class LocOpt:
         self._n_jobs = n_jobs
 
         self._loc_opt_df = self._find_loc_opt()
+        print("after find loc opt")
 
         self._hd2_escape_df, self._loc_opt_escape_df = self._append_escape()
         print("after append escape")
-        print(self._hd2_escape_df.head(), len(self._hd2_escape_df))
+        print(self._hd2_escape_df.head())
         print(self._loc_opt_escape_df.head(), len(self._loc_opt_escape_df))
 
         self._merged_escape_df = pd.merge(
@@ -135,7 +137,7 @@ class LocOpt:
         )
 
         # save the merged loc opt with escape data
-        self.merged_escape_df.to_csv(
+        self._merged_escape_df.to_csv(
             os.path.join(self._output_folder, f"{self.lib_name}_loc_opt_escape.csv"),
             index=False,
         )
@@ -162,7 +164,7 @@ class LocOpt:
         # Convert this data to a dataframe and
         # merge it with the original data to get the fitness information
         temp = pd.merge(
-            self.df.copy(),
+            self.df,
             pd.DataFrame(find_optima_dict, index=["n_greater"])
             .T.sort_values("n_greater", ascending=False)
             .reset_index()
@@ -170,7 +172,9 @@ class LocOpt:
         )
 
         # Get the local optima by finding the variants where no single mutant is more fit
-        loc_opt_df = temp[temp["n_greater"] == 0].reset_index(drop=True).copy()
+        loc_opt_df = temp[temp["n_greater"] == 0].reset_index(drop=True)
+
+        del temp
         return loc_opt_df.sort_values("fitness", ascending=False).reset_index(drop=True)
 
     def _append_escape(self) -> pd.DataFrame:
@@ -181,7 +185,7 @@ class LocOpt:
         double_site_escape = {}
 
         # Loop through the optima
-        for opt_variant in tqdm(self.loc_opt_df["AAs"].values):
+        for opt_variant in tqdm(self._loc_opt_df["AAs"].values):
 
             # slice out the variant and all the variants at hamming distance 2.
             # Then sort the dataframe by descending fitness
@@ -202,9 +206,11 @@ class LocOpt:
             # This time save the entire DataFrame for some downstream analyses
             double_site_escape[opt_variant] = temp
 
-        # merge the data with the TrpB_data to get the fitness information
+            del temp
+
+        # merge the data with the original to get the fitness information
         hd2_escape_df = pd.merge(
-            self.df.copy(),
+            self.df,
             pd.DataFrame(find_hd2_escape, index=["n_escape"])
             .T.sort_values("n_escape", ascending=False)
             .reset_index()
@@ -217,7 +223,7 @@ class LocOpt:
         result_dict = {}
 
         # for every local optima
-        for var_of_interest in tqdm(self.loc_opt_df["AAs"].values):
+        for var_of_interest in tqdm(self._loc_opt_df["AAs"].values):
 
             # Get the dataframe for that variant
             result_dict[var_of_interest] = {}
@@ -236,6 +242,8 @@ class LocOpt:
 
                 # save the number of mutants for that pair that escape
                 result_dict[var_of_interest][(position1, position2)] = len(_temp)
+
+            del temp
 
         # Convert these results to a DataFrame
         loc_opt_escape = pd.DataFrame(result_dict).T
@@ -264,7 +272,7 @@ class LocOpt:
         title = f"{self.lib_name} local optima"
 
         # add a column for rank
-        temp = self.loc_opt_df.copy()
+        temp = self._loc_opt_df
         temp["rank"] = temp["fitness"].rank(ascending=False)
 
         fig = (
