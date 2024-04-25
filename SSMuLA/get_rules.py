@@ -94,9 +94,9 @@ for de_type in de_types:
         if de_df_col not in ["lib", "de_type"]:
             sliced_de_df = sliced_de_df.rename(
                 columns={de_df_col: f"{de_type}_{de_df_col}"}
-            ).drop(["de_type"], axis=1)
+            )
 
-    de_df_concat = pd.merge(de_df_concat, sliced_de_df, on="lib")
+    de_df_concat = pd.merge(de_df_concat, sliced_de_df.drop(["de_type"], axis=1), on="lib")
 
 
 ########## mlde stat ##########
@@ -175,3 +175,5 @@ simple_merge_pw = pd.merge(simple_merge, df_pw, on="lib")
 
 simple_merge_pw["norm_non-magnitude"] = simple_merge_pw["fraction_non-magnitude"] * simple_merge_pw["percent_active"]
 simple_merge_pw["norm_reciprocal-sign"] = simple_merge_pw["fraction_reciprocal-sign"] * simple_merge_pw["percent_active"]
+simple_merge_pw["delta_ft_mlde"] = np.maximum(simple_merge_pw["maxes_ev"], simple_merge_pw["maxes_Triad"]) - simple_merge_pw["top_maxes"]
+simple_merge_pw["delta_ft_de"] = np.maximum(simple_merge_pw["maxes_ev"], simple_merge_pw["maxes_Triad"]) - simple_merge_pw["recomb_SSM_mean_all"]
