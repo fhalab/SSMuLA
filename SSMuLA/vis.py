@@ -66,6 +66,7 @@ HM_GREY = "#76777B"
 PRESENTATION_PALETTE_SATURATE = {
     "blue": "#4bacc6",
     "orange": "#f79646ff",
+    "red": "#0000ff",
     "green": "#9bbb59",
     "yellow": "#f9be00",
     "purple": "#8064a2",
@@ -84,6 +85,8 @@ LIB_COLORS = {
         LIB_NAMES,
         [
             PRESENTATION_PALETTE_SATURATE["orange"],
+            PRESENTATION_PALETTE_SATURATE["red"],
+            PRESENTATION_PALETTE_SATURATE["brown"],
             PRESENTATION_PALETTE_SATURATE["yellow"],
         ]
         + sns.color_palette("crest", 9).as_hex()
@@ -91,7 +94,7 @@ LIB_COLORS = {
     )
 }
 
-LIB_COLORS_CODON = {"DHFR": PRESENTATION_PALETTE_SATURATE["brown"]}
+LIB_COLORS_CODON = {"DHFR": "#00faf4"} # light orange
 
 # define plot hooks
 def one_decimal_x(plot, element):

@@ -30,6 +30,7 @@ from SSMuLA.landscape_global import (
     LIB_INFO_DICT,
     LIB_NAMES,
     LibData,
+    ParD_names,
     append_active_cutoff,
     n_mut_cutoff_dict,
 )
@@ -405,6 +406,196 @@ class ProcessDHFR(ProcessData):
         return self.df_avg_aa_scaled[self.df_avg_aa_scaled["AAs"] == self.parent_aa][
             "fitness"
         ].values[0]
+
+
+class ProcessParD(ProcessData):
+    """
+    Class to clean up the ParD data
+    """
+
+    def __init__(
+        self,
+        input_csv: str ,
+        scale_fit: str = "max",
+    ) -> None:
+
+        """
+        Args:
+        - input_csv, str: path to the input csv file
+        - scale_fit, str: ways to scale the fitness
+        """
+
+        super().__init__(input_csv, scale_fit)
+
+        # append the active cutoffs
+        self._df_active_append_scaled, _ = append_active_cutoff(
+            self.df_aa_scaled, ["fitness"], self.active_thresh_scaled
+        )
+
+        # save scaled df
+        self._append_mut(self.df_scale_fit).to_csv(self.output_csv, index=False)
+
+        
+    @property
+    def df_scale_fit(self) -> pd.DataFrame:
+
+        """Scale fitness"""
+
+        df = self.input_df.copy()
+
+        if self._scale_fit == "max":
+            df["fitness"] = df["fitness"] / df["fitness"].max()
+        elif self._scale_fit == "parent":
+            df["fitness"] = df["fitness"] / self.parent_aa_fitness
+        else:
+            raise ValueError("The scale_fit should be parent or max")
+        
+        return df
+
+    @property
+    def scaled_fitness(self) -> pd.Series:
+        """Return the scaled fitness"""
+        return self.df_scale_fit["fitness"]
+
+    @property
+    def parent_aa_fitness(self) -> float:
+        """Return the parent aa fitness"""
+        return self.input_df[self.input_df["AAs"] == self.parent_aa]["fitness"].values[0]
+
+    @property
+    def active_thresh_scaled(self) -> float:
+        """Return the active threshold"""
+        act_fit = ACTIVE_THRESH_DICT[self.protein_name]
+        if self._scale_fit == "max":
+            return act_fit / self.max_fit
+        else:
+            return act_fit
+
+    
+
+class PlotParD:
+    """
+    Plot ParD fitness landscape
+    """
+
+    def __init__(
+        self,
+        folder: str = "data/ParD/fitness_landscape",
+        scale_fit: str = "max",
+        codon_aa: str = "AA",
+    ) -> None:
+
+        """
+        Args:
+        - folder, str: path to the folder containing the fitness landscapes
+        - scale_fit, str: ways to scale the fitness
+        - codon_aa, str: whether to scale the fitness to codon or amino acid
+        """
+
+        self._folder = os.path.normpath(folder)
+        self._scale_fit = scale_fit
+        self._codon_aa = codon_aa
+
+        (
+            self._overlay_dist,
+            self._dist_list,
+            self._ks_list,
+            self._ks_p_list,
+        ) = self._overlay_fit_dist()
+
+        self._ks, self._ks_p = ks_2samp(self.pard2_class.scaled_fitness, self.pard3_class.scaled_fitness)
+        print(f"Kolmogorov-Smirnov Statistic: {self._ks}")
+        print(f"P-value: {self._ks_p}")
+
+        print("Plotting the fitness distribution...")
+        
+
+    def _overlay_fit_dist(self) -> hv.Distribution:
+
+        """
+        Plot the fitness distribution
+
+        Returns:
+        - hv.Distribution: plot of the fitness distribution
+        """
+
+        hv_dist = self.pard2_fit_dist * self.pard3_fit_dist
+
+        # get y_range for spike height
+        y_range = (
+            hv.renderer("bokeh").instance(mode="server").get_plot(hv_dist).state.y_range
+        )
+
+        # set spike length to be 5% of the y_range
+        spike_length = (y_range.end - y_range.start) * 0.05
+
+        # Overlay the two plots
+        overlay_dist = (
+            hv_dist
+            * hv.Spikes([self.pard2_class.parent_aa_fitness], label="ParD2 parent").opts(
+                color=LIB_COLORS[self.pard2_class.lib_name],
+                line_dash="dotted",
+                line_width=1.6,
+                spike_length=spike_length,
+            )
+            * hv.Spikes([self.pard3_class.parent_aa_fitness], label="ParD3 parent").opts(
+                color=LIB_COLORS[self.pard3_class.lib_name],
+                line_dash="dotted",
+                line_width=1.6,
+                spike_length=spike_length,
+            )
+        )
+
+        # Customize the plot options
+        overlay_dist.opts(
+            legend_position="top_right",
+            title=f"{self.protein_name} fitness distribution",
+            xlabel="Fitness",
+        )
+
+        # Display the plot with the legend
+        save_bokeh_hv(
+            overlay_dist,
+            plot_name=f"{self.lib_name} fitness distribution",
+            plot_path=checkNgen_folder(os.path.join(self.dist_dir, "by_protein")),
+            bokehorhv="hv",
+        )
+
+        return overlay_dist
+
+    @property
+    def lib_aa_list(self) -> list:
+        """Return the list of libraries"""
+        return [os.path.join(self._folder, f"{lib}.csv") for lib in ParD_names]
+
+    @property
+    def pard_lib_numb(self) -> int:
+        """Return the number of libraries"""
+        return len(ParD_names)
+
+    @property
+    def pard2_class(self) -> pd.Series:
+        """Return the class of ParD2"""
+        return ProcessParD(os.path.join(self._folder, "ParD2.csv"), scale_fit=self._scale_fit)
+    
+    @property
+    def pard3_class(self) -> pd.Series:
+        """Return the class of ParD3"""
+        return ProcessParD(os.path.join(self._folder, "ParD3.csv"), scale_fit=self._scale_fit)
+    
+    @property
+    def pard2_fit_dist(self) -> hv.Distribution:
+        """Return the fitness distribution based on average amino acid"""
+        return plot_fit_dist(
+            self.pard2_class.df_scale_fit, color=LIB_COLORS[self.lib_name], label="AA"
+        )
+    
+    @property
+    def pard3_fit_dist(self) -> hv.Distribution:
+        """Return the fitness distribution based on average amino acid"""
+        return plot_fit_dist(
+            self.pard3_class.df_scale_fit, color=LIB_COLORS[self.lib_name], label="AA"
+        )
 
 
 class ProcessGB1(ProcessData):
@@ -806,6 +997,7 @@ def process_all(
     """
 
     ProcessDHFR(scale_fit=scale_fit)
+    ProcessParD(scale_fit=scale_fit)
     ProcessGB1(scale_fit=scale_fit)
     PlotTrpB(scale_fit=scale_fit)
 

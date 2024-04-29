@@ -16,11 +16,14 @@ DEFALT_SPLITS = ["single", "double", "multi"]
 
 ACTIVE_THRESH_DICT ={
     "DHFR": -0.5,
+    "ParD": 0,
     "GB1" : 0.01,
     "TrpB": None
 }
 
 COMBO_COLS = ["AAs", "fitness", "active"]
+
+ParD_names = ["ParD2", "ParD3"]
 
 # the number for which the PDB file has as the first amino acid
 # no M included while in seq M is added to be the first amino acid
@@ -28,7 +31,7 @@ TrpB_PDB_START_AA_IND = 2
 
 TrpB_names = deepcopy([*["TrpB3" + string for string in [chr(ord("A") + i) for i in range(9)]], "TrpB4"])
 
-LIB_NAMES = deepcopy(["DHFR", "GB1", *TrpB_names])
+LIB_NAMES = deepcopy(["DHFR", *ParD_names, "GB1", *TrpB_names])
 
 # Dictionary with positions for mutation, parent codons, and parent amino acids
 LIB_INFO_DICT = deepcopy({
@@ -37,6 +40,16 @@ LIB_INFO_DICT = deepcopy({
         "codons": {1: "GCC", 2: "GAT", 3: "CTC"}, 
         "AAs": {1: "A", 2: "D", 3: "L"}
         },
+    "ParD2": {
+        "positions": {1: 61, 2: 64, 3: 80},
+        "codons": {1: "", 2: "", 3: ""}, 
+        "AAs": {1: "I", 2: "L", 3: "K"}
+    },
+    "ParD3": {
+        "positions": {1: 61, 2: 64, 3: 80},
+        "codons": {1: "", 2: "", 3: ""}, 
+        "AAs": {1: "D", 2: "K", 3: "E"}
+    },
     "GB1": {
         "positions": {1: 39, 2: 40, 3: 41, 4: 54},
         "codons": {1: "", 2: "", 3: "", 4: ""}, 
