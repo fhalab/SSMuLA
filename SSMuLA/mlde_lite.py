@@ -1044,13 +1044,13 @@ def run_all_mlde_parallelized(
     tasks = []
 
     # Iterate over each combination of parameters to create tasks
-    # for input_csv in sorted(
-    #     glob(f"{os.path.normpath(zs_folder)}/{filter_min_by}/{scale_type}/all/*.csv")
-    # ):
-    for input_csv in [
-        "results/zs_comb/none/scale2max/all/GB1.csv", 
-        "results/zs_comb/none/scale2max/all/TrpB4.csv"
-    ]:
+    for input_csv in sorted(
+        glob(f"{os.path.normpath(zs_folder)}/{filter_min_by}/{scale_type}/all/*.csv")
+    ):
+    # for input_csv in [
+    #     "results/zs_comb/none/scale2max/all/GB1.csv", 
+    #     "results/zs_comb/none/scale2max/all/TrpB4.csv"
+    # ]:
         for n_mut_cutoff in n_mut_cutoffs:
             for zs_predictor in zs_predictors:
                 # Determine feature libraries based on the predictor
