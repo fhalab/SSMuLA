@@ -568,7 +568,5 @@ def lib2prot(lib_name: str) -> str:
     """
     if "TrpB" in lib_name:
         return "TrpB"
-    elif "ParD" in lib_name:
-        return "ParD"
     else:
         return lib_name

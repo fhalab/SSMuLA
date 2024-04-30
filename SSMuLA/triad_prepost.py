@@ -289,10 +289,15 @@ class ParseTriadResults(TriadLib):
         return self._triad_df
 
 
-def run_traid_gen_mut_file():
+def run_traid_gen_mut_file(all_lib: bool = True, lib_list: list[str] = []):
     """Run the triad gen mut file function for all libraries"""
-    for lib in glob("data/*/scale2max/*.csv"):
+
+    if all_lib or len(lib_list) == 0:
+        lib_list = glob("data/*/scale2max/*.csv")
+   
+    for lib in lib_list:
         TriadGenMutFile(input_csv=lib)
+
 
 
 def run_parse_triad_results(triad_folder: str = "triad"):

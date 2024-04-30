@@ -7,7 +7,7 @@ from glob import glob
 
 from datetime import datetime
 
-from SSMuLA.triad_prepost import run_traid_gen_mut_file, run_parse_triad_results
+from SSMuLA.triad_prepost import run_traid_gen_mut_file
 from SSMuLA.util import checkNgen_folder
 
 if __name__ == "__main__":
@@ -22,6 +22,6 @@ if __name__ == "__main__":
     )
     sys.stdout = f
 
-    run_traid_gen_mut_file()
+    run_traid_gen_mut_file(lib_list = ["ParD2", "ParD3"])
 
     f.close()

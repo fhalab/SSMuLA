@@ -493,28 +493,24 @@ class PlotParD:
 
     def __init__(
         self,
-        folder: str = "data/ParD/fitness_landscape",
         scale_fit: str = "max",
         codon_aa: str = "AA",
     ) -> None:
 
         """
         Args:
-        - folder, str: path to the folder containing the fitness landscapes
         - scale_fit, str: ways to scale the fitness
         - codon_aa, str: whether to scale the fitness to codon or amino acid
         """
 
-        self._folder = os.path.normpath(folder)
         self._scale_fit = scale_fit
         self._codon_aa = codon_aa
 
-        self.pard2_class = ProcessParD(
-            os.path.join(self._folder, "ParD2.csv"), scale_fit=self._scale_fit
-        )
-        self.pard3_class = ProcessParD(
-            os.path.join(self._folder, "ParD3.csv"), scale_fit=self._scale_fit
-        )
+        self.pard2_csv = "data/ParD2/fitness_landscape/ParD2.csv"
+        self.pard3_csv = "data/ParD3/fitness_landscape/ParD3.csv"
+
+        self.pard2_class = ProcessParD(self.pard2_csv, scale_fit=self._scale_fit)
+        self.pard3_class = ProcessParD(self.pard3_csv, scale_fit=self._scale_fit)
 
         self._ks, self._ks_p = ks_2samp(
             self.pard2_class.scaled_fitness, self.pard3_class.scaled_fitness
