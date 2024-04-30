@@ -16,7 +16,7 @@ import pandas as pd
 import holoviews as hv
 
 
-from SSMuLA.landscape_global import LIB_INFO_DICT, make_new_sequence, hamming
+from SSMuLA.landscape_global import LIB_INFO_DICT, hamming
 from SSMuLA.vis import save_bokeh_hv, JSON_THEME
 from SSMuLA.util import get_file_name, checkNgen_folder
 

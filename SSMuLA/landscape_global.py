@@ -518,6 +518,8 @@ class LibData:
         """
         if "TrpB" in self.lib_name:
             return "TrpB"
+        elif "ParD" in self.lib_name:
+            return "ParD"
         else:
             return self.lib_name
 
@@ -552,3 +554,21 @@ class LibData:
     @property
     def df_length(self):
         return len(self.input_df)
+
+
+def lib2prot(lib_name: str) -> str:
+    """
+    Return the protein name from the library name
+
+    Args:
+    - lib_name, str: the library name
+
+    Returns:
+    - str: the protein name
+    """
+    if "TrpB" in lib_name:
+        return "TrpB"
+    elif "ParD" in lib_name:
+        return "ParD"
+    else:
+        return lib_name

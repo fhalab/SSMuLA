@@ -1,12 +1,10 @@
-"""A script to test the learned embedding generation"""
-
-
-"""Test the triad pre and post processing."""
+"""
+A script to test the learned embedding generation
+Test the triad pre and post processing.
+"""
 
 import sys
 import os
-
-from glob import glob
 
 from datetime import datetime
 

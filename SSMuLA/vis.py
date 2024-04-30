@@ -66,7 +66,7 @@ HM_GREY = "#76777B"
 PRESENTATION_PALETTE_SATURATE = {
     "blue": "#4bacc6",
     "orange": "#f79646ff",
-    "red": "#0000ff",
+    "red": "#ff8888",
     "green": "#9bbb59",
     "yellow": "#f9be00",
     "purple": "#8064a2",

@@ -31,6 +31,7 @@ from SSMuLA.landscape_global import (
     LIB_NAMES,
     LibData,
     ParD_names,
+    lib2prot,
     append_active_cutoff,
     n_mut_cutoff_dict,
 )
@@ -415,7 +416,7 @@ class ProcessParD(ProcessData):
 
     def __init__(
         self,
-        input_csv: str ,
+        input_csv: str,
         scale_fit: str = "max",
     ) -> None:
 
@@ -429,13 +430,14 @@ class ProcessParD(ProcessData):
 
         # append the active cutoffs
         self._df_active_append_scaled, _ = append_active_cutoff(
-            self.df_aa_scaled, ["fitness"], self.active_thresh_scaled
+            self.df_scale_fit, ["fitness"], self.active_thresh_scaled
         )
 
         # save scaled df
-        self._append_mut(self.df_scale_fit).to_csv(self.output_csv, index=False)
+        self._append_mut(self._df_active_append_scaled).to_csv(
+            self.output_csv, index=False
+        )
 
-        
     @property
     def df_scale_fit(self) -> pd.DataFrame:
 
@@ -449,7 +451,7 @@ class ProcessParD(ProcessData):
             df["fitness"] = df["fitness"] / self.parent_aa_fitness
         else:
             raise ValueError("The scale_fit should be parent or max")
-        
+
         return df
 
     @property
@@ -460,7 +462,14 @@ class ProcessParD(ProcessData):
     @property
     def parent_aa_fitness(self) -> float:
         """Return the parent aa fitness"""
-        return self.input_df[self.input_df["AAs"] == self.parent_aa]["fitness"].values[0]
+        return self.input_df[self.input_df["AAs"] == self.parent_aa]["fitness"].values[
+            0
+        ]
+
+    @property
+    def max_fit(self) -> float:
+        """Return the max fitness"""
+        return self.scaled_fitness.max()
 
     @property
     def active_thresh_scaled(self) -> float:
@@ -471,7 +480,11 @@ class ProcessParD(ProcessData):
         else:
             return act_fit
 
-    
+    @property
+    def df_active_append_scaled(self) -> pd.DataFrame:
+        """Return the active appended dataframe"""
+        return self._df_active_append_scaled
+
 
 class PlotParD:
     """
@@ -496,19 +509,22 @@ class PlotParD:
         self._scale_fit = scale_fit
         self._codon_aa = codon_aa
 
-        (
-            self._overlay_dist,
-            self._dist_list,
-            self._ks_list,
-            self._ks_p_list,
-        ) = self._overlay_fit_dist()
+        self.pard2_class = ProcessParD(
+            os.path.join(self._folder, "ParD2.csv"), scale_fit=self._scale_fit
+        )
+        self.pard3_class = ProcessParD(
+            os.path.join(self._folder, "ParD3.csv"), scale_fit=self._scale_fit
+        )
 
-        self._ks, self._ks_p = ks_2samp(self.pard2_class.scaled_fitness, self.pard3_class.scaled_fitness)
+        self._ks, self._ks_p = ks_2samp(
+            self.pard2_class.scaled_fitness, self.pard3_class.scaled_fitness
+        )
         print(f"Kolmogorov-Smirnov Statistic: {self._ks}")
         print(f"P-value: {self._ks_p}")
 
         print("Plotting the fitness distribution...")
-        
+
+        self._overlay_dist = self._overlay_fit_dist()
 
     def _overlay_fit_dist(self) -> hv.Distribution:
 
@@ -532,13 +548,17 @@ class PlotParD:
         # Overlay the two plots
         overlay_dist = (
             hv_dist
-            * hv.Spikes([self.pard2_class.parent_aa_fitness], label="ParD2 parent").opts(
+            * hv.Spikes(
+                [self.pard2_class.parent_aa_fitness], label="ParD2 parent"
+            ).opts(
                 color=LIB_COLORS[self.pard2_class.lib_name],
                 line_dash="dotted",
                 line_width=1.6,
                 spike_length=spike_length,
             )
-            * hv.Spikes([self.pard3_class.parent_aa_fitness], label="ParD3 parent").opts(
+            * hv.Spikes(
+                [self.pard3_class.parent_aa_fitness], label="ParD3 parent"
+            ).opts(
                 color=LIB_COLORS[self.pard3_class.lib_name],
                 line_dash="dotted",
                 line_width=1.6,
@@ -549,24 +569,21 @@ class PlotParD:
         # Customize the plot options
         overlay_dist.opts(
             legend_position="top_right",
-            title=f"{self.protein_name} fitness distribution",
+            title=f"{self.pard2_class.protein_name} fitness distribution",
             xlabel="Fitness",
         )
 
         # Display the plot with the legend
         save_bokeh_hv(
             overlay_dist,
-            plot_name=f"{self.lib_name} fitness distribution",
-            plot_path=checkNgen_folder(os.path.join(self.dist_dir, "by_protein")),
+            plot_name=f"{self.pard2_class.protein_name} fitness distribution",
+            plot_path=checkNgen_folder(
+                os.path.join(self.pard2_class.dist_dir, "by_protein")
+            ),
             bokehorhv="hv",
         )
 
         return overlay_dist
-
-    @property
-    def lib_aa_list(self) -> list:
-        """Return the list of libraries"""
-        return [os.path.join(self._folder, f"{lib}.csv") for lib in ParD_names]
 
     @property
     def pard_lib_numb(self) -> int:
@@ -574,28 +591,27 @@ class PlotParD:
         return len(ParD_names)
 
     @property
-    def pard2_class(self) -> pd.Series:
-        """Return the class of ParD2"""
-        return ProcessParD(os.path.join(self._folder, "ParD2.csv"), scale_fit=self._scale_fit)
-    
-    @property
-    def pard3_class(self) -> pd.Series:
-        """Return the class of ParD3"""
-        return ProcessParD(os.path.join(self._folder, "ParD3.csv"), scale_fit=self._scale_fit)
-    
-    @property
     def pard2_fit_dist(self) -> hv.Distribution:
         """Return the fitness distribution based on average amino acid"""
         return plot_fit_dist(
-            self.pard2_class.df_scale_fit, color=LIB_COLORS[self.lib_name], label="AA"
+            self.pard2_class.scaled_fitness,
+            color=LIB_COLORS[self.pard2_class.lib_name],
+            label="ParD2",
         )
-    
+
     @property
     def pard3_fit_dist(self) -> hv.Distribution:
         """Return the fitness distribution based on average amino acid"""
         return plot_fit_dist(
-            self.pard3_class.df_scale_fit, color=LIB_COLORS[self.lib_name], label="AA"
+            self.pard3_class.scaled_fitness,
+            color=LIB_COLORS[self.pard3_class.lib_name],
+            label="ParD3",
         )
+
+    @property
+    def overlay_dist(self) -> hv.Distribution:
+        """Return the overlay distribution"""
+        return self._overlay_dist
 
 
 class ProcessGB1(ProcessData):
@@ -851,7 +867,7 @@ class PlotTrpB:
         dist_dir = checkNgen_folder(os.path.join(trpb4_class.dist_dir, "by_protein"))
 
         print(
-            "Plotting {} fitness distribution wtih {} {}...".format(
+            "Plotting {} fitness distribution with {} {}...".format(
                 trpb4_name, trpb4_class.parent_aa, trpb4_class.parent_aa_fitness_scaled
             )
         )
@@ -1003,7 +1019,14 @@ def process_all(
 
 
 def sum_ks(
-    input_folder: str = "data", output_folder: str = "results/fitness_distribution"
+    input_folder: str = "data", 
+    output_folder: str = "results/fitness_distribution",
+    process_types: dict = {
+        "fitness_landscape": "preprocessed",
+        "processed": "exp_log",
+        "scale2max": "scaled_to_max",
+        "scale2parent": "scaled_to_parent",
+    }
 ) -> dict:
     """
     Return the summary statistics from different ways of processing data
@@ -1011,14 +1034,8 @@ def sum_ks(
     Args:
     - input_folder, str: path to the input folder
     - output_folder, str: path to the output folder
+    - process_types, dict: the dictionary of process types
     """
-
-    process_types = {
-        "fitness_landscape": "preprocessed",
-        "processed": "exp_log",
-        "scale2max": "scaled_to_max",
-        "scale2parent": "scaled_to_parent",
-    }
 
     output_dict = {}
 
@@ -1037,10 +1054,7 @@ def sum_ks(
 
         for lib in tqdm(LIB_NAMES):
 
-            if "TrpB" in lib:
-                protein = "TrpB"
-            else:
-                protein = lib
+            protein = lib2prot(lib)
 
             df = pd.read_csv(
                 os.path.join(input_folder, protein, data_folder, lib + ".csv")
@@ -1053,10 +1067,7 @@ def sum_ks(
 
             for lib2 in LIB_NAMES:
 
-                if "TrpB" in lib2:
-                    protein2 = "TrpB"
-                else:
-                    protein2 = lib2
+                protein2 = lib2prot(lib2)
 
                 df2 = pd.read_csv(
                     os.path.join(input_folder, protein2, data_folder, lib2 + ".csv")
@@ -1161,8 +1172,8 @@ class SDA(LibData):
         print(f"Kolmogorov-Smirnov Statistic: {sda_ks_dict}")
 
         hv_dist = plot_fit_dist(
-                self.m_fit, color=PRESENTATION_PALETTE_SATURATE["blue"], label="All"
-            )
+            self.m_fit, color=PRESENTATION_PALETTE_SATURATE["blue"], label="All"
+        )
 
         # get y_range for spike height
         y_range = (
@@ -1176,10 +1187,13 @@ class SDA(LibData):
                 self.s_fit,
                 color=PRESENTATION_PALETTE_SATURATE["yellow"],
                 label="Single",
-                spike_length=spike_length
+                spike_length=spike_length,
             )
             * plot_fit_dist(
-                self.d_fit, color=PRESENTATION_PALETTE_SATURATE["green"], label="Double", spike_length=spike_length
+                self.d_fit,
+                color=PRESENTATION_PALETTE_SATURATE["green"],
+                label="Double",
+                spike_length=spike_length,
             )
             * hv_dist
         )
@@ -1262,10 +1276,7 @@ def get_all_sda(
 
     for lib in tqdm(LIB_NAMES):
 
-        if "TrpB" in lib:
-            protein = "TrpB"
-        else:
-            protein = lib
+        protein = lib2prot(lib)
 
         sda_class = SDA(
             input_csv=os.path.join(
@@ -1547,10 +1558,7 @@ def get_all_lib_stats(
 
     for lib in tqdm(LIB_NAMES):
 
-        if "TrpB" in lib:
-            protein = "TrpB"
-        else:
-            protein = lib
+        protein = lib2prot(lib)
 
         for n_mut_cuttoff in [0, 1, 2]:
 
