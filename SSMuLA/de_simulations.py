@@ -499,7 +499,7 @@ def calc_char(
 def run_all_de_simulations(
     df: pd.DataFrame,
     lib_name: str,
-    save_dir: str = "results/simulations/DE",
+    save_dir: str = "results/de/DE",
     seq_col: str = "AAs",
     fitness_col: str = "fitness",
     n_sites: int = 4,
@@ -620,6 +620,9 @@ def run_all_de_simulations(
 def run_all_lib_de_simulations(
     scale_types: list = ["scale2max", "scale2parent"],
     de_opts: list = ["DE-active", "DE-0", "DE-all"],
+    save_dir: str = "results/de",
+    all_lib: bool = True,
+    lib_list: list[str] = [],
 ):
     """
     Run all simulations for each library.
@@ -627,14 +630,24 @@ def run_all_lib_de_simulations(
     Args:
     - scale_types: list, the scale types of fitness to simulate
     - de_opts: list, the DE options to simulate
+    - save_dir: str, the directory to save the results to
+    - all_lib: bool, run all libraries
+    - lib_list: list, the list of libraries to simulate
     """
     for scale_type in scale_types:
         for de_det in de_opts:
 
             all_char_sum_df_list = []
 
+            if all_lib or len(lib_list) == 0:
+                lib_csv_list = sorted(glob(f"data/*/{scale_type}/*.csv"))
+            else:
+                lib_csv_list = sorted([
+                        f"data/{lib}/{scale_type}/{lib}.csv" for lib in lib_list
+                ])
+
             # Run simulations for each library
-            for lib in sorted(glob(f"data/*/{scale_type}/*.csv")):
+            for lib in lib_csv_list:
 
                 lib_name = get_file_name(lib)
                 n_sites = len(LIB_INFO_DICT[lib_name]["positions"])
@@ -657,14 +670,14 @@ def run_all_lib_de_simulations(
                 elif de_det == "DE-active":
                     select_df = df[df["active"]].copy()
 
-                save_dir = f"results/simulations/{de_det}/{scale_type}"
+                save_subdir = f"{save_dir}/{de_det}/{scale_type}"
 
                 _, char_sum_df = run_all_de_simulations(
                     df=select_df,
                     seq_col="AAs",
                     fitness_col="fitness",
                     lib_name=lib_name,
-                    save_dir=save_dir,
+                    save_dir=save_subdir,
                     n_sites=n_sites,
                     N=96,
                     topns=[96, 384],
@@ -676,7 +689,7 @@ def run_all_lib_de_simulations(
 
             all_char_sum_df = pd.concat(all_char_sum_df_list, ignore_index=True)
             all_char_sum_df.to_csv(
-                f"{save_dir}/all_landscape_de_summary.csv", index=False
+                f"{save_subdir}/all_landscape_de_summary.csv", index=False
             )
 
 
@@ -877,11 +890,11 @@ class VisDESims:
         lib_name: str,
         append_title: str = "max fitness achieved",
         v_width: int = 400,
-        sim_folder: str = "results/simulations",
+        sim_folder: str = "results/de",
         de_sub_folder: str = "DE-active",
         fit_scale_sub_folder: str = "scale2max",
         n_mut_cutoff: int = 0,
-        vis_folder: str = "results/simulations_vis",
+        vis_folder: str = "results/de_vis",
     ) -> None:
 
         """
@@ -1033,26 +1046,36 @@ class VisDESims:
 def run_plot_de(
     scale_types: list = ["scale2max", "scale2parent"],
     de_opts: list = ["DE-active"],
-    sim_folder: str = "results/simulations",
-    vis_folder: str = "results/simulations_vis",
+    sim_folder: str = "results/de",
+    vis_folder: str = "results/de_vis",
     v_width: int = 400,
+    all_lib: bool = True,
+    lib_list: list[str] = [],
 ):
 
     """
     Run the DE simulation plotting
 
     Args:
-    - scale_types (list): The scale types of fitness
-    - de_opts (list): The DE options to plot
-    - sim_folder (str): Path to the DE simulation results
-    - vis_folder (str): Path to save the DE simulation plots
-    - v_width (int): Width of the violin plot
+    - scale_types: list, The scale types of fitness
+    - de_opts: list, The DE options to plot
+    - sim_folder: str, Path to the DE simulation results
+    - vis_folder: str, Path to save the DE simulation plots
+    - v_width: int, Width of the violin plot
+    - all_lib: bool, Run all libraries
+    - lib_list: list, The list of libraries to simulate
     """
 
     for de_sub_folder in de_opts:
         for fit_scale_sub_folder in scale_types:
             for n_mut in [0, 1, 2]:
-                for lib in tqdm(LIB_NAMES + ["TrpB"]):
+
+                if all_lib or len(lib_list) == 0:
+                    lib_list = LIB_NAMES + ["TrpB"]
+                else:
+                    lib_list = lib_list + ["TrpB"]
+
+                for lib in tqdm(lib_list):
                     if "TrpB" in lib:
                         v_width = 1280
                     else:

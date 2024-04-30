@@ -1031,11 +1031,34 @@ def run_all_mlde_parallelized(
     verbose: bool = False,
     save_model: bool = False,
     mlde_folder: str = "results/mlde",
+    all_libs: bool = True,
+    lib_list: list[str] = [],
 ):
     
     """
     Run all MLDE give zs combined csv
     
+    Args:
+    - zs_folder: str, path to the folder with zero-shot combined CSV files
+    - filter_min_by: str, filter minimum fitness by
+    - n_mut_cutoffs: list[int], list of number of mutations cutoff
+    - scale_type: str, scaling type
+    - zs_predictors: list[str], list of zero-shot predictors
+    - ft_lib_fracs: list[float], list of percent of focused training libraries
+    - encodings: list[str], list of encoding types
+    - model_classes: list[str], list of model classes
+    - n_samples: list[int], list of number of samples to train on
+    - n_split: int, number of splits for cross-validation
+    - n_replicate: int, number of replicates
+    - n_tops: list[int], list of number of top sequences to calculate max and mean fitness
+    - boosting_n_worker: int, number of workers for parallel processing
+    - n_job: int, number of jobs to run in parallel
+    - global_seed: int, global seed for reproducibility
+    - verbose: bool, verbose output
+    - save_model: bool, save models
+    - mlde_folder: str, path to save results
+    - all_libs: bool, run all libraries
+    - lib_list: list[str], list of libraries to run
     """
 
     mlde_folder = checkNgen_folder(os.path.normpath(mlde_folder))
@@ -1043,14 +1066,17 @@ def run_all_mlde_parallelized(
     # Create a list to hold tasks for parallel execution
     tasks = []
 
+    if all_libs or len(lib_list) == 0:
+        lib_csv_list = sorted(
+            glob(f"{os.path.normpath(zs_folder)}/{filter_min_by}/{scale_type}/all/*.csv")
+        )
+    else:
+        lib_csv_list = sorted(
+            [f"{os.path.normpath(zs_folder)}/{filter_min_by}/{scale_type}/all/{lib}.csv" for lib in lib_list]
+        )
+
     # Iterate over each combination of parameters to create tasks
-    for input_csv in sorted(
-        glob(f"{os.path.normpath(zs_folder)}/{filter_min_by}/{scale_type}/all/*.csv")
-    ):
-    # for input_csv in [
-    #     "results/zs_comb/none/scale2max/all/GB1.csv", 
-    #     "results/zs_comb/none/scale2max/all/TrpB4.csv"
-    # ]:
+    for input_csv in tqdm(lib_csv_list):
         for n_mut_cutoff in n_mut_cutoffs:
             for zs_predictor in zs_predictors:
                 # Determine feature libraries based on the predictor

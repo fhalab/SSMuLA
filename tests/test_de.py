@@ -20,6 +20,18 @@ if __name__ == "__main__":
     run_all_lib_de_simulations(
         scale_types = ["scale2max"],
         de_opts = ["DE-active", "DE-0", "DE-all"],
+        all_lib = False,
+        lib_list = ["ParD2", "ParD3"],
     )
+
+    """
+    run_all_lib_de_simulations(
+    scale_types: list = ["scale2max", "scale2parent"],
+    de_opts: list = ["DE-active", "DE-0", "DE-all"],
+    save_dir: str = "results/de",
+    all_lib: bool = True,
+    lib_list: list[str] = [],
+    )
+    """
     
     f.close()
