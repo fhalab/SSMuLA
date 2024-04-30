@@ -305,13 +305,18 @@ class ZS_Analysis(LibData):
             df[f"{zs}_rank"] = df[f"{zs}_score"].rank(ascending=False)
 
         # prevent duplicates
+        drop_cols = ["fit", "combo"]
+
         if "active" in df.columns:
-            df = df.drop(columns=["active"])
+            drop_cols.append("active")
+
+        if "AAs" in df.columns:
+            drop_cols.append("AAs")
 
         if "n_mut" in df.columns:
-            return df.drop(columns=["fit", "combo", "n_mut"]).copy()
-        else:
-            return df.drop(columns=["fit", "combo"]).copy()
+            drop_cols.append("n_mut")
+        
+        return df.drop(columns=drop_cols).copy()
 
     @property
     def triad_path(self) -> pd.DataFrame:

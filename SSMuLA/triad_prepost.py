@@ -30,7 +30,7 @@ for lib in LIB_NAMES:
             f"data/{lib}/scaled2max/{lib}.csv"
         ] = f"triad/{lib}/{lib}_fixed.txt"
 
-sorted_lib_triad_pair = deepcopy(
+SORTED_LIB_TRIAD_PAIR = deepcopy(
     dict(sorted(lib_triad_pair.items(), key=lambda x: x[0]))
 )
 
@@ -290,7 +290,13 @@ class ParseTriadResults(TriadLib):
 
 
 def run_traid_gen_mut_file(all_lib: bool = True, lib_list: list[str] = []):
-    """Run the triad gen mut file function for all libraries"""
+    """
+    Run the triad gen mut file function for all libraries
+    
+    Args:
+    - all_lib: bool, whether to run for all libraries
+    - lib_list: list, a list of libraries to run for
+    """
 
     if all_lib or len(lib_list) == 0:
         lib_list = glob("data/*/scale2max/*.csv")
@@ -299,15 +305,22 @@ def run_traid_gen_mut_file(all_lib: bool = True, lib_list: list[str] = []):
         TriadGenMutFile(input_csv=lib)
 
 
-
-def run_parse_triad_results(triad_folder: str = "triad"):
+def run_parse_triad_results(
+    triad_folder: str = "triad", 
+    all_lib: bool = True, 
+    lib_list: list[str] = []
+    ):
 
     """
     Run the parse triad results function for all libraries
-    Currently TrpB only
+    
+    Args:
+    - triad_folder: str, the parent folder to all triad data
+    - all_lib: bool, whether to run for all libraries
+    - lib_list: list, a list of libraries to run for
     """
 
-    for lib, triad_txt in sorted_lib_triad_pair.items():
+    for lib, triad_txt in SORTED_LIB_TRIAD_PAIR.items():
         ParseTriadResults(input_csv=lib, triad_txt=triad_txt, triad_folder=triad_folder)
 
     # need to merge

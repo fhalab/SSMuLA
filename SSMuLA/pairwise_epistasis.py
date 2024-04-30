@@ -843,6 +843,8 @@ def calc_all_pairwise_epistasis(
     input_folder: str = "data",
     fitness_process_type: str = "scale2max",
     activestart: bool = True,
+    ifall: bool = True,
+    lib_list: list[str] = [],
     output_folder: str = "results/pairwise_epistasis",
     n_jobs: int = 128,
 ):
@@ -854,13 +856,23 @@ def calc_all_pairwise_epistasis(
     - input_folder, str: The input folder.
     - fitness_process_type, str: The fitness process type.
     - activestart, bool: Whether to only calculate pairwise epistasis for active mutants.
+    - ifall, bool: Whether to calculate pairwise epistasis for all lib.
+    - lib_list, list[str]: The list of libraries to calculate pairwise epistasis for.
     - output_folder, str: The output folder.
     - n_jobs, int: The number of jobs to run in parallel.
     """
 
-    for lib in tqdm(sorted(
-        glob(os.path.normpath(input_folder) + "/*/" + fitness_process_type + "/*.csv")
-    )):
+    if ifall or len(lib_list) == 0:
+        lib_csv_list = sorted(
+            glob(os.path.normpath(input_folder) + "/*/" + fitness_process_type + "/*.csv")
+        )
+    else:
+        lib_csv_list = [
+            os.path.join(input_folder, lib, fitness_process_type, f"{lib}.csv")
+            for lib in lib_list
+        ]
+
+    for lib in tqdm(lib_csv_list):
         print(f"Processing {lib}...")
         PairwiseEpistasis(
             lib, activestart=activestart, output_folder=output_folder, n_jobs=n_jobs

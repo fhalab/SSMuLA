@@ -22,8 +22,27 @@ if __name__ == "__main__":
     f = open(os.path.join(log_folder, f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}.out"), 'w')
     sys.stdout = f
     
-    # calc_all_pairwise_epistasis()
     fitness_process_type = "scale2max"
+
+    calc_all_pairwise_epistasis(
+        fitness_process_type=fitness_process_type,
+        ifall=False,
+        lib_list=["ParD2", "ParD3"],
+        output_folder="results/pairwise_epistasis",
+        n_jobs=128,
+    )
+
+    """
+    calc_all_pairwise_epistasis(
+    input_folder: str = "data",
+    fitness_process_type: str = "scale2max",
+    activestart: bool = True,
+    ifall: bool = True,
+    lib_list: list[str] = [],
+    output_folder: str = "results/pairwise_epistasis",
+    n_jobs: int = 128,
+    """
+    
     pos_calc_filter_min = "none"
 
     plot_pairwise_epistasis(

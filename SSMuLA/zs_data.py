@@ -239,6 +239,60 @@ EV_META = {
         },
     },
 
+    "ParD2": {
+        "recommended": {
+            "bitscore": 0.3,
+            "sequences": 13911,
+            "seqs_per_l": 252.9,
+            "quality": 10,
+        },
+        "other_1": {
+            "bitscore": 0.1,
+            "sequences": 102977,
+            "seqs_per_l": 2060,
+            "quality": 9,
+        },
+        "chosen": {
+            "bitscore": 0.5,
+            "sequences": 6789,
+            "seqs_per_l": 93.0,
+            "quality": 9,
+        },
+        "other_3": {
+            "bitscore": 0.7,
+            "sequences": 3638,
+            "seqs_per_l": 49.2,
+            "quality": 8,
+        },
+    },
+
+    "ParD3": {
+        "recommended": {
+            "bitscore": 0.3,
+            "sequences": 13189,
+            "seqs_per_l": 235.5,
+            "quality": 10,
+        },
+        "other_1": {
+            "bitscore": 0.1,
+            "sequences": 117463,
+            "seqs_per_l": 2303,
+            "quality": 9,
+        },
+        "chosen": {
+            "bitscore": 0.5,
+            "sequences": 6784,
+            "seqs_per_l": 91.7,
+            "quality": 9,
+        },
+        "other_3": {
+            "bitscore": 0.7,
+            "sequences": 3249,
+            "seqs_per_l": 43.3,
+            "quality": 8,
+        },
+    },
+
     "GB1": {
         "recommended": {
             "bitscore": 0.3,
