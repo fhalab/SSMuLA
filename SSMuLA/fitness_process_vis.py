@@ -131,6 +131,26 @@ class ProcessData(LibData):
 
         return df_appended.copy()
 
+    def _split_aa(self, df: pd.DataFrame) -> pd.DataFrame:
+
+        """
+        Split the amino acids into individual columns
+
+        Args:
+        - df, pd.DataFrame: the input dataframe
+
+        Returns:
+        - pd.DataFrame: the split dataframe
+        """
+
+        df_split = df.copy()
+
+        df_split[self.split_aa_cols] = df_split["AAs"].apply(
+            lambda x: pd.Series(list(x))
+        )
+
+        return df_split[["AAs", *self.split_aa_cols, "fitness"]].copy()
+
     @property
     def output_csv(self) -> str:
 
@@ -325,11 +345,6 @@ class ProcessDHFR(ProcessData):
         ].values[0]
 
     @property
-    def split_AA_cols(self) -> list:
-        """Return the columns for the split amino acids"""
-        return [f"AA{str(i)}" for i in self.lib_info["positions"].keys()]
-
-    @property
     def df_aa(self) -> pd.DataFrame:
 
         """Return the input dataframe with amino acid translations"""
@@ -347,12 +362,7 @@ class ProcessDHFR(ProcessData):
         """Return the input dataframe with amino acid translations
         and split into individual amino acids"""
 
-        df = self.df_aa.copy()
-
-        # Split combo into individual amino acids
-        df[self.split_AA_cols] = df["AAs"].apply(lambda x: pd.Series(list(x)))
-
-        return df[["AAs", *self.split_AA_cols, "seq", "fitness"]].copy()
+        return self._split_aa(df=self.df_aa.copy())
 
     @property
     def df_avg_aa(self) -> pd.DataFrame:
@@ -363,8 +373,7 @@ class ProcessDHFR(ProcessData):
         # Group by amino acid and take the average fitness
         df = df.groupby("AAs")["fitness"].mean().reset_index()
         # Split combo into individual amino acids
-        df[self.split_AA_cols] = df["AAs"].apply(lambda x: pd.Series(list(x)))
-        return df[["AAs", *self.split_AA_cols, "fitness"]].copy()
+        return self._split_aa(df=df)
 
     @property
     def df_avg_aa_scaled(self) -> pd.DataFrame:
@@ -430,7 +439,7 @@ class ProcessParD(ProcessData):
 
         # append the active cutoffs
         self._df_active_append_scaled, _ = append_active_cutoff(
-            self.df_scale_fit, ["fitness"], self.active_thresh_scaled
+            self._split_aa(df=self.df_scale_fit), ["fitness"], self.active_thresh_scaled
         )
 
         # save scaled df
@@ -509,8 +518,8 @@ class PlotParD:
         self.pard2_csv = "data/ParD2/fitness_landscape/ParD2.csv"
         self.pard3_csv = "data/ParD3/fitness_landscape/ParD3.csv"
 
-        self.pard2_class = ProcessParD(self.pard2_csv, scale_fit=self._scale_fit)
-        self.pard3_class = ProcessParD(self.pard3_csv, scale_fit=self._scale_fit)
+        self.pard2_class = ProcessParD(input_csv=self.pard2_csv, scale_fit=self._scale_fit)
+        self.pard3_class = ProcessParD(input_csv=self.pard3_csv, scale_fit=self._scale_fit)
 
         self._ks, self._ks_p = ks_2samp(
             self.pard2_class.scaled_fitness, self.pard3_class.scaled_fitness
@@ -632,7 +641,7 @@ class ProcessGB1(ProcessData):
 
         # append the active cutoffs
         self._df_active_append_scaled, _ = append_active_cutoff(
-            self.df_aa_scaled, ["fitness"], self.active_thresh_scaled
+            self.df_split_aa_scaled, ["fitness"], self.active_thresh_scaled
         )
 
         # save the appended dataframe
@@ -720,12 +729,7 @@ class ProcessGB1(ProcessData):
         """Return the input dataframe with amino acid translations
         and split into individual amino acids"""
 
-        df = self.df_aa_scaled.copy()
-
-        # Split combo into individual amino acids
-        df[self.split_AA_cols] = df["AAs"].apply(lambda x: pd.Series(list(x)))
-
-        return df[["AAs", *self.split_AA_cols, "fitness"]].copy()
+        return self._split_aa(df=self.df_aa_scaled.copy())
 
     @property
     def parent_aa_fitness(self) -> float:
@@ -1009,7 +1013,7 @@ def process_all(
     """
 
     ProcessDHFR(scale_fit=scale_fit)
-    ProcessParD(scale_fit=scale_fit)
+    PlotParD(scale_fit=scale_fit)
     ProcessGB1(scale_fit=scale_fit)
     PlotTrpB(scale_fit=scale_fit)
 

@@ -69,7 +69,7 @@ class LocOpt:
         self,
         input_csv: str,
         output_folder: str = "results/local_optima",
-        n_jobs: int = 256,
+        n_jobs: int = 16,
     ) -> None:
         """
         Args:
@@ -82,6 +82,10 @@ class LocOpt:
             output_folder.replace("local_optima", "local_optima_vis")
         )
 
+        df = pd.read_csv(self._input_csv)
+        self._df = df[~df["AAs"].str.contains("\*")].reset_index(drop=True)
+        self._active_df = self.df[self.df["active"]].reset_index(drop=True)
+
         self._n_jobs = n_jobs
 
         self._loc_opt_df = self._find_loc_opt()
@@ -89,7 +93,9 @@ class LocOpt:
 
         self._hd2_escape_df, self._loc_opt_escape_df = self._append_escape()
         print("after append escape")
+        print("hd2_escape_df")
         print(self._hd2_escape_df.head())
+        print("loc_opt_escape_df")
         print(self._loc_opt_escape_df.head(), len(self._loc_opt_escape_df))
 
         self._merged_escape_df = pd.merge(
@@ -150,21 +156,20 @@ class LocOpt:
         just taking those which are the maximum fitness
         """
         # Get the active variants and the args for multiprocessing
-        active_variants = self.df[self.df["active"]]["AAs"].values
-        pool_args = [(x, self.df, "fitness") for x in active_variants]
+        pool_args = [(x, self.active_df, "fitness") for x in self.active_variants]
 
         # For every active variant determine its rank among its single mutants
         with Pool(self._n_jobs) as pool:
             results = pool.starmap(determine_optima, tqdm(pool_args))
 
         find_optima_dict = {
-            active_variants[i]: results[i] for i in range(len(active_variants))
+            self.active_variants[i]: results[i] for i in range(len(self.active_variants))
         }
 
         # Convert this data to a dataframe and
         # merge it with the original data to get the fitness information
         temp = pd.merge(
-            self.df,
+            self.active_df.copy(),
             pd.DataFrame(find_optima_dict, index=["n_greater"])
             .T.sort_values("n_greater", ascending=False)
             .reset_index()
@@ -207,7 +212,8 @@ class LocOpt:
             double_site_escape[opt_variant] = temp
 
             del temp
-
+        print("find_hd2_escape")
+        print(find_hd2_escape)
         # merge the data with the original to get the fitness information
         hd2_escape_df = pd.merge(
             self.df,
@@ -216,6 +222,9 @@ class LocOpt:
             .reset_index()
             .rename(columns={"index": "AAs"}),
         )
+
+        print("double_site_escape")
+        print(double_site_escape)
 
         # Get all possible pairs of positions that could be included in the escape double
         position_sets = list(itertools.combinations(range(self.numb_sites), 2))
@@ -230,6 +239,9 @@ class LocOpt:
             var_fit = self.df_seq_fit_dict[var_of_interest]
             temp = double_site_escape[var_of_interest].copy()
 
+            print("temp")
+            print(temp)
+
             # For every pair of positions
             for position1, position2 in position_sets:
 
@@ -240,10 +252,13 @@ class LocOpt:
                     & (_temp[f"AA{position2+1}"] == var_of_interest[position2])
                 ]
 
+                print("_temp")
+                print(_temp)
+
                 # save the number of mutants for that pair that escape
                 result_dict[var_of_interest][(position1, position2)] = len(_temp)
 
-            del temp
+            del temp, _temp
 
         # Convert these results to a DataFrame
         loc_opt_escape = pd.DataFrame(result_dict).T
@@ -335,8 +350,9 @@ class LocOpt:
     @property
     def df(self) -> pd.DataFrame:
         """Returns the dataframe without stop codons"""
-        df = pd.read_csv(self._input_csv)
-        return df[~df["AAs"].str.contains("\*")].copy()
+        # df = pd.read_csv(self._input_csv)
+        # return df[~df["AAs"].str.contains("\*")].copy()
+        return self._df
 
     @property
     def numb_no_stop(self) -> int:
@@ -349,9 +365,19 @@ class LocOpt:
         return self.numb_no_stop / 20 ** self.numb_sites
 
     @property
+    def active_df(self) -> pd.DataFrame:
+        """Return the active dataframe"""
+        return self._active_df
+
+    @property
+    def active_variants(self) -> list:
+        """Return the active variants"""
+        return self.active_df["AAs"].values
+    
+    @property
     def numb_active(self) -> int:
         """Return the number of active variants"""
-        return len(self.df[self.df["active"]])
+        return len(self.active_df)
 
     @property
     def frac_active(self) -> float:
@@ -447,7 +473,7 @@ def run_loc_opt(
     input_folder: str = "data",
     fitness_process_type: str = "scale2max",
     output_folder: str = "results/local_optima",
-    n_jobs: int = 256,
+    n_jobs: int = 16,
 ) -> None:
     """
     Run the local optima

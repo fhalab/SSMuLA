@@ -17,9 +17,7 @@ if __name__ == "__main__":
     f = open(os.path.join(log_folder, f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}.out"), 'w')
     sys.stdout = f
 
-    # process_all(scale_fit="max")
-    PlotParD(scale_fit="max")
-    PlotParD(scale_fit="parent")
+    process_all(scale_fit="max")
 
     sum_ks(process_types = {
         "fitness_landscape": "preprocessed",

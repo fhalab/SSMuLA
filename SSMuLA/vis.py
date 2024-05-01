@@ -66,6 +66,7 @@ HM_GREY = "#76777B"
 PRESENTATION_PALETTE_SATURATE = {
     "blue": "#4bacc6",
     "orange": "#f79646ff",
+    "light_orange": "#00faf4",
     "red": "#ff8888",
     "green": "#9bbb59",
     "yellow": "#f9be00",
@@ -85,7 +86,7 @@ LIB_COLORS = {
         LIB_NAMES,
         [
             PRESENTATION_PALETTE_SATURATE["orange"],
-            PRESENTATION_PALETTE_SATURATE["red"],
+            PRESENTATION_PALETTE_SATURATE["light_orange"],
             PRESENTATION_PALETTE_SATURATE["brown"],
             PRESENTATION_PALETTE_SATURATE["yellow"],
         ]

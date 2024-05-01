@@ -555,6 +555,12 @@ class LibData:
     def df_length(self):
         return len(self.input_df)
 
+    @property
+    def split_aa_cols(self) -> list:
+        """Return the columns for the split amino acids"""
+        return [f"AA{str(i)}" for i in self.lib_info["positions"].keys()]
+
+
 
 def lib2prot(lib_name: str) -> str:
     """
