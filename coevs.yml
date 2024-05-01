@@ -1,0 +1,12 @@
+# conda env update --file coevs.yml --prune
+# need to be tested
+name: coevs
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.9
+  - rdkit
+
+  - pip:
+    - atom3d

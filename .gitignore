@@ -27,6 +27,10 @@ ev_esm2
 ev_esm2/
 ev_esm2/*
 
+lmdb
+lmdb/
+lmdb/*
+
 triad
 triad/
 triad/*
