@@ -7,7 +7,17 @@ import pandas as pd
 from Bio import SeqIO
 
 from SSMuLA.landscape_global import LIB_INFO_DICT
+from SSMuLA.util import csv2fasta
 
+
+def prep_fasta(ev_esm_dir: str = "ev_esm2") -> None:
+    """
+    A function for preparing fasta files for zero-shot prediction
+    Need to make the sequence length matching the pdb file
+    """
+
+    for lib in LIB_INFO_DICT.keys():
+        csv2fasta(f"{ev_esm_dir}/{lib}/{lib}.csv")
 
 class DataProcessor:
     def __init__(self):

@@ -134,3 +134,22 @@ def ecdf_transform(data: pd.Series) -> pd.Series:
     """
 
     return data.rank(method="first") / len(data)
+
+
+
+def csv2fasta(csv: str) -> None:
+    """
+    A function for converting a csv file to a fasta file
+    ie /disk2/fli/SSMuLA/ev_esm2/DHFR/DHFR.csv
+
+    """
+    df = pd.read_csv(csv)
+
+    for col in ["muts", "seq"]:
+        if col not in df.columns:
+            raise ValueError(f"{col} column not found")
+
+    fasta = csv.replace(".csv", ".fasta")
+    with open(fasta, "w") as f:
+        for mut, seq in zip(df["muts"].values, df["seq"].values):
+            f.write(f">{mut}\n{seq}\n")

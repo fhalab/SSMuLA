@@ -319,7 +319,7 @@ class MLDEVis:
                 + deepcopy([DEFAULT_LEARNED_EMB_COMBO])
             )
         else:
-            encoding_lists = encoding_lists
+            encoding_lists = [[encoding_list] for encoding_list in encoding_lists]
 
         models = self._all_df["model"].unique()
         n_tops = self._all_df["n_top"].unique()
