@@ -90,6 +90,7 @@ class LocOpt:
 
         self._loc_opt_df = self._find_loc_opt()
         print("after find loc opt")
+        print(self._loc_opt_df.head())
 
         self._hd2_escape_df, self._loc_opt_escape_df = self._append_escape()
         print("after append escape")
@@ -217,8 +218,8 @@ class LocOpt:
         # merge the data with the original to get the fitness information
         hd2_escape_df = pd.merge(
             self.df,
-            pd.DataFrame(find_hd2_escape, index=["n_escape"])
-            .T.sort_values("n_escape", ascending=False)
+            pd.DataFrame(find_hd2_escape, index=["n_hd2_greater"])
+            .T.sort_values("n_hd2_greater", ascending=False)
             .reset_index()
             .rename(columns={"index": "AAs"}),
         )
@@ -227,6 +228,7 @@ class LocOpt:
         print(double_site_escape)
 
         # Get all possible pairs of positions that could be included in the escape double
+        # these are the position that can be mutated
         position_sets = list(itertools.combinations(range(self.numb_sites), 2))
 
         result_dict = {}
@@ -239,18 +241,30 @@ class LocOpt:
             var_fit = self.df_seq_fit_dict[var_of_interest]
             temp = double_site_escape[var_of_interest].copy()
 
-            print("temp")
-            print(temp)
-
-            # For every pair of positions
+            # For every pair of positions sites to mutate
             for position1, position2 in position_sets:
 
                 # find the mutants that escape the double-site mutant
                 _temp = temp[temp["fitness"] > var_fit].reset_index(drop=True)
-                _temp = _temp[
-                    (_temp[f"AA{position1+1}"] == var_of_interest[position1])
-                    & (_temp[f"AA{position2+1}"] == var_of_interest[position2])
-                ]
+
+                print("_temp")
+                print(_temp)
+
+                sites2keep = list(set(range(self.numb_sites)) - set([position1, position2]))
+
+                print("sites2keep")
+                print(sites2keep)
+
+                if len(sites2keep) == 1:
+                    _temp = _temp[
+                        (_temp[f"AA{sites2keep[0]+1}"] == var_of_interest[sites2keep[0]])
+                    ]
+
+                else:
+                    _temp = _temp[
+                        (_temp[f"AA{sites2keep[0]+1}"] == var_of_interest[sites2keep[0]])
+                        & (_temp[f"AA{sites2keep[1]+1}"] == var_of_interest[sites2keep[1]])
+                    ]
 
                 print("_temp")
                 print(_temp)
@@ -436,12 +450,12 @@ class LocOpt:
     @property
     def hd2_can_escape_numb(self) -> pd.DataFrame:
         """Return the dataframe of local optima escape variants"""
-        return len(self.hd2_escape_df[self.hd2_escape_df["n_escape"] != 0])
+        return len(self.hd2_escape_df[self.hd2_escape_df["n_hd2_greater"] != 0])
 
     @property
     def hd2_cannot_escape_numb(self) -> pd.DataFrame:
         """Return the dataframe of local optima escape variants"""
-        return len(self.hd2_escape_df[self.hd2_escape_df["n_escape"] == 0])
+        return len(self.hd2_escape_df[self.hd2_escape_df["n_hd2_greater"] == 0])
 
     @property
     def frac_loc_opt_hd2_escape_numb(self) -> float:

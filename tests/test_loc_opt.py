@@ -19,8 +19,8 @@ if __name__ == "__main__":
 
     run_loc_opt(input_folder = "data", 
                 fitness_process_type = "scale2max",
-                output_folder = "results/local_optima_2", 
-                n_jobs = 16)
+                output_folder = "results/local_optima", 
+                n_jobs = 96)
     
     f.close()
 
