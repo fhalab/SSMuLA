@@ -3,21 +3,120 @@
 A script for processing zs data
 """
 
+import warnings
+
 import pandas as pd
+
 from Bio import SeqIO
 
 from SSMuLA.landscape_global import LIB_INFO_DICT
-from SSMuLA.util import csv2fasta
+
+warnings.filterwarnings("ignore")
 
 
-def prep_fasta(ev_esm_dir: str = "ev_esm2") -> None:
+def pdb2seq(pdb_file_path: str, chain_id: str = "A") -> str:
+
     """
-    A function for preparing fasta files for zero-shot prediction
-    Need to make the sequence length matching the pdb file
+    A function for extracting chain in string format from pdb
+
+    Args:
+    - pdb_file_path: str,
+    - chain_id: str = "A"
     """
 
+    chains = {
+        record.id: record.seq for record in SeqIO.parse(pdb_file_path, "pdb-atom")
+    }
+
+    return str(chains[[chain for chain in chains.keys() if chain_id in chain][0]])
+
+
+def find_missing_str(longer: str, shorter: str) -> [str, str]:
+    """
+    A function for finding the missing part of a string
+
+    Args:
+    - longer: str, longer string
+    - shorter: str, shorter string
+
+    Returns:
+    - part_before: str, part of the longer string before the shorter
+    - part_after: str, part of the longer string after the shorter
+    """
+    # Find the start index of the shorter in the longer string
+    start_index = longer.find(shorter)
+
+    # If the shorter is not found, return the longer string as the "missing" part
+    if start_index == -1:
+        return longer, ""
+
+    # Find the end index of the shorter
+    end_index = start_index + len(shorter)
+
+    # Extract parts of the longer string that are not the shorter
+    part_before = longer[:start_index]
+    part_after = longer[end_index:]
+
+    return part_before, part_after
+
+
+def mut_csv2fasta(lib: str, ev_esm_dir: str = "ev_esm2") -> None:
+    """
+    A function for converting mutation csv to fasta
+
+    Args:
+    - lib: str, path to mutation csv
+    - ev_esm_dir: str = "ev_esm2"
+    """
+
+    csv_path = f"{ev_esm_dir}/{lib}/{lib}.csv"
+
+    if "TrpB" in lib:
+        protein = "TrpB"
+    else:
+        protein = lib
+
+    seq = SeqIO.read(f"data/{protein}/{protein}.fasta", "fasta").seq
+
+    if lib == "DHFR":
+        seq = str(seq.translate())
+    else:
+        seq = str(seq)
+
+    pdb_seq = pdb2seq(f"data/{protein}/{protein}.pdb", "A")
+
+    df = pd.read_csv(csv_path)
+
+    for col in ["muts", "seq"]:
+        if col not in df.columns:
+            raise ValueError(f"{col} column not found")
+
+    fasta = csv_path.replace(".csv", ".fasta")
+
+    # pdb has more than fasta should only be for dhfr
+    if len(seq) < len(pdb_seq):
+        part_before, part_after = find_missing_str(longer=pdb_seq, shorter=seq)
+        with open(fasta, "w") as f:
+            for mut, seq in zip(df["muts"].values, df["seq"].values):
+                f.write(f">{mut}\n{part_before+seq+part_after}\n")
+    elif len(seq) == len(pdb_seq):
+        with open(fasta, "w") as f:
+            for mut, seq in zip(df["muts"].values, df["seq"].values):
+                f.write(f">{mut}\n{seq}\n")
+    else:
+        part_before, part_after = find_missing_str(longer=seq, shorter=pdb_seq)
+        with open(fasta, "w") as f:
+            for mut, seq in zip(df["muts"].values, df["seq"].values):
+                f.write(f">{mut}\n{seq[len(part_before):len(seq)-len(part_after)]}\n")
+
+
+def get_all_mutfasta(ev_esm_dir: str = "ev_esm2") -> None:
+    """
+    A function for converting all mutation csv to fasta
+    subject to the pdb file sequence
+    """
     for lib in LIB_INFO_DICT.keys():
-        csv2fasta(f"{ev_esm_dir}/{lib}/{lib}.csv")
+        mut_csv2fasta(lib, ev_esm_dir)
 
 class DataProcessor:
     def __init__(self):

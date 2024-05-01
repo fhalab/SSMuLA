@@ -7,7 +7,7 @@ import os
 from datetime import datetime
 
 # from SSMuLA.zs_analysis import run_zs_analysis
-from SSMuLA.zs_data import prep_fasta
+from SSMuLA.zs_data import get_all_mutfasta
 from SSMuLA.util import checkNgen_folder
 
 if __name__ == "__main__":
@@ -22,6 +22,6 @@ if __name__ == "__main__":
     )
     sys.stdout = f
 
-    prep_fasta()
+    get_all_mutfasta()
 
     f.close()
