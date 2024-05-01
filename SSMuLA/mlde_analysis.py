@@ -7,6 +7,8 @@ from glob import glob
 from tqdm import tqdm
 from copy import deepcopy
 
+import warnings
+
 import numpy as np
 import pandas as pd
 
@@ -21,6 +23,8 @@ from SSMuLA.util import checkNgen_folder, get_file_name
 
 hv.extension("bokeh")
 
+# Suppress all warnings
+warnings.filterwarnings("ignore")
 
 DEFAULT_MLDE_METRICS = [
     "all_maxes", # change to all_maxes
@@ -291,12 +295,16 @@ class MLDEVis:
         self,
         mlde_results_dir: str = "results/mlde/saved",
         mlde_vis_dir: str = "results/mlde/vis",
+        all_encoding: bool = True,
+        encoding_lists: list[str] = [],
     ) -> None:
 
         """
         Args:
         - mlde_results_dir: str, the directory where the mlde results are saved
         - mlde_vis_dir: str, the directory where the mlde visualizations are saved
+        - all_encoding: bool, whether to visualize all encodings
+        - encoding_lists: list[str], the list of encodings to visualize
         """
 
         self._mlde_results_dir = mlde_results_dir
@@ -305,10 +313,14 @@ class MLDEVis:
         self._all_df = get_all_metric_df(self._mlde_results_dir)
         self._all_df.to_csv(os.path.join(self._mlde_vis_dir, "all_df.csv"), index=False)
 
-        encoding_lists = deepcopy(
-            [[encoding] for encoding in self._all_df["encoding"].unique()]
-            + deepcopy([DEFAULT_LEARNED_EMB_COMBO])
-        )
+        if all_encoding or len(encoding_lists) == 0:
+            encoding_lists = deepcopy(
+                [[encoding] for encoding in self._all_df["encoding"].unique()]
+                + deepcopy([DEFAULT_LEARNED_EMB_COMBO])
+            )
+        else:
+            encoding_lists = encoding_lists
+
         models = self._all_df["model"].unique()
         n_tops = self._all_df["n_top"].unique()
         n_samples = self._all_df["n_sample"].unique()

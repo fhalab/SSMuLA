@@ -3,8 +3,6 @@
 import sys
 import os
 
-from glob import glob
-
 from datetime import datetime
 
 from SSMuLA.mlde_analysis import MLDEVis
@@ -29,7 +27,9 @@ if __name__ == "__main__":
 
     MLDEVis(
         mlde_results_dir = "results/mlde/saved",
-        mlde_vis_dir = "results/mlde/vis_3"
+        mlde_vis_dir = "results/mlde/vis_3",
+        all_encoding = False,
+        encoding_lists = ["one-hot"],
     )
 
     f.close()

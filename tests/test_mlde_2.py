@@ -21,75 +21,75 @@ if __name__ == "__main__":
     )
     sys.stdout = f
 
-    run_all_mlde_parallelized(
-        encodings=["one-hot"],
-        n_mut_cutoffs=[0, 2, 1],
-        zs_predictors=["none"],
-        # n_samples=[960, 1920],
-        n_samples=[24, 48],
-        n_replicate=50,
-        n_job=96,
-        all_libs=False,
-        lib_list=["ParD2", "ParD3"],
-    )
+    # run_all_mlde_parallelized(
+    #     encodings=["one-hot"],
+    #     n_mut_cutoffs=[0, 2, 1],
+    #     zs_predictors=["none"],
+    #     # n_samples=[960, 1920],
+    #     n_samples=[24, 48],
+    #     n_replicate=50,
+    #     n_job=96,
+    #     all_libs=False,
+    #     lib_list=["ParD2", "ParD3"],
+    # )
+
+    # run_all_mlde_parallelized(
+    #     encodings=["one-hot"],
+    #     n_mut_cutoffs=[0, 2, 1],
+    #     zs_predictors=["Triad", "ev", "esm"],
+    #     # n_samples=[960, 1920],
+    #     n_samples=[24, 48],
+    #     n_replicate=50,
+    #     n_job=96,
+    #     all_libs=False,
+    #     lib_list=["ParD2", "ParD3"],
+    # )
+
+    # run_all_mlde_parallelized(
+    #     encodings=["one-hot"],
+    #     n_mut_cutoffs=[0, 2, 1],
+    #     zs_predictors=["none"],
+    #     n_samples=[96, 192, 288, 480, 576],
+    #     n_replicate=50,
+    #     n_job=96,
+    #     all_libs=False,
+    #     lib_list=["ParD2", "ParD3"],
+    # )
 
     run_all_mlde_parallelized(
         encodings=["one-hot"],
         n_mut_cutoffs=[0, 2, 1],
-        zs_predictors=["Triad", "ev", "esm"],
-        # n_samples=[960, 1920],
-        n_samples=[24, 48],
-        n_replicate=50,
-        n_job=96,
-        all_libs=False,
-        lib_list=["ParD2", "ParD3"],
-    )
-
-    run_all_mlde_parallelized(
-        encodings=["one-hot"],
-        n_mut_cutoffs=[0, 2, 1],
-        zs_predictors=["none"],
+        zs_predictors=["esm"],
         n_samples=[96, 192, 288, 480, 576],
         n_replicate=50,
         n_job=96,
         all_libs=False,
-        lib_list=["ParD2", "ParD3"],
+        lib_list=["DHFR", "GB1", "TrpB3A", "TrpB3B", "TrpB3C", "TrpB3D", "TrpB3E", "TrpB3F", "TrpB3G", "TrpB3H", "TrpB3I", "TrpB4"],
     )
 
-    run_all_mlde_parallelized(
-        encodings=["one-hot"],
-        n_mut_cutoffs=[0, 2, 1],
-        zs_predictors=["Triad", "ev", "esm"],
-        n_samples=[96, 192, 288, 480, 576],
-        n_replicate=50,
-        n_job=96,
-        all_libs=False,
-        lib_list=["ParD2", "ParD3"],
-    )
+    # run_all_mlde_parallelized(
+    #     encodings=["one-hot"],
+    #     n_mut_cutoffs=[0, 2, 1],
+    #     zs_predictors=["none"],
+    #     n_samples=[960, 1920],
+    #     # n_samples=[24, 48],
+    #     n_replicate=50,
+    #     n_job=96,
+    #     all_libs=False,
+    #     lib_list=["ParD2", "ParD3"],
+    # )
 
-    run_all_mlde_parallelized(
-        encodings=["one-hot"],
-        n_mut_cutoffs=[0, 2, 1],
-        zs_predictors=["none"],
-        n_samples=[960, 1920],
-        # n_samples=[24, 48],
-        n_replicate=50,
-        n_job=96,
-        all_libs=False,
-        lib_list=["ParD2", "ParD3"],
-    )
-
-    run_all_mlde_parallelized(
-        encodings=["one-hot"],
-        n_mut_cutoffs=[0, 2, 1],
-        zs_predictors=["Triad", "ev", "esm"],
-        n_samples=[960, 1920],
-        # n_samples=[24, 48],
-        n_replicate=50,
-        n_job=96,
-        all_libs=False,
-        lib_list=["ParD2", "ParD3"],
-    )
+    # run_all_mlde_parallelized(
+    #     encodings=["one-hot"],
+    #     n_mut_cutoffs=[0, 2, 1],
+    #     zs_predictors=["Triad", "ev", "esm"],
+    #     n_samples=[960, 1920],
+    #     # n_samples=[24, 48],
+    #     n_replicate=50,
+    #     n_job=96,
+    #     all_libs=False,
+    #     lib_list=["ParD2", "ParD3"],
+    # )
 
     # run_all_mlde_parallelized(
     #     encodings=["one-hot"],

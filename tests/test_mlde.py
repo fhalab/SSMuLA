@@ -21,25 +21,60 @@ if __name__ == "__main__":
     )
     sys.stdout = f
 
-    run_all_mlde_parallelized(
-        encodings=["one-hot"],
-        n_mut_cutoffs=[0, 2, 1],
-        zs_predictors=["none"],
-        n_replicate=100,
-        n_job=256,
-        all_libs=False,
-        lib_list=["ParD2", "ParD3"],
-    )
+    # run_all_mlde_parallelized(
+    #     encodings=["one-hot"],
+    #     n_mut_cutoffs=[0, 2, 1],
+    #     zs_predictors=["none"],
+    #     n_replicate=100,
+    #     n_job=256,
+    #     all_libs=False,
+    #     lib_list=["ParD2", "ParD3"],
+    # )
+
+    # run_all_mlde_parallelized(
+    #     encodings=["one-hot"],
+    #     n_mut_cutoffs=[0, 2, 1],
+    #     zs_predictors=["Triad", "ev", "esm"],
+    #     n_replicate=100,
+    #     n_job=256,
+    #     all_libs=False,
+    #     lib_list=["ParD2", "ParD3"],
+    # )
 
     run_all_mlde_parallelized(
         encodings=["one-hot"],
         n_mut_cutoffs=[0, 2, 1],
-        zs_predictors=["Triad", "ev", "esm"],
+        zs_predictors=["esm"],
         n_replicate=100,
         n_job=256,
         all_libs=False,
-        lib_list=["ParD2", "ParD3"],
+        lib_list=["DHFR", "GB1", "TrpB3A", "TrpB3B", "TrpB3C", "TrpB3D", "TrpB3E", "TrpB3F", "TrpB3G", "TrpB3H", "TrpB3I", "TrpB4"],
     )
+
+
+    run_all_mlde_parallelized(
+        encodings=["one-hot"],
+        n_mut_cutoffs=[0, 2, 1],
+        zs_predictors=["esm"],
+        n_samples=[24, 48],
+        n_replicate=50,
+        n_job=256,
+        all_libs=False,
+        lib_list=["DHFR", "GB1", "TrpB3A", "TrpB3B", "TrpB3C", "TrpB3D", "TrpB3E", "TrpB3F", "TrpB3G", "TrpB3H", "TrpB3I", "TrpB4"],
+    )
+
+
+    run_all_mlde_parallelized(
+        encodings=["one-hot"],
+        n_mut_cutoffs=[0, 2, 1],
+        zs_predictors=["esm"],
+        n_samples=[960, 1920],
+        n_replicate=50,
+        n_job=256,
+        all_libs=False,
+        lib_list=["DHFR", "GB1", "TrpB3A", "TrpB3B", "TrpB3C", "TrpB3D", "TrpB3E", "TrpB3F", "TrpB3G", "TrpB3H", "TrpB3I", "TrpB4"],
+    )
+
 
     # run_all_mlde_parallelized(
     #     encodings=DEFAULT_LEARNED_EMB_COMBO,
