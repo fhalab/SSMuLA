@@ -20,14 +20,14 @@ if __name__ == "__main__":
     )
     sys.stdout = f
 
-    DESumVis(
-        input_csv = "results/de/DE-active/scale2max/all_landscape_de_summary.csv",
-        output_folder = "results/summary/DE")
+    # DESumVis(
+    #     input_csv = "results/de/DE-active/scale2max/all_landscape_de_summary.csv",
+    #     output_folder = "results/summary/DE")
 
-    ZSSSumVis(
-        input_csv="results/zs_sum/none/zs_stat_scale2max.csv",
-        output_folder="results/summary/ZS"
-    )
+    # ZSSSumVis(
+    #     input_csv="results/zs_sum/none/zs_stat_scale2max.csv",
+    #     output_folder="results/summary/ZS"
+    # )
 
     plot_de_v_mlde(
         plot_folder = "results/de_vs_mlde/onehot/collage/n_samples", 
@@ -40,6 +40,8 @@ if __name__ == "__main__":
         mlde_csv = "results/mlde/vis_3/all_df.csv",
         de_folder = "results/de/DE-active/scale2max",
     )
+
+
     """
     DESumVis(SumVis):
         input_csv: str = "results/de/DE-active/scale2max/all_landscape_de_summary.csv",

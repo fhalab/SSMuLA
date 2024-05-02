@@ -66,7 +66,7 @@ HM_GREY = "#76777B"
 PRESENTATION_PALETTE_SATURATE = {
     "blue": "#4bacc6",
     "orange": "#f79646ff",
-    "light_orange": "#00faf4",
+    "light_orange": "#ffbb78",
     "red": "#ff8888",
     "green": "#9bbb59",
     "yellow": "#f9be00",
@@ -95,7 +95,16 @@ LIB_COLORS = {
     )
 }
 
-LIB_COLORS_CODON = {"DHFR": "#00faf4"} # light orange
+LIB_COLORS_CODON = {"DHFR": "#ffbb78"}  # light orange
+
+MLDE_COLORS = (
+    [
+        PRESENTATION_PALETTE_SATURATE["orange"],
+        PRESENTATION_PALETTE_SATURATE["yellow"],
+    ]
+    + sns.color_palette("crest", 9).as_hex()
+    + [PRESENTATION_PALETTE_SATURATE["gray"]]
+)
 
 # define plot hooks
 def one_decimal_x(plot, element):
@@ -197,11 +206,11 @@ def save_plt(fig, plot_title: str, path2folder: str):
 
 
 def plot_fit_dist(
-    fitness: pd.Series, 
-    label: str, 
-    color: str = "", 
+    fitness: pd.Series,
+    label: str,
+    color: str = "",
     spike_length: float | None = None,
-    ignore_line_label: bool = False
+    ignore_line_label: bool = False,
 ) -> hv.Distribution:
     """
     Plot the fitness distribution

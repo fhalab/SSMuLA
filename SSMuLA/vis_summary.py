@@ -19,6 +19,7 @@ from SSMuLA.landscape_global import LIB_INFO_DICT, LIB_NAMES, TrpB_names
 from SSMuLA.vis import (
     LIB_COLORS,
     PRESENTATION_PALETTE_SATURATE,
+    MLDE_COLORS,
     save_plt,
     save_bokeh_hv,
     JSON_THEME,
@@ -47,9 +48,24 @@ ZS_METRICS = ["rho", "ndcg", "rocauc"]
 ZS_OPTS_NOESM = deepcopy([zs for zs in ZS_OPTS if "esm" not in zs])
 ZS_N_MUTS = ["all", "double", "single"]
 
-
-TEN_COLORS = list(LIB_COLORS.values())
 N_SAMPLE_LIST = [24, 48, 96, 192, 288, 384, 480, 576, 960, 1920]
+
+SORTED_LIBS = [
+    "ParD2",
+    "ParD3",
+    "DHFR",
+    "TrpB3I",
+    "TrpB3B",
+    "TrpB3C",
+    "TrpB3H",
+    "TrpB3A",
+    "TrpB3E",
+    "TrpB3G",
+    "TrpB3F",
+    "TrpB3D",
+    "GB1",
+    "TrpB4"
+]
 
 
 def de_sum_hook(plot, element):
@@ -75,7 +91,7 @@ class SumVis:
     @property
     def input_csv(self):
         return self._input_csv
-    
+
     @property
     def input_df(self):
         return pd.read_csv(self._input_csv)
@@ -96,7 +112,7 @@ class DESumVis(SumVis):
     def __init__(
         self,
         input_csv: str = "results/simulations/DE-active/scale2max/all_landscape_de_summary.csv",
-        output_folder: str = ""
+        output_folder: str = "",
     ) -> None:
 
         """
@@ -118,7 +134,7 @@ class DESumVis(SumVis):
 
         """
         A method to plot the summary of DE simulations.
-        
+
         Args:
         - metric: str, the metric to plot, ie: 'mean_all', 'median_all'
         - metric_dets: str, the details of the metric, ie: 'all simulations fitness mean'
@@ -177,7 +193,7 @@ class ZSSSumVis(SumVis):
         super().__init__(input_csv, output_folder)
 
         self._zs_df = self._get_zs_df()
- 
+
         for n_mut in ZS_N_MUTS:
             for metric in ZS_METRICS:
                 for include_esm in [True, False]:
@@ -199,9 +215,14 @@ class ZSSSumVis(SumVis):
             - Triad_score
             - ev_score
             - esm_score
+            - esmif_score
         """
 
         zs_sum_df = self.input_df.copy()
+
+        zs_cols = [zs_col for zs_col in zs_sum_df.columns if "score" in zs_col]
+
+        print(f"Consider the following ZS columns: {zs_cols}")
 
         # Melt the DataFrame with the following columns:
         # lib
@@ -210,7 +231,7 @@ class ZSSSumVis(SumVis):
 
         zs_sum_df_melt = zs_sum_df.melt(
             id_vars=["lib", "n_mut"],
-            value_vars=ZS_OPTS,
+            value_vars=zs_cols,
             var_name="zs_type",
             value_name="corr",
         )
@@ -225,7 +246,10 @@ class ZSSSumVis(SumVis):
         df_expanded = pd.concat(
             [
                 zs_sum_df_melt.drop("corr", axis=1),
-                zs_sum_df_melt["corr"].apply(literal_eval).apply(pd.Series),
+                zs_sum_df_melt["corr"]
+                .str.replace(": nan", ": None")
+                .apply(literal_eval)
+                .apply(pd.Series),
             ],
             axis=1,
         )
@@ -255,7 +279,9 @@ class ZSSSumVis(SumVis):
         """
 
         if include_esm:
-            plot_df = self._zs_df[(self._zs_df["metric"] == metric) & (self._zs_df["n_mut"] == n_mut)]
+            plot_df = self._zs_df[
+                (self._zs_df["metric"] == metric) & (self._zs_df["n_mut"] == n_mut)
+            ]
             hook = self._zs_hook
             esm_dets = ""
         else:
@@ -322,12 +348,11 @@ class ZSSSumVis(SumVis):
         return self._zs_df
 
 
-
 def plot_de_v_mlde(
-    plot_folder: str = "results/de_vs_mlde/onehot/collage/n_samples", 
+    plot_folder: str = "results/de_vs_mlde/onehot/collage/n_samples",
     mlde_csv: str = "results/mlde/vis_3/all_df.csv",
-    de_folder: str = "results/simulations/DE-active/scale2max",
-    ) -> None:
+    de_folder: str = "results/de/DE-active/scale2max",
+) -> None:
 
     """
     A function for plotting DE vs MLDE in a collage plot
@@ -343,21 +368,27 @@ def plot_de_v_mlde(
 
     for zs, mlde_title in zip(
         ["Triad_score", "esm_score", "ev_score", "none"],
-        ["Triad-ftMLDE", "ESM-ftMLDE", "EVmutation-ftMLDE", "MLDE"]
+        ["Triad-ftMLDE", "ESM-ftMLDE", "EVmutation-ftMLDE", "MLDE"],
     ):
 
         sup_title = f"{mlde_title} vs DE"
 
-        fig, axs = plt.subplots(3, 4, figsize=(28, 16))
+        # organize into
+        # first row easy de: pard2, pard3, dhfr, trpb3i
+        # second row dead: trpb3a, trpb3b, trpb3c, trpb3h
+        # third row rest of 3 sites: trpb3e, trpb3f, trpb3g, trpb3d,
+        # fourth row two 4 sites: GB1, TrpB4
+        # lib4by4 = {0: ["ParD2", "ParD3", "DHFR", "TrpB3I"],
+        #           1: ["TrpB3B", "TrpB3C", "TrpB3H", "TrpB3A"],
+        #           2: ["TrpB3E", "TrpB3G", "TrpB3F", "TrpB3D"],
+        #           3: ["GB1", "TrpB4"]}
+        fig, axs = plt.subplots(4, 4, figsize=(28, 20))
 
-        for i, (ax, lib) in enumerate(zip(axs.flatten(), LIB_INFO_DICT.keys())):
+        # for i, (ax, lib) in enumerate(zip(axs.flatten(), LIB_INFO_DICT.keys())):
+        for i, (ax, lib) in enumerate(zip(axs.flatten()[:len(SORTED_LIBS)], SORTED_LIBS)):
 
-            ss_df_all = pd.read_csv(
-                f"{de_folder}/{lib}-single_step_DE.csv"
-            )
-            recomb_df_all = pd.read_csv(
-                f"{de_folder}/{lib}-recomb_SSM.csv"
-            )
+            ss_df_all = pd.read_csv(f"{de_folder}/{lib}-single_step_DE.csv")
+            recomb_df_all = pd.read_csv(f"{de_folder}/{lib}-recomb_SSM.csv")
 
             ss_df = ss_df_all.copy()
             recomb_df = recomb_df_all.copy()
@@ -374,14 +405,14 @@ def plot_de_v_mlde(
                 ecdf_transform(ss_df["final_fitness"]),
                 ".",
                 label="DE - single-step",
-                color=TEN_COLORS[0],
+                color=MLDE_COLORS[0],
             )
             ax.plot(
                 recomb_df["final_fitness"],
                 ecdf_transform(recomb_df["final_fitness"]),
                 ".",
                 label="DE - recombination",
-                color=TEN_COLORS[1],
+                color=MLDE_COLORS[1],
             )
 
             for n, n_samples in enumerate(N_SAMPLE_LIST):
@@ -392,7 +423,7 @@ def plot_de_v_mlde(
                     ecdf_transform(mlde_df_n),
                     ".",
                     label=f"{mlde_title} - {str(n_samples)}",
-                    color=TEN_COLORS[n + 2],
+                    color=MLDE_COLORS[n + 2],
                 )
 
             if i == 3:
@@ -409,7 +440,6 @@ def plot_de_v_mlde(
             plot_title=sup_title,
             path2folder=plot_folder,
         )
-
 
 
 def plot_n_ftmlde(
@@ -434,16 +464,16 @@ def plot_n_ftmlde(
 
         sup_title = f"{str(n)} MLDE sample 12.5% ft library vs DE"
 
-        fig, axs = plt.subplots(3, 4, figsize=(28, 16))
+        # fig, axs = plt.subplots(3, 4, figsize=(28, 16))
 
-        for i, (ax, lib) in enumerate(zip(axs.flatten(), LIB_INFO_DICT.keys())):
+        # for i, (ax, lib) in enumerate(zip(axs.flatten(), LIB_INFO_DICT.keys())):
+        fig, axs = plt.subplots(4, 4, figsize=(28, 20))
 
-            ss_df_all = pd.read_csv(
-                f"{de_folder}/{lib}-single_step_DE.csv"
-            )
-            recomb_df_all = pd.read_csv(
-                f"{de_folder}/{lib}-recomb_SSM.csv"
-            )
+        # for i, (ax, lib) in enumerate(zip(axs.flatten(), LIB_INFO_DICT.keys())):
+        for i, (ax, lib) in enumerate(zip(axs.flatten()[:len(SORTED_LIBS)], SORTED_LIBS)):
+
+            ss_df_all = pd.read_csv(f"{de_folder}/{lib}-single_step_DE.csv")
+            recomb_df_all = pd.read_csv(f"{de_folder}/{lib}-recomb_SSM.csv")
 
             ss_df = ss_df_all.copy()
             recomb_df = recomb_df_all.copy()
@@ -460,29 +490,28 @@ def plot_n_ftmlde(
                 ecdf_transform(ss_df["final_fitness"]),
                 ".",
                 label="DE - single-step",
-                color=TEN_COLORS[0],
+                color=MLDE_COLORS[0],
             )
             ax.plot(
                 recomb_df["final_fitness"],
                 ecdf_transform(recomb_df["final_fitness"]),
                 ".",
                 label="DE - recombination",
-                color=TEN_COLORS[1],
+                color=MLDE_COLORS[1],
             )
 
             for zs_label, zs_color, zs in zip(
                 ["MLDE", "Triad ftMLDE", "ESM ftMLDE", "EVmutation ftMLDE"],
                 ["gray", "blue", "purple", "green"],
                 ["none", "Triad_score", "esm_score", "ev_score"],
-            ):  
+            ):
                 if zs == "none":
-                    mlde_df_n = mlde_df[
-                        (mlde_df["zs"] == zs)
-                    ]["top_maxes"]
+                    mlde_df_n = mlde_df[(mlde_df["zs"] == zs)]["top_maxes"]
 
                 else:
                     mlde_df_n = mlde_df[
-                        (mlde_df["zs"] == zs) & (mlde_df["ft_lib"] == mlde_df["ft_lib"].min())
+                        (mlde_df["zs"] == zs)
+                        & (mlde_df["ft_lib"] == mlde_df["ft_lib"].min())
                     ]["top_maxes"]
 
                 ax.plot(
