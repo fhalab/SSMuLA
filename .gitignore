@@ -15,6 +15,10 @@ logs
 logs/
 logs/*
 
+esmif
+esmif/
+esmif/*
+
 ev_esm
 ev_esm/
 ev_esm/*
@@ -26,6 +30,10 @@ ev_esm1v/*
 ev_esm2
 ev_esm2/
 ev_esm2/*
+
+gvp-pytorch
+gvp-pytorch/
+gvp-pytorch/*
 
 lmdb
 lmdb/
