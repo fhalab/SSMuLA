@@ -507,6 +507,7 @@ def run_all_de_simulations(
     topns: list = [96, 384],
     max_samples: int | None = None,
     n_jobs: int = 256,
+    rerun: bool = False,
 ):
 
     """
@@ -525,6 +526,7 @@ def run_all_de_simulations(
     - topns: list, the top N values to calculate the characteristics
     - max_samples: int, the maximum number of samples to simulate
     - n_jobs: int, the number of jobs to use for multiprocessing
+    - rerun: bool, rerun the simulations
 
     Returns:
     - dict, the results of the simulations
@@ -533,57 +535,74 @@ def run_all_de_simulations(
 
     save_dir = checkNgen_folder(save_dir)
 
-    ######## Simulate a single step directed evolution walk ########
-    print("Simulate a single step directed evolution walk")
-    fitness_array, single_step_DE = simulate_single_step_DE(
-        df=df,
-        seq_col=seq_col,
-        fitness_col=fitness_col,
-        n_sites=n_sites,
-    )
+    if rerun:
 
-    # get the characteristics of the simulation
-    single_step_DE_char = calc_char(
-        single_step_DE, col_name="final_fitness", topns=topns
-    )
+        ######## Simulate a single step directed evolution walk ########
+        print("Simulate a single step directed evolution walk")
+        fitness_array, single_step_DE = simulate_single_step_DE(
+            df=df,
+            seq_col=seq_col,
+            fitness_col=fitness_col,
+            n_sites=n_sites,
+        )
 
-    # save reults to csv
-    single_step_DE.to_csv(
-        os.path.join(save_dir, f"{lib_name}-single_step_DE.csv"), index=False
-    )
+        # get the characteristics of the simulation
+        single_step_DE_char = calc_char(
+            single_step_DE, col_name="final_fitness", topns=topns
+        )
 
-    ######## Simulate a simple SSM recombination ########
-    print("\nSimulate a simple SSM recombination")
-    recomb_SSM = simulate_simple_recomb_SSM_DE(
-        df=df,
-        seq_col=seq_col,
-        fitness_col=fitness_col,
-        n_sites=n_sites,
-    )
+        # save reults to csv
+        single_step_DE.to_csv(
+            os.path.join(save_dir, f"{lib_name}-single_step_DE.csv"), index=False
+        )
 
-    # get the characteristics of the simulation
-    recomb_SSM_char = calc_char(recomb_SSM, col_name="final_fitness", topns=topns)
+        ######## Simulate a simple SSM recombination ########
+        print("\nSimulate a simple SSM recombination")
+        recomb_SSM = simulate_simple_recomb_SSM_DE(
+            df=df,
+            seq_col=seq_col,
+            fitness_col=fitness_col,
+            n_sites=n_sites,
+        )
 
-    # save reults to csv
-    recomb_SSM.to_csv(os.path.join(save_dir, f"{lib_name}-recomb_SSM.csv"), index=False)
+        # get the characteristics of the simulation
+        recomb_SSM_char = calc_char(recomb_SSM, col_name="final_fitness", topns=topns)
 
-    ######## Simulate SSM predict top N ########
-    print(f"\nSimulate SSM predict top {N}")
-    top96_SSM = sample_SSM_test_top_N(
-        df=df,
-        seq_col=seq_col,
-        fitness_col=fitness_col,
-        n_sites=n_sites,
-        N=N,
-        max_samples=max_samples,
-        n_jobs=n_jobs,
-    )
+        # save reults to csv
+        recomb_SSM.to_csv(os.path.join(save_dir, f"{lib_name}-recomb_SSM.csv"), index=False)
 
-    # get the characteristics of the simulation
-    top96_SSM_char = calc_char(top96_SSM, col_name="final_fitness", topns=topns)
+        ######## Simulate SSM predict top N ########
+        print(f"\nSimulate SSM predict top {N}")
+        top96_SSM = sample_SSM_test_top_N(
+            df=df,
+            seq_col=seq_col,
+            fitness_col=fitness_col,
+            n_sites=n_sites,
+            N=N,
+            max_samples=max_samples,
+            n_jobs=n_jobs,
+        )
 
-    # save reults to csv
-    top96_SSM.to_csv(os.path.join(save_dir, f"{lib_name}-top{N}_SSM.csv"), index=False)
+        # get the characteristics of the simulation
+        top96_SSM_char = calc_char(top96_SSM, col_name="final_fitness", topns=topns)
+
+        # save reults to csv
+        top96_SSM.to_csv(os.path.join(save_dir, f"{lib_name}-top{N}_SSM.csv"), index=False)
+    
+    else:
+        print("Results already exist, loading from csv...")
+
+        single_step_DE = pd.read_csv(
+            os.path.join(save_dir, f"{lib_name}-single_step_DE.csv")
+        )
+        recomb_SSM = pd.read_csv(os.path.join(save_dir, f"{lib_name}-recomb_SSM.csv"))
+        top96_SSM = pd.read_csv(os.path.join(save_dir, f"{lib_name}-top{N}_SSM.csv"))
+
+        single_step_DE_char = calc_char(
+            single_step_DE, col_name="final_fitness", topns=topns
+        )
+        recomb_SSM_char = calc_char(recomb_SSM, col_name="final_fitness", topns=topns)
+        top96_SSM_char = calc_char(top96_SSM, col_name="final_fitness", topns=topns)
 
     # Create an initially empty DataFrame
     char_sum_df = pd.DataFrame()
@@ -623,6 +642,7 @@ def run_all_lib_de_simulations(
     save_dir: str = "results/de",
     all_lib: bool = True,
     lib_list: list[str] = [],
+    rerun: bool = False,
 ):
     """
     Run all simulations for each library.
@@ -633,6 +653,7 @@ def run_all_lib_de_simulations(
     - save_dir: str, the directory to save the results to
     - all_lib: bool, run all libraries
     - lib_list: list, the list of libraries to simulate
+    - rerun: bool, rerun the simulations
     """
     for scale_type in scale_types:
         for de_det in de_opts:
@@ -683,6 +704,7 @@ def run_all_lib_de_simulations(
                     topns=[96, 384],
                     max_samples=None,
                     n_jobs=256,
+                    rerun=rerun,
                 )
 
                 all_char_sum_df_list.append(char_sum_df)
