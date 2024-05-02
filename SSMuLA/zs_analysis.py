@@ -32,12 +32,13 @@ from SSMuLA.util import ndcg_scale, checkNgen_folder
 hv.extension("bokeh")
 hv.renderer("bokeh").theme = JSON_THEME
 
-ZS_OPTS = ["Triad_score", "ev_score", "esm_score"]
+ZS_OPTS = ["Triad_score", "ev_score", "esm_score", "esmif_score"]
 ZS_OPTS_LEGEND = {
     "none": "No ZS",
     "Triad_score": "Triad",
     "ev_score": "EVMutation",
     "esm_score": "ESM",
+    "esmif_score": "ESM-IF"
 }
 
 
@@ -54,6 +55,7 @@ class ZS_Analysis(LibData):
         n_mut_cutoff: int = 0,
         ev_esm_folder: str = "ev_esm",
         triad_folder: str = "triad",
+        esmif_folder: str = "esmif",
         filter_min_by: str = "none",
         zs_comb_dir: str = "results/zs_comb",
         zs_vis_dir: str = "results/zs_vis",
@@ -68,6 +70,7 @@ class ZS_Analysis(LibData):
         - n_mut_cutoff, int: the number of mutations cutoff
         - ev_esm_folder, str: the folder for the ev and esm scores
         - triad_folder, str: the folder for the triad scores
+        - esmif_folder, str: the folder for the esm inverse folding scores
         - filter_min_by, str: the filter for the minimum fitness
         - zs_comb_dir, str: the folder for the ZS combed with fitness outputs
         - zs_vis_dir, str: the folder for the ZS vis outputs
@@ -78,6 +81,7 @@ class ZS_Analysis(LibData):
         self._n_mut_cutoff = n_mut_cutoff
         self._ev_esm_folder = os.path.normpath(ev_esm_folder)
         self._triad_folder = os.path.normpath(triad_folder)
+        self._esmif_folder = os.path.normpath(esmif_folder)
         self._filter_min_by = filter_min_by
         self._zs_comb_dir = checkNgen_folder(zs_comb_dir)
         self._zs_vis_dir = checkNgen_folder(zs_vis_dir)
@@ -90,6 +94,7 @@ class ZS_Analysis(LibData):
         print(f"Get fitness data without stop codon from {self._input_csv}...")
         print(f"Get ev esm data from {self.ev_esm_path}...")
         print(f"Get triad data from {self.triad_path}...")
+        print(f"Get inverse folding data from {self.esmif_path}...")
 
         print(f"Save combed zs data to {self.zf_comb_path}...")
         self.zs_df.to_csv(self.zf_comb_path, index=False)
@@ -319,7 +324,7 @@ class ZS_Analysis(LibData):
         return df.drop(columns=drop_cols).copy()
 
     @property
-    def triad_path(self) -> pd.DataFrame:
+    def triad_path(self) -> str:
 
         """
         Returns the path to triad scores
@@ -341,13 +346,51 @@ class ZS_Analysis(LibData):
         return df.copy()
 
     @property
+    def esmif_path(self) -> str:
+            
+        """
+        Returns the path to the esm inverse folding scores
+
+        ie esmif/DHFR_esmif_scores.csv
+        """
+
+        return f"{self._esmif_folder}/{self.lib_name}_esmif_scores.csv"
+
+    @property
+    def esmif_df(self) -> pd.DataFrame:
+        """
+        Returns the dataframe with the esm inverse folding scores
+
+        Start with columns 'seqid,log_likelihood'
+        Rename to 'muts,esmif_score' and add `esmif_rank`
+
+        Note WT is WT
+
+        Returns:
+        - df, pd.DataFrame: the dataframe with the esm inverse folding scores
+        """
+
+        df = pd.read_csv(self.esmif_path)
+
+        # Rename columns
+        df.columns = ["muts", "esmif_score"]
+
+
+        # Add rank column for each score
+        df["esmif_rank"] = df["esmif_score"].rank(ascending=False)
+
+        return df.copy()
+
+    @property
     def zs_df(self) -> pd.DataFrame:
         """
         Returns the dataframe with the ZS scores
+
+        Merge the fitness data with the ev, esm, triad, and esmif scores
         """
 
         df = pd.merge(
-            pd.merge(self.df_no_stop, self.ev_esm_df, on="muts"),
+            pd.merge(pd.merge(self.df_no_stop, self.ev_esm_df, on="muts"), self.esmif_df, on="muts"),
             self.triad_df,
             on="AAs",
         )
@@ -435,6 +478,7 @@ def run_zs_analysis(
     data_folder: str = "data",
     ev_esm_folder: str = "ev_esm",
     triad_folder: str = "triad",
+    esmif_folder: str = "esmif",
     filter_min_by: str = "none",
     zs_comb_dir: str = "results/zs_comb",
     zs_vis_dir: str = "results/zs_vis",
@@ -449,6 +493,7 @@ def run_zs_analysis(
     - data_folder, str: the folder for the data
     - ev_esm_folder, str: the folder for the ev and esm scores
     - triad_folder, str: the folder for the triad scores
+    - esmif_folder, str: the folder for the esm inverse folding scores
     - filter_min_by, str: the filter for the minimum fitness
     - zs_comb_dir, str: the folder for the ZS combed with fitness outputs
     - zs_vis_dir, str: the folder for the ZS vis outputs
@@ -473,6 +518,7 @@ def run_zs_analysis(
                     n_mut_cutoff=n_mut_cutoff,
                     ev_esm_folder=ev_esm_folder,
                     triad_folder=triad_folder,
+                    esmif_folder=esmif_folder,
                     filter_min_by=filter_min_by,
                     zs_comb_dir=zs_comb_dir,
                     zs_vis_dir=zs_vis_dir,
