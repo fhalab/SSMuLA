@@ -6,6 +6,7 @@ A script to visualize the results cross landscapes.
 import os
 from copy import deepcopy
 import pandas as pd
+from tqdm import tqdm
 from ast import literal_eval
 
 
@@ -50,7 +51,7 @@ ZS_N_MUTS = ["all", "double", "single"]
 
 N_SAMPLE_LIST = [24, 48, 96, 192, 288, 384, 480, 576, 960, 1920]
 
-SORTED_LIBS = [
+LIB4BY4 = [
     "ParD2",
     "ParD3",
     "DHFR",
@@ -67,6 +68,23 @@ SORTED_LIBS = [
     "TrpB4"
 ]
 
+LIB3BY5 = [
+    "ParD3",
+    "ParD2",
+    "DHFR",
+    "TrpB3I",
+    "TrpB3D",
+    "GB1", 
+    "TrpB4",
+    "TrpB3G", 
+    "TrpB3F",
+    "",
+    "TrpB3E",
+    "TrpB3H",
+    "TrpB3A",
+    "TrpB3C",
+    "TrpB3B"
+]
 
 def de_sum_hook(plot, element):
     plot.handles["plot"].x_range.factors = [
@@ -366,10 +384,10 @@ def plot_de_v_mlde(
     plot_folder = checkNgen_folder(plot_folder)
     mlde_all = pd.read_csv(mlde_csv).copy()
 
-    for zs, mlde_title in zip(
+    for zs, mlde_title in tqdm(zip(
         ["Triad_score", "esm_score", "ev_score", "none"],
         ["Triad-ftMLDE", "ESM-ftMLDE", "EVmutation-ftMLDE", "MLDE"],
-    ):
+    )):
 
         sup_title = f"{mlde_title} vs DE"
 
@@ -382,56 +400,71 @@ def plot_de_v_mlde(
         #           1: ["TrpB3B", "TrpB3C", "TrpB3H", "TrpB3A"],
         #           2: ["TrpB3E", "TrpB3G", "TrpB3F", "TrpB3D"],
         #           3: ["GB1", "TrpB4"]}
-        fig, axs = plt.subplots(4, 4, figsize=(28, 20))
-
+        # LIB3BY5 = ["ParD3", "ParD2", "DHFR", "TrpB3I", "TrpB3D",
+        #            "GB1", "TrpB4", "TrpB3G", "TrpB3F", ""
+        #            "TrpB3E", "TrpB3H", "TrpB3A", "TrpB3C", "TrpB3B",
+        # ]
+        # fig, axs = plt.subplots(4, 3, figsize=(28, 16))
         # for i, (ax, lib) in enumerate(zip(axs.flatten(), LIB_INFO_DICT.keys())):
-        for i, (ax, lib) in enumerate(zip(axs.flatten()[:len(SORTED_LIBS)], SORTED_LIBS)):
+        # fig, axs = plt.subplots(4, 4, figsize=(28, 20))
+        # for i, (ax, lib) in enumerate(zip(axs.flatten()[:len(LIB4BY4)], LIB4BY4)):
 
-            ss_df_all = pd.read_csv(f"{de_folder}/{lib}-single_step_DE.csv")
-            recomb_df_all = pd.read_csv(f"{de_folder}/{lib}-recomb_SSM.csv")
+        # LIB3BY5
+        ncol = 5
+        nrow = 3
+        fig, axs = plt.subplots(nrow, ncol, figsize=(32, 16))
+        for i, (ax, lib) in enumerate(zip(axs.flatten(), LIB3BY5)):
 
-            ss_df = ss_df_all.copy()
-            recomb_df = recomb_df_all.copy()
+            if lib != "":
 
-            mlde_df = mlde_all[
-                (mlde_all["lib"] == lib)
-                & (mlde_all["n_mut_cutoff"] == "all")
-                & (mlde_all["zs"] == zs)
-                & (mlde_all["encoding"] == "one-hot")
-            ].copy()
+                ss_df_all = pd.read_csv(f"{de_folder}/{lib}-single_step_DE.csv")
+                recomb_df_all = pd.read_csv(f"{de_folder}/{lib}-recomb_SSM.csv")
 
-            ax.plot(
-                ss_df["final_fitness"],
-                ecdf_transform(ss_df["final_fitness"]),
-                ".",
-                label="DE - single-step",
-                color=MLDE_COLORS[0],
-            )
-            ax.plot(
-                recomb_df["final_fitness"],
-                ecdf_transform(recomb_df["final_fitness"]),
-                ".",
-                label="DE - recombination",
-                color=MLDE_COLORS[1],
-            )
+                ss_df = ss_df_all.copy()
+                recomb_df = recomb_df_all.copy()
 
-            for n, n_samples in enumerate(N_SAMPLE_LIST):
-                # [24, 48, 96, 192, 288, 384, 480, 576, 960, 1920]
-                mlde_df_n = mlde_df[mlde_df["n_sample"] == n_samples]["top_maxes"]
+                mlde_df = mlde_all[
+                    (mlde_all["lib"] == lib)
+                    & (mlde_all["n_mut_cutoff"] == "all")
+                    & (mlde_all["zs"] == zs)
+                    & (mlde_all["encoding"] == "one-hot")
+                ].copy()
+
                 ax.plot(
-                    mlde_df_n,
-                    ecdf_transform(mlde_df_n),
+                    ss_df["final_fitness"],
+                    ecdf_transform(ss_df["final_fitness"]),
                     ".",
-                    label=f"{mlde_title} - {str(n_samples)}",
-                    color=MLDE_COLORS[n + 2],
+                    label="DE - single-step",
+                    color=MLDE_COLORS[0],
+                )
+                ax.plot(
+                    recomb_df["final_fitness"],
+                    ecdf_transform(recomb_df["final_fitness"]),
+                    ".",
+                    label="DE - recombination",
+                    color=MLDE_COLORS[1],
                 )
 
-            if i == 3:
-                ax.legend(loc="upper left", bbox_to_anchor=(1, 1))
+                for n, n_samples in enumerate(N_SAMPLE_LIST):
+                    # [24, 48, 96, 192, 288, 384, 480, 576, 960, 1920]
+                    mlde_df_n = mlde_df[mlde_df["n_sample"] == n_samples]["top_maxes"]
+                    ax.plot(
+                        mlde_df_n,
+                        ecdf_transform(mlde_df_n),
+                        ".",
+                        label=f"{mlde_title} - {str(n_samples)}",
+                        color=MLDE_COLORS[n + 2],
+                    )
 
-            ax.set_title(lib)
-            ax.set_xlabel("Max fitness achieved")
-            ax.set_ylabel("ECDF")
+                if i == ncol-1:
+                    ax.legend(loc="upper left", bbox_to_anchor=(1, 1))
+
+                ax.set_title(lib)
+                ax.set_xlabel("Max fitness achieved")
+                ax.set_ylabel("ECDF")
+
+            else:
+                ax.set_visible(False)
 
         fig.suptitle(sup_title, fontsize=16, fontweight="bold", y=0.9125)
 
@@ -460,74 +493,84 @@ def plot_n_ftmlde(
     plot_folder = checkNgen_folder(plot_folder)
     mlde_all = pd.read_csv(mlde_csv).copy()
 
-    for n in N_SAMPLE_LIST:
+    for n in tqdm(N_SAMPLE_LIST):
 
         sup_title = f"{str(n)} MLDE sample 12.5% ft library vs DE"
 
         # fig, axs = plt.subplots(3, 4, figsize=(28, 16))
+        # for i, (ax, lib) in enumerate(zip(axs.flatten(), LIB_INFO_DICT.keys())):
+        
 
         # for i, (ax, lib) in enumerate(zip(axs.flatten(), LIB_INFO_DICT.keys())):
-        fig, axs = plt.subplots(4, 4, figsize=(28, 20))
+        # fig, axs = plt.subplots(4, 4, figsize=(28, 20))
+        # for i, (ax, lib) in enumerate(zip(axs.flatten()[:len(LIB4BY4)], LIB4BY4)):
+        # LIB3BY5
+        ncol = 5
+        nrow = 3
+        fig, axs = plt.subplots(nrow, ncol, figsize=(32, 16))
+        for i, (ax, lib) in enumerate(zip(axs.flatten(), LIB3BY5)):
 
-        # for i, (ax, lib) in enumerate(zip(axs.flatten(), LIB_INFO_DICT.keys())):
-        for i, (ax, lib) in enumerate(zip(axs.flatten()[:len(SORTED_LIBS)], SORTED_LIBS)):
+            if lib != "":
 
-            ss_df_all = pd.read_csv(f"{de_folder}/{lib}-single_step_DE.csv")
-            recomb_df_all = pd.read_csv(f"{de_folder}/{lib}-recomb_SSM.csv")
+                ss_df_all = pd.read_csv(f"{de_folder}/{lib}-single_step_DE.csv")
+                recomb_df_all = pd.read_csv(f"{de_folder}/{lib}-recomb_SSM.csv")
 
-            ss_df = ss_df_all.copy()
-            recomb_df = recomb_df_all.copy()
+                ss_df = ss_df_all.copy()
+                recomb_df = recomb_df_all.copy()
 
-            mlde_df = mlde_all[
-                (mlde_all["lib"] == lib)
-                & (mlde_all["n_mut_cutoff"] == "all")
-                & (mlde_all["n_sample"] == n)
-                & (mlde_all["encoding"] == "one-hot")
-            ].copy()
-
-            ax.plot(
-                ss_df["final_fitness"],
-                ecdf_transform(ss_df["final_fitness"]),
-                ".",
-                label="DE - single-step",
-                color=MLDE_COLORS[0],
-            )
-            ax.plot(
-                recomb_df["final_fitness"],
-                ecdf_transform(recomb_df["final_fitness"]),
-                ".",
-                label="DE - recombination",
-                color=MLDE_COLORS[1],
-            )
-
-            for zs_label, zs_color, zs in zip(
-                ["MLDE", "Triad ftMLDE", "ESM ftMLDE", "EVmutation ftMLDE"],
-                ["gray", "blue", "purple", "green"],
-                ["none", "Triad_score", "esm_score", "ev_score"],
-            ):
-                if zs == "none":
-                    mlde_df_n = mlde_df[(mlde_df["zs"] == zs)]["top_maxes"]
-
-                else:
-                    mlde_df_n = mlde_df[
-                        (mlde_df["zs"] == zs)
-                        & (mlde_df["ft_lib"] == mlde_df["ft_lib"].min())
-                    ]["top_maxes"]
+                mlde_df = mlde_all[
+                    (mlde_all["lib"] == lib)
+                    & (mlde_all["n_mut_cutoff"] == "all")
+                    & (mlde_all["n_sample"] == n)
+                    & (mlde_all["encoding"] == "one-hot")
+                ].copy()
 
                 ax.plot(
-                    mlde_df_n,
-                    ecdf_transform(mlde_df_n),
+                    ss_df["final_fitness"],
+                    ecdf_transform(ss_df["final_fitness"]),
                     ".",
-                    label=zs_label,
-                    color=PRESENTATION_PALETTE_SATURATE[zs_color],
+                    label="DE - single-step",
+                    color=MLDE_COLORS[0],
+                )
+                ax.plot(
+                    recomb_df["final_fitness"],
+                    ecdf_transform(recomb_df["final_fitness"]),
+                    ".",
+                    label="DE - recombination",
+                    color=MLDE_COLORS[1],
                 )
 
-            if i == 3:
-                ax.legend(loc="upper left", bbox_to_anchor=(1, 1))
+                for zs_label, zs_color, zs in zip(
+                    ["MLDE", "Triad ftMLDE", "ESM ftMLDE", "EVmutation ftMLDE"],
+                    ["gray", "blue", "purple", "green"],
+                    ["none", "Triad_score", "esm_score", "ev_score"],
+                ):
+                    if zs == "none":
+                        mlde_df_n = mlde_df[(mlde_df["zs"] == zs)]["top_maxes"]
 
-            ax.set_title(lib)
-            ax.set_xlabel("Max fitness achieved")
-            ax.set_ylabel("ECDF")
+                    else:
+                        mlde_df_n = mlde_df[
+                            (mlde_df["zs"] == zs)
+                            & (mlde_df["ft_lib"] == mlde_df["ft_lib"].min())
+                        ]["top_maxes"]
+
+                    ax.plot(
+                        mlde_df_n,
+                        ecdf_transform(mlde_df_n),
+                        ".",
+                        label=zs_label,
+                        color=PRESENTATION_PALETTE_SATURATE[zs_color],
+                    )
+
+                if i == ncol-1:
+                    ax.legend(loc="upper left", bbox_to_anchor=(1, 1))
+
+                ax.set_title(lib)
+                ax.set_xlabel("Max fitness achieved")
+                ax.set_ylabel("ECDF")
+            
+            else:
+                ax.set_visible(False)
 
         fig.suptitle(sup_title, fontsize=16, fontweight="bold", y=0.9125)
 
