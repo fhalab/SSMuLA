@@ -129,14 +129,14 @@ class DESumVis(SumVis):
 
     def __init__(
         self,
-        input_csv: str = "results/simulations/DE-active/scale2max/all_landscape_de_summary.csv",
+        input_csv: str = "results/de/DE-active/scale2max/all_landscape_de_summary.csv",
         output_folder: str = "",
     ) -> None:
 
         """
         Args:
         - input_csv: str, The input csv file path for the summary df
-            ie 'results/simulations/DE-active/scale2max/all_landscape_de_summary.csv'
+            ie 'results/de/DE-active/scale2max/all_landscape_de_summary.csv'
         - output_folder: str, The output folder for the plots
         """
 
@@ -385,8 +385,8 @@ def plot_de_v_mlde(
     mlde_all = pd.read_csv(mlde_csv).copy()
 
     for zs, mlde_title in tqdm(zip(
-        ["Triad_score", "esm_score", "ev_score", "none"],
-        ["Triad-ftMLDE", "ESM-ftMLDE", "EVmutation-ftMLDE", "MLDE"],
+        ["Triad_score", "ev_score", "esm_score", "esmif_score", "none"],
+        ["Triad-ftMLDE", "EVmutation-ftMLDE", "ESM-ftMLDE", "ESMIF-ftMLDE", "MLDE"],
     )):
 
         sup_title = f"{mlde_title} vs DE"
@@ -541,9 +541,9 @@ def plot_n_ftmlde(
                 )
 
                 for zs_label, zs_color, zs in zip(
-                    ["MLDE", "Triad ftMLDE", "ESM ftMLDE", "EVmutation ftMLDE"],
-                    ["gray", "blue", "purple", "green"],
-                    ["none", "Triad_score", "esm_score", "ev_score"],
+                    ["MLDE", "Triad ftMLDE", "EVmutation ftMLDE", "ESM ftMLDE",  "ESMIF ftMLDE"],
+                    ["gray", "blue", "green", "purple", "brown"],
+                    ["none", "Triad_score", "ev_score", "esm_score", "esmif_score"],
                 ):
                     if zs == "none":
                         mlde_df_n = mlde_df[(mlde_df["zs"] == zs)]["top_maxes"]

@@ -972,8 +972,7 @@ class VisDESims:
                 .copy()
             )
 
-        plot_name = f"{self._lib_name} {self._append_title} \
-            start from {n_mut_cutoff_dict[self._n_mut_cutoff]}"
+        plot_name = f"{self._lib_name} {self._append_title} start from {n_mut_cutoff_dict[self._n_mut_cutoff]}"
         plot_folder = checkNgen_folder(
             os.path.join(
                 self._vis_folder,

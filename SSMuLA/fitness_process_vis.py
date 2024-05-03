@@ -1200,7 +1200,9 @@ class SDA(LibData):
 
         # plot s2d, s2m, d2m fitness distribution
         sda_dist = sda_dist.opts(
-            legend_position="top_right",
+            width = 550,
+            legend_position="right",
+            legend_offset=(5, 0),
             title=f"{self.lib_name} fitness distribution",
             xlabel="Fitness",
         )

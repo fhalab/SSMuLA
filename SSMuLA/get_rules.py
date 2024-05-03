@@ -1,12 +1,14 @@
 """A script for getting all results into a summary"""
 
 from glob import glob
+from tqdm import tqdm
 
 import pandas as pd
 import numpy as np
 
 from ast import literal_eval
 
+from scipy.stats import spearmanr
 
 import bokeh
 from bokeh.io import show, export_svg, export_png, output_notebook
@@ -199,10 +201,20 @@ simple_merge_pw["norm_reciprocal-sign"] = (
     simple_merge_pw["fraction_reciprocal-sign"] * simple_merge_pw["percent_active"]
 )
 simple_merge_pw["delta_ft_mlde"] = (
-    np.maximum(simple_merge_pw["maxes_ev"], simple_merge_pw["maxes_Triad"])
+    np.maximum.reduce([
+        simple_merge_pw["maxes_Triad"],
+        simple_merge_pw["maxes_ev"],
+        simple_merge_pw["maxes_esm"],
+        simple_merge_pw["maxes_esmif"]
+    ])
     - simple_merge_pw["top_maxes"]
 )
 simple_merge_pw["delta_ft_de"] = (
-    np.maximum(simple_merge_pw["maxes_ev"], simple_merge_pw["maxes_Triad"])
+    np.maximum.reduce([
+        simple_merge_pw["maxes_Triad"],
+        simple_merge_pw["maxes_ev"],
+        simple_merge_pw["maxes_esm"],
+        simple_merge_pw["maxes_esmif"]
+    ])
     - simple_merge_pw["recomb_SSM_mean_all"]
 )

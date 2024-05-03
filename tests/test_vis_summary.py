@@ -29,11 +29,11 @@ if __name__ == "__main__":
     #     output_folder="results/summary/ZS"
     # )
 
-    plot_de_v_mlde(
-        plot_folder = "results/de_vs_mlde/onehot/collage/n_samples", 
-        mlde_csv = "results/mlde/vis_3/all_df.csv",
-        de_folder = "results/de/DE-active/scale2max",
-    )
+    # plot_de_v_mlde(
+    #     plot_folder = "results/de_vs_mlde/onehot/collage/n_samples", 
+    #     mlde_csv = "results/mlde/vis_3/all_df.csv",
+    #     de_folder = "results/de/DE-active/scale2max",
+    # )
 
     plot_n_ftmlde(
         plot_folder = "results/de_vs_mlde/onehot/collage/ftMLDE",
