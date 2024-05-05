@@ -115,7 +115,7 @@ mlde_avg = (
         & (mlde_df["encoding"] == "one-hot")
         & (mlde_df["model"] == "boosting")
         & (mlde_df["n_mut_cutoff"] == "all")
-        & (mlde_df["n_sample"] == 384)
+        & (mlde_df["n_sample"] == 96)
         & (mlde_df["n_top"] == 96)
     ][["lib", "top_maxes", "top_means", "ndcgs", "rhos", "if_truemaxs"]]
     .groupby("lib")
@@ -142,7 +142,7 @@ for zs in zs_simpele:
                 & (mlde_df["encoding"] == "one-hot")
                 & (mlde_df["model"] == "boosting")
                 & (mlde_df["n_mut_cutoff"] == "all")
-                & (mlde_df["n_sample"] == 384)
+                & (mlde_df["n_sample"] == 96)
                 & (mlde_df["n_top"] == 96)
             ][["lib", "top_maxes", "top_means", "ndcgs", "rhos", "if_truemaxs"]]
             .groupby("lib")

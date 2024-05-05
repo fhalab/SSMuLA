@@ -41,31 +41,31 @@ if __name__ == "__main__":
     #     lib_list=["ParD2", "ParD3"],
     # )
 
-    run_all_mlde_parallelized(
-        encodings=["one-hot"],
-        n_mut_cutoffs=[0, 2, 1],
-        zs_predictors=["esmif"],
-        n_replicate=100,
-        n_job=256
-    )
+    # run_all_mlde_parallelized(
+    #     encodings=["one-hot"],
+    #     n_mut_cutoffs=[0, 2, 1],
+    #     zs_predictors=["esmif"],
+    #     n_replicate=100,
+    #     n_job=256
+    # )
 
-    run_all_mlde_parallelized(
-        encodings=["one-hot"],
-        n_mut_cutoffs=[0, 2, 1],
-        zs_predictors=["esmif"],
-        n_samples=[24, 48],
-        n_replicate=50,
-        n_job=256
-    )
+    # run_all_mlde_parallelized(
+    #     encodings=["one-hot"],
+    #     n_mut_cutoffs=[0, 2, 1],
+    #     zs_predictors=["esmif"],
+    #     n_samples=[24, 48],
+    #     n_replicate=50,
+    #     n_job=256
+    # )
 
-    run_all_mlde_parallelized(
-        encodings=["one-hot"],
-        n_mut_cutoffs=[0, 2, 1],
-        zs_predictors=["esmif"],
-        n_samples=[960, 1920],
-        n_replicate=50,
-        n_job=256
-    )
+    # run_all_mlde_parallelized(
+    #     encodings=["one-hot"],
+    #     n_mut_cutoffs=[0, 2, 1],
+    #     zs_predictors=["esmif"],
+    #     n_samples=[960, 1920],
+    #     n_replicate=50,
+    #     n_job=256
+    # )
 
 
     # run_all_mlde_parallelized(

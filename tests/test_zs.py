@@ -22,7 +22,37 @@ if __name__ == "__main__":
     )
     sys.stdout = f
 
-    run_zs_analysis(scale_types=["max"], filter_min_by="none", ev_esm_folder = "ev_esm2")
-    run_zs_analysis(scale_types=["max"], filter_min_by="min0", ev_esm_folder = "ev_esm2")
+    run_zs_analysis(
+        scale_types=["max"], 
+        filter_min_by="none", 
+        ev_esm_folder = "ev_esm2",
+        zs_comb_dir = "results/zs_comb_2",
+        zs_vis_dir = "results/zs_vis_2",
+        zs_sum_dir = "results/zs_sum_2",
+    )
+    
+    run_zs_analysis(
+        scale_types=["max"], 
+        filter_min_by="min0", 
+        ev_esm_folder = "ev_esm2",
+        zs_comb_dir = "results/zs_comb_2",
+        zs_vis_dir = "results/zs_vis_2",
+        zs_sum_dir = "results/zs_sum_2",
+    )
 
     f.close()
+
+    """
+    run_zs_analysis(
+        scale_types: list = ["max", "parent"],
+        data_folder: str = "data",
+        ev_esm_folder: str = "ev_esm",
+        triad_folder: str = "triad",
+        esmif_folder: str = "esmif",
+        filter_min_by: str = "none",
+        n_mut_cutoff_list: list[int] = [0, 1, 2],
+        zs_comb_dir: str = "results/zs_comb",
+        zs_vis_dir: str = "results/zs_vis",
+        zs_sum_dir: str = "results/zs_sum",
+        )
+    """

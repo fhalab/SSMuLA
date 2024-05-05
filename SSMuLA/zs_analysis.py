@@ -33,13 +33,20 @@ hv.extension("bokeh")
 hv.renderer("bokeh").theme = JSON_THEME
 
 ZS_OPTS = ["Triad_score", "ev_score", "esm_score", "esmif_score"]
+ZS_COMB_OPTS = ["struc-comb_score", "msanoif-comb_score", "msa-comb_score", "structnmsa-comb_score"]
+
 ZS_OPTS_LEGEND = {
     "none": "No ZS",
     "Triad_score": "Triad",
     "ev_score": "EVMutation",
     "esm_score": "ESM",
-    "esmif_score": "ESM-IF"
+    "esmif_score": "ESM-IF",
+    "struc-comb_score": "Triad + ESM-IF",
+    "msanoif-comb_score": "EVMutation + ESM",
+    "msa-comb_score": "EVMutation + ESM + ESM-IF",
+    "structnmsa-comb_score": "Triad + EVMutation + ESM + ESM-IF",
 }
+
 
 
 class ZS_Analysis(LibData):
@@ -97,11 +104,36 @@ class ZS_Analysis(LibData):
         print(f"Get inverse folding data from {self.esmif_path}...")
 
         print(f"Save combed zs data to {self.zf_comb_path}...")
+        self._zs_df = self._get_zs_df()
         self.zs_df.to_csv(self.zf_comb_path, index=False)
 
         self._roc, self._zs_coord_dict = self._plot_roc()
         self._zs_fit_plot_dict = self._plot_zs_vs_fitness()
 
+    def _get_zs_df(self) -> pd.DataFrame:
+        """
+        Get the ZS dataframe
+        """
+        df = pd.merge(
+            pd.merge(pd.merge(self.df_no_stop, self.ev_esm_df, on="muts"), self.esmif_df, on="muts"),
+            self.triad_df,
+            on="AAs",
+        )
+
+        # some easy zs comb
+        df["struc-comb_score"] = -1 * (df["Triad_rank"] + df["esmif_rank"])
+        df["msa-comb_score"] = -1 * (df["ev_rank"] + df["esm_rank"] + df["esmif_rank"])
+        df["msanoif-comb_score"] = -1 * (df["ev_rank"] + df["esm_rank"])
+        df["structnmsa-comb_score"] = -1 * (df["Triad_rank"] + df["ev_rank"] + df["esm_rank"] + df["esmif_rank"])
+
+        for comb_opt in ["struc-comb", "msa-comb", "msanoif-comb", "structnmsa-comb"]:
+            df[f"{comb_opt}_rank"] = df[f"{comb_opt}_score"].rank(ascending=False)
+
+        if self._n_mut_cutoff > 0:
+            return df[df["n_mut"] <= self._n_mut_cutoff].copy()
+        else:
+            return df.copy()
+    
     def _plot_roc(self) -> hv.Overlay:
 
         """
@@ -112,13 +144,19 @@ class ZS_Analysis(LibData):
 
         df = self.zs_df.copy()
 
-        zs_coord_dict = {zs: {} for zs in ZS_OPTS}
+        zs_coord_dict = {zs: {} for zs in ZS_OPTS + ZS_COMB_OPTS}
 
         roc_plots = []
 
-        for zs in ZS_OPTS:
+        for zs in (ZS_OPTS + ZS_COMB_OPTS):
 
             print(f"number of nan in {self.lib_name} {zs}: {np.sum(np.isnan(df[zs]))}")
+
+            if zs in ZS_OPTS:
+                line_style = "solid"
+            else:
+                line_style = "dashed"
+                
 
             df = df.dropna(subset=[zs])
             y_true_active = df["active"].values
@@ -143,11 +181,12 @@ class ZS_Analysis(LibData):
                     label=ZS_OPTS_LEGEND[zs],
                 ).opts(
                     height=400,
-                    width=400,
+                    width=700,
                     xlim=(0, 1),
                     ylim=(0, 1),
                     hooks=[one_decimal_x, one_decimal_y, fixmargins],
                     color=hv.Cycle("Category10"),
+                    line_dash=line_style,
                 )
             )
 
@@ -167,8 +206,9 @@ class ZS_Analysis(LibData):
 
         roc = hv.Overlay(roc_plots).opts(
             height=400,
-            width=400,
-            legend_position="bottom_right",
+            width=700,
+            legend_position="right",
+            legend_offset=(5, 0),
             xlim=(0, 1),
             ylim=(0, 1),
             hooks=[one_decimal_x, one_decimal_y, fixmargins],
@@ -192,7 +232,7 @@ class ZS_Analysis(LibData):
 
         zs_fit_plot_dict = {}
 
-        for zs in ZS_OPTS:
+        for zs in (ZS_OPTS + ZS_COMB_OPTS):
 
             zs_title = f"{self.lib_name} {ZS_OPTS_LEGEND[zs]} vs fitness"
 
@@ -389,16 +429,7 @@ class ZS_Analysis(LibData):
         Merge the fitness data with the ev, esm, triad, and esmif scores
         """
 
-        df = pd.merge(
-            pd.merge(pd.merge(self.df_no_stop, self.ev_esm_df, on="muts"), self.esmif_df, on="muts"),
-            self.triad_df,
-            on="AAs",
-        )
-
-        if self._n_mut_cutoff > 0:
-            return df[df["n_mut"] <= self._n_mut_cutoff].copy()
-        else:
-            return df.copy()
+        return self._zs_df
 
     @property
     def zf_comb_folder(self) -> str:
@@ -480,6 +511,7 @@ def run_zs_analysis(
     triad_folder: str = "triad",
     esmif_folder: str = "esmif",
     filter_min_by: str = "none",
+    n_mut_cutoff_list: list[int] = [0, 1, 2],
     zs_comb_dir: str = "results/zs_comb",
     zs_vis_dir: str = "results/zs_vis",
     zs_sum_dir: str = "results/zs_sum",
@@ -495,6 +527,7 @@ def run_zs_analysis(
     - triad_folder, str: the folder for the triad scores
     - esmif_folder, str: the folder for the esm inverse folding scores
     - filter_min_by, str: the filter for the minimum fitness
+    - n_mut_cutoff_list, list[int]: the list of number of mutations cutoff
     - zs_comb_dir, str: the folder for the ZS combed with fitness outputs
     - zs_vis_dir, str: the folder for the ZS vis outputs
     - zs_sum_dir, str: the folder for the ZS summary outputs
@@ -504,7 +537,7 @@ def run_zs_analysis(
 
         zs_stat_df = pd.DataFrame()
 
-        for n_mut_cutoff in [0, 1, 2]:
+        for n_mut_cutoff in n_mut_cutoff_list:
 
             for lib_path in tqdm(
                 sorted(
