@@ -284,6 +284,15 @@ class CorrPerfomanceCharacter:
                         merge_df[f"maxes_{ft_col}"] - merge_df[f"{de}_mean_all"]
                     )
 
+        # numb_loc_opt		
+        # frac_loc_opt_total	
+        # frac_loc_opt_hd2_escape_numb	
+        # frac_loc_opt_hd2_cannot_escape_numb
+        # numb_loc_opt_norm_cannot_escape
+        # frac_loc_opt_norm_cannot_escape
+        merge_df["numb_loc_opt_norm_cannot_escape"] = merge_df["numb_loc_opt"] * merge_df["frac_loc_opt_hd2_cannot_escape_numb"]
+        merge_df["frac_loc_opt_norm_cannot_escape"] = merge_df["frac_loc_opt_total"] * merge_df["frac_loc_opt_hd2_cannot_escape_numb"]
+
         merge_df["norm_non-magnitude"] = (
             merge_df["fraction_non-magnitude"] * merge_df["percent_active"]
         )
@@ -323,7 +332,7 @@ class CorrPerfomanceCharacter:
 
         corr_df = pd.DataFrame()
 
-        for des in [
+        des_list = [
             "percent_active",
             "parent_rank_percent",
             # "parent_rank",
@@ -341,16 +350,19 @@ class CorrPerfomanceCharacter:
             "Q1",
             "Q2",
             "Q3",
-            "n_locopt",
+            "numb_loc_opt",
+            "frac_loc_opt_total",
+            "frac_loc_opt_hd2_escape_numb",
+            "frac_loc_opt_hd2_cannot_escape_numb",
+            "numb_loc_opt_norm_cannot_escape",
+            "frac_loc_opt_norm_cannot_escape",
             "fraction_non-magnitude",
             "fraction_reciprocal-sign",
             "norm_non-magnitude",
             "norm_reciprocal-sign",
-        ]:
+        ]
 
-            corr_row = {"descriptor": des}
-
-            for val in [
+        val_list = [
                 "single_step_DE_mean_all",
                 "single_step_DE_median_all",
                 "single_step_DE_mean_top96",
@@ -397,7 +409,6 @@ class CorrPerfomanceCharacter:
                 "ndcgs_esmif",
                 "rhos_esmif",
                 "if_truemaxs_esmif",
-                "n_locopt",
                 "mlde_single_step_DE_delta",
                 "mlde_recomb_SSM_delta",
                 "mlde_top96_SSM_delta",
@@ -415,7 +426,13 @@ class CorrPerfomanceCharacter:
                 "esmif_top96_SSM_delta",
                 "delta_ft_mlde",
                 "delta_ft_de",
-            ]:
+            ]
+
+        for des in des_list:
+
+            corr_row = {"descriptor": des}
+
+            for val in des_list + val_list:
 
                 corr_row[val] = spearmanr(
                     self._merge_all_df[des], self._merge_all_df[val]
@@ -440,7 +457,12 @@ class CorrPerfomanceCharacter:
                 "skewness",
                 "kurt",
                 "numb_kde_peak",
-                "n_locopt",
+                "numb_loc_opt",		
+                "frac_loc_opt_total",	
+                "frac_loc_opt_hd2_escape_numb",	
+                "frac_loc_opt_hd2_cannot_escape_numb",
+                "numb_loc_opt_norm_cannot_escape",
+                "frac_loc_opt_norm_cannot_escape",
                 "fraction_non-magnitude",
                 "fraction_reciprocal-sign",
                 "norm_non-magnitude",
@@ -465,9 +487,9 @@ class CorrPerfomanceCharacter:
                 for logx in [True, False]:
 
                     if logx:
-                        plot_path = f"{self._corr_subdir}/logx/{str(self._n_sample)}"
+                        plot_path = checkNgen_folder(os.path.join(self._corr_subdir, subdir, "logx"))
                     else:
-                        plot_path = f"{self._corr_subdir}/{str(self._n_sample)}"
+                        plot_path = checkNgen_folder(os.path.join(self._corr_subdir, subdir))
 
                     save_bokeh_hv(
                         plot_obj=hv.Scatter(
@@ -538,7 +560,6 @@ def perfom_corr(
         mlde_path: str = "results/mlde/vis_3/all_df.csv",
         corr_dir: str = "results/corr",
         n_mut_cuttoff: int = 0,
-        n_samples: list[int] = [384],
         n_top_list: list[int] = [96, 384],
         models_list: list[list[str]] = [["boosting"], ["ridge"], ["boosting", "ridge"]]):
 
