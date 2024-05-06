@@ -15,7 +15,7 @@ import holoviews as hv
 
 
 from SSMuLA.de_simulations import DE_TYPES
-from SSMuLA.zs_analysis import ZS_OPTS
+from SSMuLA.zs_analysis import ZS_OPTS, ZS_COMB_OPTS
 from SSMuLA.landscape_global import LIB_INFO_DICT, LIB_NAMES, TrpB_names
 from SSMuLA.vis import (
     LIB_COLORS,
@@ -46,8 +46,8 @@ DE_METRIC_MAP = {
 }
 
 ZS_METRICS = ["rho", "ndcg", "rocauc"]
-ZS_OPTS_NOESM = deepcopy([zs for zs in ZS_OPTS if "esm" not in zs])
 ZS_N_MUTS = ["all", "double", "single"]
+ZS_COMB_VIS_OPTS = ["both", "nocomb", "comb"]
 
 N_SAMPLE_LIST = [24, 48, 96, 192, 288, 384, 480, 576, 960, 1920]
 
@@ -214,11 +214,11 @@ class ZSSSumVis(SumVis):
 
         for n_mut in ZS_N_MUTS:
             for metric in ZS_METRICS:
-                for include_esm in [True, False]:
+                for comb_opt in ZS_COMB_VIS_OPTS:
                     self._plot_zs_sum(
                         metric=metric,
                         n_mut=n_mut,
-                        include_esm=include_esm,
+                        comb_opt=comb_opt,
                     )
 
     def _get_zs_df(self):
@@ -285,7 +285,7 @@ class ZSSSumVis(SumVis):
             value_name="value",
         )
 
-    def _plot_zs_sum(self, metric: str, n_mut: str = "all", include_esm: bool = True):
+    def _plot_zs_sum(self, metric: str, n_mut: str = "all", comb_opt: str = "both"):
 
         """
         Plot the bar plot summary of ZS simulations.
@@ -293,27 +293,32 @@ class ZSSSumVis(SumVis):
         Args:
         - metric: str, the metric to plot, ie: 'rho', 'ndcg', 'rocauc'
         - n_mut: str, the number of mutations to plot, ie: 'all', 'double', 'single'
-        - include_esm: bool, whether to include the ESM score in the plot
+        - comb_opt: str, the combination option to plot, ie: 'both', 'nocomb', 'comb'
         """
 
-        if include_esm:
-            plot_df = self._zs_df[
-                (self._zs_df["metric"] == metric) & (self._zs_df["n_mut"] == n_mut)
-            ]
+        assert comb_opt in ZS_COMB_VIS_OPTS, f"{comb_opt} not in {ZS_COMB_VIS_OPTS}"
+
+        if comb_opt == "both":
+            zs_opt = ZS_OPTS + ZS_COMB_OPTS
             hook = self._zs_hook
-            esm_dets = ""
+            comb_dets = "-both"
+        elif comb_opt == "nocomb":
+            zs_opt = ZS_OPTS
+            hook = self._zs_nocombhook
+            comb_dets = "-nocomb"
         else:
-            plot_df = self._zs_df[
-                (self._zs_df["metric"] == metric)
-                & (self._zs_df["n_mut"] == n_mut)
-                & (self._zs_df["zs_type"].isin(ZS_OPTS_NOESM))
-            ]
-            hook = self._zs_noesm_hook
-            esm_dets = "-noesm"
+            zs_opt = ZS_COMB_OPTS
+            hook = self._zs_combhook
+            comb_dets = "-comb"
 
         # Create the Holoviews Bars element
         save_bokeh_hv(
-            hv.Bars(plot_df, kdims=["lib", "zs_type"], vdims="value").opts(
+                hv.Bars(self._zs_df[
+                    (self._zs_df["metric"] == metric)
+                    & (self._zs_df["n_mut"] == n_mut)
+                    & (self._zs_df["zs_type"].isin(zs_opt))
+                ], 
+                kdims=["lib", "zs_type"], vdims="value").opts(
                 width=1200,
                 height=400,
                 show_legend=True,
@@ -325,8 +330,8 @@ class ZSSSumVis(SumVis):
                 xlabel="Library",
                 hooks=[fixmargins, one_decimal_y, hook],
             ),
-            plot_name=f"{self.zs_dets}-{metric}{esm_dets}-{n_mut}",
-            plot_path=self.zs_dir,
+            plot_name=f"{self.zs_dets}-{metric}{comb_dets}-{n_mut}",
+            plot_path=self._output_folder,
         )
 
     def _zs_hook(self, plot, element):
@@ -334,15 +339,23 @@ class ZSSSumVis(SumVis):
         Plot hook to set the x_range factors for ZS plots.
         """
         plot.handles["plot"].x_range.factors = [
+            (lib, zs) for lib in LIB_NAMES for zs in ZS_OPTS + ZS_COMB_OPTS
+        ]
+    
+    def _zs_nocombhook(self, plot, element):
+        """
+        Plot hook to set the x_range factors for ZS plots.
+        """
+        plot.handles["plot"].x_range.factors = [
             (lib, zs) for lib in LIB_NAMES for zs in ZS_OPTS
         ]
 
-    def _zs_noesm_hook(self, plot, element):
+    def _zs_combhook(self, plot, element):
         """
-        Plot hook to set the x_range factors for ZS plots without ESM.
+        Plot hook to set the x_range factors for ZS plots.
         """
         plot.handles["plot"].x_range.factors = [
-            (lib, zs) for lib in LIB_NAMES for zs in ZS_OPTS_NOESM
+            (lib, zs) for lib in LIB_NAMES for zs in ZS_COMB_OPTS
         ]
 
     @property
@@ -541,7 +554,7 @@ def plot_n_ftmlde(
                 )
 
                 for zs_label, zs_color, zs in zip(
-                    ["MLDE", "Triad ftMLDE", "EVmutation ftMLDE", "ESM ftMLDE",  "ESMIF ftMLDE"],
+                    ["MLDE", "Triad ftMLDE", "EVmutation ftMLDE", "ESM ftMLDE", "ESMIF ftMLDE"],
                     ["gray", "blue", "green", "purple", "brown"],
                     ["none", "Triad_score", "ev_score", "esm_score", "esmif_score"],
                 ):
