@@ -188,7 +188,8 @@ class MLDEParser:
         # add other details as additional columns
         metric_df["n_mut_cutoff"] = n_mut_cutoff_dict[self.n_mut_cutoff]
         metric_df["lib"] = get_file_name(self.input_csv)
-        metric_df["zs"] = self.zs_predictor
+        # TODO fix _score_score
+        metric_df["zs"] = self.zs_predictor.replace("_score_score", "_score")
         metric_df["n_top"] = self.n_top
         metric_df["scale_fit"] = self.scale_fit
 

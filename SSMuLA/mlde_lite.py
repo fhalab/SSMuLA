@@ -163,6 +163,7 @@ class MLDEDataset(LibData):
         df = self._n_mut_cuttoff_df.copy()
 
         if len(df) <= cutoff or self._zs_predictor not in df.columns:
+            print(f"Less than {cutoff} sequences or no {self._zs_predictor} in the dataframe")
             df_sorted = df.copy()
         else:
             df_sorted = (

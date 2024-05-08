@@ -52,7 +52,7 @@ if __name__ == "__main__":
     run_all_mlde_parallelized(
         encodings=["one-hot"],
         n_mut_cutoffs=[0],
-        zs_predictors=["struc-comb_score", "msanoif-comb_score", "msa-comb_score", "structnmsa-comb_score"],
+        zs_predictors=["struc-comb", "msanoif-comb", "msa-comb", "structnmsa-comb"],
         n_replicate=100,
         n_job=256
     )
@@ -60,7 +60,7 @@ if __name__ == "__main__":
     run_all_mlde_parallelized(
         encodings=["one-hot"],
         n_mut_cutoffs=[0],
-        zs_predictors=["struc-comb_score", "msanoif-comb_score", "msa-comb_score", "structnmsa-comb_score"],
+        zs_predictors=["struc-comb", "msanoif-comb", "msa-comb", "structnmsa-comb"],
         n_samples=[24, 48],
         n_replicate=50,
         n_job=256
@@ -69,7 +69,7 @@ if __name__ == "__main__":
     run_all_mlde_parallelized(
         encodings=["one-hot"],
         n_mut_cutoffs=[0],
-        zs_predictors=["struc-comb_score", "msanoif-comb_score", "msa-comb_score", "structnmsa-comb_score"],
+        zs_predictors=["struc-comb", "msanoif-comb", "msa-comb", "structnmsa-comb"],
         n_samples=[960, 1920],
         n_replicate=50,
         n_job=256
@@ -78,7 +78,7 @@ if __name__ == "__main__":
     run_all_mlde_parallelized(
         encodings=["one-hot"],
         n_mut_cutoffs=[0],
-        zs_predictors=["struc-comb_score", "msanoif-comb_score", "msa-comb_score", "structnmsa-comb_score"],
+        zs_predictors=["struc-comb", "msanoif-comb", "msa-comb", "structnmsa-comb"],
         n_samples=[96, 192, 288, 480, 576],
         n_replicate=50,
         n_job=256

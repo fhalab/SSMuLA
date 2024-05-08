@@ -15,7 +15,7 @@ import holoviews as hv
 
 
 from SSMuLA.de_simulations import DE_TYPES
-from SSMuLA.zs_analysis import ZS_OPTS, ZS_COMB_OPTS
+from SSMuLA.zs_analysis import ZS_OPTS, ZS_COMB_OPTS, ZS_OPTS_LEGEND
 from SSMuLA.landscape_global import LIB_INFO_DICT, LIB_NAMES, TrpB_names
 from SSMuLA.vis import (
     LIB_COLORS,
@@ -65,7 +65,7 @@ LIB4BY4 = [
     "TrpB3F",
     "TrpB3D",
     "GB1",
-    "TrpB4"
+    "TrpB4",
 ]
 
 LIB3BY5 = [
@@ -74,17 +74,18 @@ LIB3BY5 = [
     "DHFR",
     "TrpB3I",
     "TrpB3D",
-    "GB1", 
+    "GB1",
     "TrpB4",
-    "TrpB3G", 
+    "TrpB3G",
     "TrpB3F",
     "",
     "TrpB3E",
     "TrpB3H",
     "TrpB3A",
     "TrpB3C",
-    "TrpB3B"
+    "TrpB3B",
 ]
+
 
 def de_sum_hook(plot, element):
     plot.handles["plot"].x_range.factors = [
@@ -313,12 +314,15 @@ class ZSSSumVis(SumVis):
 
         # Create the Holoviews Bars element
         save_bokeh_hv(
-                hv.Bars(self._zs_df[
+            hv.Bars(
+                self._zs_df[
                     (self._zs_df["metric"] == metric)
                     & (self._zs_df["n_mut"] == n_mut)
                     & (self._zs_df["zs_type"].isin(zs_opt))
-                ], 
-                kdims=["lib", "zs_type"], vdims="value").opts(
+                ],
+                kdims=["lib", "zs_type"],
+                vdims="value",
+            ).opts(
                 width=1200,
                 height=400,
                 show_legend=True,
@@ -341,7 +345,7 @@ class ZSSSumVis(SumVis):
         plot.handles["plot"].x_range.factors = [
             (lib, zs) for lib in LIB_NAMES for zs in ZS_OPTS + ZS_COMB_OPTS
         ]
-    
+
     def _zs_nocombhook(self, plot, element):
         """
         Plot hook to set the x_range factors for ZS plots.
@@ -397,10 +401,24 @@ def plot_de_v_mlde(
     plot_folder = checkNgen_folder(plot_folder)
     mlde_all = pd.read_csv(mlde_csv).copy()
 
-    for zs, mlde_title in tqdm(zip(
-        ["Triad_score", "ev_score", "esm_score", "esmif_score", "none"],
-        ["Triad-ftMLDE", "EVmutation-ftMLDE", "ESM-ftMLDE", "ESMIF-ftMLDE", "MLDE"],
-    )):
+    for zs, mlde_title in tqdm(
+        zip(
+            ["Triad_score", "ev_score", "esm_score", "esmif_score", "none"]
+            + ZS_COMB_OPTS,
+            ["Triad-ftMLDE", "EVmutation-ftMLDE", "ESM-ftMLDE", "ESMIF-ftMLDE", "MLDE"]
+            + [
+                "Triad + ESM-IF",
+                "EVMutation + ESM",
+                "EVMutation + ESM + ESM-IF",
+                "Triad + EVMutation + ESM + ESM-IF",
+            ],
+        )
+    ):
+
+        """ "struc-comb_score": "Triad + ESM-IF",
+        "msanoif-comb_score": "EVMutation + ESM",
+        "msa-comb_score": "EVMutation + ESM + ESM-IF",
+        "structnmsa-comb_score": "Triad + EVMutation + ESM + ESM-IF","""
 
         sup_title = f"{mlde_title} vs DE"
 
@@ -469,7 +487,7 @@ def plot_de_v_mlde(
                         color=MLDE_COLORS[n + 2],
                     )
 
-                if i == ncol-1:
+                if i == ncol - 1:
                     ax.legend(loc="upper left", bbox_to_anchor=(1, 1))
 
                 ax.set_title(lib)
@@ -512,7 +530,6 @@ def plot_n_ftmlde(
 
         # fig, axs = plt.subplots(3, 4, figsize=(28, 16))
         # for i, (ax, lib) in enumerate(zip(axs.flatten(), LIB_INFO_DICT.keys())):
-        
 
         # for i, (ax, lib) in enumerate(zip(axs.flatten(), LIB_INFO_DICT.keys())):
         # fig, axs = plt.subplots(4, 4, figsize=(28, 20))
@@ -554,10 +571,41 @@ def plot_n_ftmlde(
                 )
 
                 for zs_label, zs_color, zs in zip(
-                    ["MLDE", "Triad ftMLDE", "EVmutation ftMLDE", "ESM ftMLDE", "ESMIF ftMLDE"],
-                    ["gray", "blue", "green", "purple", "brown"],
-                    ["none", "Triad_score", "ev_score", "esm_score", "esmif_score"],
+                    [
+                        "MLDE",
+                        "Triad ftMLDE",
+                        "EVmutation ftMLDE",
+                        "ESM ftMLDE",
+                        "ESMIF ftMLDE",
+                        "Triad + ESM-IF ftMLDE",
+                        "EVMutation + ESM ftMLDE",
+                        "EVMutation + ESM + ESM-IF ftMLDE",
+                        "Triad + EVMutation + ESM + ESM-IF ftMLDE",
+                    ],
+                    [
+                        "gray",
+                        "blue",
+                        "green",
+                        "purple",
+                        "brown",
+                        "light_blue",
+                        "light_green",
+                        "light_yellow",
+                        "light_brown",
+                    ],
+                    [
+                        "none",
+                        "Triad_score",
+                        "ev_score",
+                        "esm_score",
+                        "esmif_score",
+                        "struc-comb_score",
+                        "msanoif-comb_score",
+                        "msa-comb_score",
+                        "structnmsa-comb_score",
+                    ],
                 ):
+
                     if zs == "none":
                         mlde_df_n = mlde_df[(mlde_df["zs"] == zs)]["top_maxes"]
 
@@ -575,13 +623,13 @@ def plot_n_ftmlde(
                         color=PRESENTATION_PALETTE_SATURATE[zs_color],
                     )
 
-                if i == ncol-1:
+                if i == ncol - 1:
                     ax.legend(loc="upper left", bbox_to_anchor=(1, 1))
 
                 ax.set_title(lib)
                 ax.set_xlabel("Max fitness achieved")
                 ax.set_ylabel("ECDF")
-            
+
             else:
                 ax.set_visible(False)
 

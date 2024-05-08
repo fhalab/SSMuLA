@@ -68,11 +68,16 @@ PRESENTATION_PALETTE_SATURATE = {
     "orange": "#f79646ff",
     "light_orange": "#ffbb78",
     "red": "#ff8888",
+    "maroon": "#7A303F",
     "green": "#9bbb59",
     "yellow": "#f9be00",
     "purple": "#8064a2",
     "brown": "#6e4a2eff",
     "gray": "#666666",
+    "light_blue":"#849895",
+    "light_green": "#9DAE88",
+    "light_yellow": "#F1D384",
+    "light_brown": "#C7B784",
 }
 
 LIGHT_COLORS = {"yellow": "#F1D384"}
