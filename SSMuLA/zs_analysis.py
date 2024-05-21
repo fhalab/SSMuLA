@@ -35,6 +35,14 @@ hv.renderer("bokeh").theme = JSON_THEME
 ZS_OPTS = ["Triad_score", "ev_score", "esm_score", "esmif_score"]
 ZS_COMB_OPTS = ["struc-comb_score", "msanoif-comb_score", "msa-comb_score", "structnmsa-comb_score"]
 
+SIMPLE_ZS_OPT_LEGNED = {
+    "none": "No ZS",
+    "Triad_score": "Triad",
+    "ev_score": "EVMutation",
+    "esm_score": "ESM",
+    "esmif_score": "ESM-IF",
+}
+
 ZS_OPTS_LEGEND = {
     "none": "No ZS",
     "Triad_score": "Triad",
