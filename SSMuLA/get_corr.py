@@ -333,9 +333,14 @@ class CorrPerfomanceCharacter:
         corr_df = pd.DataFrame()
 
         des_list = [
+            "numb_measured",
+            "percent_measured",
+            "numb_active",
             "percent_active",
+            "active_fit_min",
+            "parent_fit",
+            "parent_rank",
             "parent_rank_percent",
-            # "parent_rank",
             "mean",
             "std",
             "range",

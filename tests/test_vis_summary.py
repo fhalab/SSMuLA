@@ -5,7 +5,7 @@ import os
 
 from datetime import datetime
 
-from SSMuLA.vis_summary import DESumVis, ZSSSumVis, plot_de_v_mlde, plot_n_ftmlde
+from SSMuLA.vis_summary import DESumVis, ZSSSumVis, plot_de_v_mlde, plot_n_ftmlde, plot_de_mlde_ft_v_n, plot_de_mlde_ft_mean_v_n, plot_de_mlde_ft_percent_v_n
 from SSMuLA.util import checkNgen_folder
 
 if __name__ == "__main__":
@@ -29,17 +29,26 @@ if __name__ == "__main__":
     #     output_folder="results/summary/ZS"
     # )
 
-    plot_de_v_mlde(
-        plot_folder = "results/de_vs_mlde/onehot/collage_wcombzs/n_samples", 
-        mlde_csv = "results/mlde/vis_4/all_df.csv",
-        de_folder = "results/de/DE-active/scale2max",
-    )
+    # plot_de_v_mlde(
+    #     plot_folder = "results/de_vs_mlde/onehot/collage_wcombzs/n_samples", 
+    #     mlde_csv = "results/mlde/vis_4/all_df.csv",
+    #     de_folder = "results/de/DE-active/scale2max",
+    # )
 
-    plot_n_ftmlde(
-        plot_folder = "results/de_vs_mlde/onehot/collage_wcombzs/ftMLDE",
-        mlde_csv = "results/mlde/vis_4/all_df.csv",
-        de_folder = "results/de/DE-active/scale2max",
-    )
+    # plot_n_ftmlde(
+    #     plot_folder = "results/de_vs_mlde/onehot/collage_wcombzs/ftMLDE",
+    #     mlde_csv = "results/mlde/vis_4/all_df.csv",
+    #     de_folder = "results/de/DE-active/scale2max",
+    # )
+
+    # plot_de_mlde_ft_v_n(
+    #     plot_folder = "results/de_vs_mlde/onehot/collage/n_mean_frac",
+    #     mlde_csv = "results/mlde/vis_4/all_df.csv",
+    #     de_folder = "results/de/DE-active/scale2max",
+    # )
+
+    plot_de_mlde_ft_mean_v_n()
+    plot_de_mlde_ft_percent_v_n()
 
 
     """

@@ -111,6 +111,31 @@ MLDE_COLORS = (
     + [PRESENTATION_PALETTE_SATURATE["gray"]]
 )
 
+ZS_LEGEND_MAP = {
+    "none": "MLDE",
+    "Triad_score": "Triad ftMLDE",
+    "ev_score": "EVmutation ftMLDE",
+    "esm_score": "ESM ftMLDE",
+    "esmif_score": "ESM-IF ftMLDE",
+    "struc-comb_score": "Triad + ESM-IF ftMLDE",
+    "msanoif-comb_score": "EVMutation + ESM ftMLDE",
+    "msa-comb_score": "EVMutation + ESM + ESM-IF ftMLDE",
+    "structnmsa-comb_score": "Triad + EVMutation + ESM + ESM-IF ftMLDE",
+}
+
+ZS_COLOR_MAP = {
+    "none": PRESENTATION_PALETTE_SATURATE["gray"],
+    "Triad_score": PRESENTATION_PALETTE_SATURATE["blue"],
+    "ev_score": PRESENTATION_PALETTE_SATURATE["green"],
+    "esm_score": PRESENTATION_PALETTE_SATURATE["purple"],
+    "esmif_score": PRESENTATION_PALETTE_SATURATE["brown"],
+    "struc-comb_score": PRESENTATION_PALETTE_SATURATE["light_blue"],
+    "msanoif-comb_score": PRESENTATION_PALETTE_SATURATE["light_green"],
+    "msa-comb_score": PRESENTATION_PALETTE_SATURATE["light_yellow"],
+    "structnmsa-comb_score": PRESENTATION_PALETTE_SATURATE["light_brown"],
+}
+
+
 # define plot hooks
 def one_decimal_x(plot, element):
     plot.handles["plot"].xaxis[0].formatter = NumeralTickFormatter(format="0.0")
