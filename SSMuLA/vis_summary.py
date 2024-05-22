@@ -396,6 +396,7 @@ def plot_de_v_mlde(
     plot_folder: str = "results/de_vs_mlde/onehot/collage/n_samples",
     mlde_csv: str = "results/mlde/vis_3/all_df.csv",
     de_folder: str = "results/de/DE-active/scale2max",
+    nsite: str = "all",
 ) -> None:
 
     """
@@ -407,7 +408,7 @@ def plot_de_v_mlde(
     - mlde_csv: str, path to the MLDE csv file
     """
 
-    plot_folder = checkNgen_folder(plot_folder)
+    plot_folder = checkNgen_folder(os.path.join(plot_folder, nsite))
     mlde_all = pd.read_csv(mlde_csv).copy()
 
     for zs, mlde_title in tqdm(
@@ -463,7 +464,7 @@ def plot_de_v_mlde(
 
                 mlde_df = mlde_all[
                     (mlde_all["lib"] == lib)
-                    & (mlde_all["n_mut_cutoff"] == "all")
+                    & (mlde_all["n_mut_cutoff"] == nsite)
                     & (mlde_all["zs"] == zs)
                     & (mlde_all["encoding"] == "one-hot")
                 ].copy()
@@ -523,6 +524,7 @@ def plot_n_ftmlde(
     plot_folder: str = "results/de_vs_mlde/onehot/collage/ftMLDE",
     mlde_csv: str = "results/mlde/vis_3/all_df.csv",
     de_folder: str = "results/simulations/DE-active/scale2max",
+    nsite: str = "all",
 ) -> None:
 
     """
@@ -534,7 +536,7 @@ def plot_n_ftmlde(
     - de_folder: str, path to the DE folder
     """
 
-    plot_folder = checkNgen_folder(plot_folder)
+    plot_folder = checkNgen_folder(os.path.join(plot_folder, nsite))
     mlde_all = pd.read_csv(mlde_csv).copy()
 
     for n in tqdm(N_SAMPLE_LIST):
@@ -561,7 +563,7 @@ def plot_n_ftmlde(
 
                 mlde_df = mlde_all[
                     (mlde_all["lib"] == lib)
-                    & (mlde_all["n_mut_cutoff"] == "all")
+                    & (mlde_all["n_mut_cutoff"] == nsite)
                     & (mlde_all["n_sample"] == n)
                     & (mlde_all["encoding"] == "one-hot")
                 ].copy()
@@ -625,159 +627,18 @@ def plot_n_ftmlde(
             path2folder=plot_folder,
         )
 
-
-# def plot_de_mlde_ft_v_n(
-#     plot_folder: str = "results/de_vs_mlde/onehot/collage/n_mean_frac",
-#     mlde_csv: str = "results/mlde/vis_4/all_df.csv",
-#     de_folder: str = "results/de/DE-active/scale2max",
-# ) -> None:
-#     """"""
-#     # combine all in one
-#     # Create the figure and subplots
-
-#     plot_folder = checkNgen_folder(plot_folder)
-#     mlde_all = pd.read_csv(mlde_csv).copy()
-
-#     sup_title = "DE vs MLDE over sample size"
-
-#     ncol = 5
-#     nrow = 3
-#     fig, axs = plt.subplots(nrow, ncol, figsize=(36, 16), sharex=True, sharey=True)
-
-#     for i, (ax, lib) in enumerate(zip(axs.flatten(), LIB_INFO_DICT.keys())):
-
-#         ss_df_all = pd.read_csv(f"{de_folder}/{lib}-single_step_DE.csv")
-#         recomb_df_all = pd.read_csv(f"{de_folder}/{lib}-recomb_SSM.csv")
-
-
-#         ss_df = ss_df_all.copy()
-#         recomb_df = recomb_df_all.copy()
-
-#         ss_mean = ss_df["final_fitness"].mean()
-#         ss_frac = get_val_percent(s=ss_df["final_fitness"], numb=1)
-
-#         recomb_mean = recomb_df["final_fitness"].mean()
-#         recomb_frac = get_val_percent(s=recomb_df["final_fitness"], numb=1)
-
-#         ax.axhline(
-#             y=ss_mean,
-#             color=PRESENTATION_PALETTE_SATURATE["orange"],
-#             linestyle="dotted",
-#             label="Mean of final fitness: single step",
-#         )
-#         ax.axhline(
-#             y=recomb_mean,
-#             color=PRESENTATION_PALETTE_SATURATE["yellow"],
-#             linestyle="dashed",
-#             label="Mean of final fitness: recomb",
-#         )
-
-#         # Setting labels and title
-#         ax.set_xlabel("Training set size")
-#         ax.set_ylabel("Mean of max fitness")
-#         ax.tick_params(axis="y")
-        
-#         ax2.axhline(
-#             y=ss_frac,
-#             color=PRESENTATION_PALETTE_SATURATE["orange"],
-#             linestyle="dotted",
-#             label="Fraction of final fitness = 1: single step",
-#         )
-#         ax2.axhline(
-#             y=recomb_frac,
-#             color=PRESENTATION_PALETTE_SATURATE["yellow"],
-#             linestyle="dashed",
-#             label="Fraction of final fitness = 1: recomb",
-#         )
-
-#         ax2.set_ylabel("Fraction of max fitness = 1")
-#         ax2.tick_params(axis="y")
-
-#         for zs, zs_color in ZS_COLOR_MAP.items():
-
-#             mlde_df = mlde_all[
-#                 (mlde_all["lib"] == lib)
-#                 & (mlde_all["n_mut_cutoff"] == "all")
-#                 & (mlde_all["zs"] == zs)
-#                 & (mlde_all["encoding"] == "one-hot")
-#             ].copy()
-
-#             if zs == "none":
-#                 mlde_df_n = mlde_df[(mlde_df["zs"] == zs)]["top_maxes"]
-
-#             else:
-#                 mlde_df_n = mlde_df[
-#                     (mlde_df["zs"] == zs)
-#                     & (mlde_df["ft_lib"] == mlde_df["ft_lib"].min())
-#                 ]["top_maxes"]
-
-#             mean_fit_dict = {}
-#             max_percent_dict = {}
-
-#             for n_samples in N_SAMPLE_LIST:
-#                 # [24, 48, 96, 192, 288, 384, 480, 576, 960, 1920]
-#                 mlde_df_n = mlde_df[mlde_df["n_sample"] == n_samples]["top_maxes"]
-
-#                 mean_fit_dict[n_samples] = mlde_df_n.mean()
-#                 max_percent_dict[n_samples] = get_val_percent(s=mlde_df_n, numb=1)
-
-#             x = list(mean_fit_dict.keys())
-#             y1 = list(mean_fit_dict.values())
-#             y2 = list(max_percent_dict.values())
-
-#             # Plotting the first y-axis
-#             ax.plot(
-#                 x,
-#                 y1,
-#                 color=zs_color,
-#                 marker="o",
-#                 linestyle="solid",
-#                 linewidth=2,
-#                 label=f"Mean of final fitness: {ZS_OPTS_LEGEND[zs]}",
-#             )
-            
-
-#             # Creating a second y-axis
-#             ax2 = ax.twinx()
-#             ax2.plot(
-#                 x,
-#                 y2,
-#                 color=zs_color,
-#                 marker="s",
-#                 linestyle="dashed",
-#                 linewidth=2,
-#                 label=f"Fraction of final fitness = 1: {ZS_OPTS_LEGEND[zs]}",
-#             )
-
-#         if i == ncol - 1:
-#             # create labels
-#             ax.legend(loc="upper left", bbox_to_anchor=(1.12, 1))
-#             ax2.legend(loc="upper left", bbox_to_anchor=(1.12, 0.25))
-
-#         ax.set_title(lib)
-#         ax.set_ylim(0, 1)
-#         ax2.set_ylim(0, 100)
-
-#     fig.suptitle(sup_title, fontsize=16, fontweight="bold", y=0.9125)
-
-#     save_plt(
-#         fig,
-#         plot_title=sup_title,
-#         path2folder=plot_folder,
-#     )
-
-
 def plot_de_mlde_ft_mean_v_n(
     plot_folder: str = "results/de_vs_mlde/onehot/collage/n_mean_frac",
     mlde_csv: str = "results/mlde/vis_4/all_df.csv",
     de_folder: str = "results/de/DE-active/scale2max",
+    nsite: str = "all",
     simplezs: bool = True
 ) -> None:
     """"""
     # combine all in one
     # Create the figure and subplots
 
-    plot_folder = checkNgen_folder(plot_folder)
+    plot_folder = checkNgen_folder(os.path.join(plot_folder, nsite))
     mlde_all = pd.read_csv(mlde_csv).copy()
 
     ncol = 5
@@ -810,19 +671,19 @@ def plot_de_mlde_ft_mean_v_n(
 
                 mlde_df = mlde_all[
                     (mlde_all["lib"] == lib)
-                    & (mlde_all["n_mut_cutoff"] == "all")
-                    & (mlde_all["zs"] == zs)
+                    & (mlde_all["n_mut_cutoff"] == nsite)
+                    # & (mlde_all["zs"] == zs)
                     & (mlde_all["encoding"] == "one-hot")
                 ].copy()
 
                 if zs == "none":
-                    mlde_df_n = mlde_df[(mlde_df["zs"] == zs)]["top_maxes"]
+                    mlde_df = mlde_df[(mlde_df["zs"] == zs)]
 
                 else:
-                    mlde_df_n = mlde_df[
+                    mlde_df = mlde_df[
                         (mlde_df["zs"] == zs)
                         & (mlde_df["ft_lib"] == mlde_df["ft_lib"].min())
-                    ]["top_maxes"]
+                    ]
 
                 mean_fit_dict = {}
                 
@@ -894,13 +755,14 @@ def plot_de_mlde_ft_percent_v_n(
     plot_folder: str = "results/de_vs_mlde/onehot/collage/n_mean_frac",
     mlde_csv: str = "results/mlde/vis_4/all_df.csv",
     de_folder: str = "results/de/DE-active/scale2max",
+    nsite: str = "all",
     simplezs: bool = True
 ) -> None:
     """"""
     # combine all in one
     # Create the figure and subplots
 
-    plot_folder = checkNgen_folder(plot_folder)
+    plot_folder = checkNgen_folder(os.path.join(plot_folder, nsite))
     mlde_all = pd.read_csv(mlde_csv).copy()
 
     ncol = 5
@@ -934,19 +796,19 @@ def plot_de_mlde_ft_percent_v_n(
 
                 mlde_df = mlde_all[
                     (mlde_all["lib"] == lib)
-                    & (mlde_all["n_mut_cutoff"] == "all")
-                    & (mlde_all["zs"] == zs)
+                    & (mlde_all["n_mut_cutoff"] == nsite)
+                    # & (mlde_all["zs"] == zs)
                     & (mlde_all["encoding"] == "one-hot")
                 ].copy()
 
                 if zs == "none":
-                    mlde_df_n = mlde_df[(mlde_df["zs"] == zs)]["top_maxes"]
+                    mlde_df = mlde_df[(mlde_df["zs"] == zs)]
 
                 else:
-                    mlde_df_n = mlde_df[
+                    mlde_df = mlde_df[
                         (mlde_df["zs"] == zs)
                         & (mlde_df["ft_lib"] == mlde_df["ft_lib"].min())
-                    ]["top_maxes"]
+                    ]
 
                 max_percent_dict = {}
 
@@ -987,7 +849,7 @@ def plot_de_mlde_ft_percent_v_n(
                 color=PRESENTATION_PALETTE_SATURATE["brown"],
                 linestyle="dashdot",
                 linewidth=2,
-                label="Mean of final fitness: top96 recomb",
+                label="Fraction of final fitness = 1: top96 recomb",
             )
 
             ax.set_ylabel("Fraction of max fitness = 1")
@@ -1000,8 +862,158 @@ def plot_de_mlde_ft_percent_v_n(
             ax.set_title(lib)
             ax.set_ylim(0, 100)
         else:
-                ax.set_visible(False)
+            ax.set_visible(False)
 
+    fig.tight_layout
+    fig.suptitle(sup_title, fontsize=16, fontweight="bold", y=0.9125)
+
+    save_plt(
+        fig,
+        plot_title=sup_title,
+        path2folder=plot_folder,
+    )
+
+
+def plot_de_mlde_ft_meancount_v_n(
+    plot_folder: str = "results/de_vs_mlde/onehot/collage/n_mean_count",
+    mlde_csv: str = "results/mlde/vis_4/all_df.csv",
+    de_folder: str = "results/de/DE-active/scale2max",
+    nsite: str = "all",
+    meanorfrac: str = "mean",
+    simplezs: bool = True,
+    min_ftlib: bool = False,
+):
+    """
+    
+    """
+
+    plot_folder = checkNgen_folder(os.path.join(plot_folder, nsite))
+    mlde_all = pd.read_csv(mlde_csv).copy()
+
+    if min_ftlib:
+        app_ftlib = " (12.5% ft) "
+    else:
+        app_ftlib = " "
+
+    if meanorfrac == "mean":
+        app_meanfrac = "mean of max fitness"
+    else:
+        app_meanfrac = "fraction of max fitness = 1"
+
+    if simplezs:
+        nrow = 2
+        zs_map = SIMPLE_ZS_COLOR_MAP
+        app_zs = ""
+    else:
+        nrow = 3
+        zs_map = ZS_COLOR_MAP
+        app_zs = " with ZS ensemble"
+    
+    sup_title = f"DE vs MLDE{app_ftlib}{app_meanfrac} over sample size{app_zs}"
+
+    ncol = 3
+
+    fig, axs = plt.subplots(nrow, ncol, figsize=(20, 12), sharex=True, sharey=True)
+
+    for i, (ax, zs) in enumerate(zip(axs.flatten(), zs_map.keys())):
+
+        mlde_df = mlde_all[
+            (mlde_all["n_mut_cutoff"] == nsite) & (mlde_all["encoding"] == "one-hot")
+        ].copy()
+
+        # init benefit_count to zeros
+        benefit_count = {}
+        for n in N_SAMPLE_LIST:
+            benefit_count[n] = {}
+
+            for de in DE_TYPES:
+                benefit_count[n][de] = 0
+
+        for lib in LIB_INFO_DICT.keys():
+            for de in DE_TYPES:
+                de_df = pd.read_csv(f"{de_folder}/{lib}-{de}.csv").copy()
+                de_mean = de_df["final_fitness"].mean()
+
+                for n in N_SAMPLE_LIST:
+
+                    if min_ftlib:
+                        if zs == "none":
+                            mlde_df_n = mlde_df[
+                                (mlde_df["zs"] == zs)
+                                & (mlde_df["lib"] == lib)
+                                & (mlde_df["n_sample"] == n)
+                            ]["top_maxes"]
+
+                        else:
+                            mlde_df_n = mlde_df[
+                                (mlde_df["zs"] == zs)
+                                & (mlde_df["lib"] == lib)
+                                & (mlde_df["n_sample"] == n)
+                                & (mlde_df["ft_lib"] == mlde_df["ft_lib"].min())
+                            ]["top_maxes"]
+                    else:
+                        # no ft lib size filter
+                        mlde_df_n = mlde_df[
+                            (mlde_df["zs"] == zs)
+                            & (mlde_df["lib"] == lib)
+                            & (mlde_df["n_sample"] == n)
+                        ]["top_maxes"]
+
+                    mlde_mean = mlde_df_n.mean()
+                    if mlde_mean > de_mean:
+                        benefit_count[n][de] += 1
+
+        x = list(benefit_count.keys())
+        single_step_DE = [
+            benefit_count[key]["single_step_DE"] / len(LIB_INFO_DICT) for key in x
+        ]
+        recomb_SSM = [benefit_count[key]["recomb_SSM"] / len(LIB_INFO_DICT) for key in x]
+        top96_SSM = [benefit_count[key]["top96_SSM"] / len(LIB_INFO_DICT) for key in x]
+
+        ax.plot(
+            x,
+            single_step_DE,
+            color=PRESENTATION_PALETTE_SATURATE["orange"],
+            marker="o",
+            linestyle="dotted",
+            linewidth=2,
+            label="Single step",
+        )
+        ax.plot(
+            x,
+            recomb_SSM,
+            color=PRESENTATION_PALETTE_SATURATE["yellow"],
+            marker="o",
+            linestyle="dashed",
+            linewidth=2,
+            label="Recomb",
+        )
+        ax.plot(
+            x,
+            top96_SSM,
+            color=PRESENTATION_PALETTE_SATURATE["brown"],
+            marker="o",
+            linestyle="solid",
+            linewidth=2,
+            label="Top96 recomb",
+        )
+
+        if i == ncol - 1:
+            # create labels
+            ax.legend(loc="upper left", bbox_to_anchor=(1.12, 1))
+
+        if i == 5 and simplezs:
+            ax.set_visible(False)
+        else:
+            # Adding labels and title
+            ax.set_xlabel("Number of samples")
+            ax.set_ylabel("Fraction of MLDE > DE")
+            ax.tick_params(axis="y")
+
+
+            ax.set_title(ZS_OPTS_LEGEND[zs])
+            ax.set_ylim(0, 1)
+    
     fig.tight_layout
     fig.suptitle(sup_title, fontsize=16, fontweight="bold", y=0.9125)
 

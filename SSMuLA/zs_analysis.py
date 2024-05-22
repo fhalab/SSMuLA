@@ -56,7 +56,6 @@ ZS_OPTS_LEGEND = {
 }
 
 
-
 class ZS_Analysis(LibData):
 
     """
