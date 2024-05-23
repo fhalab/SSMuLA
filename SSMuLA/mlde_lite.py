@@ -10,6 +10,7 @@ import os
 import gc
 import time
 import json
+import math
 import random
 import tables
 import numpy as np
@@ -351,6 +352,7 @@ class MLDESim(MLDEDataset):
         verbose: bool = False,
         save_model: bool = False,
         ft_libs: list[float] = [1],
+        ft_first: bool = True,
         scale_fit: str = "max",
         filter_min_by: str = "none",
         n_mut_cutoff: int = 0,
@@ -366,6 +368,15 @@ class MLDESim(MLDEDataset):
             ie `one-hot`, or `esm2_t33_650M_UR50D-flatten_site`
         - ft_libs: list[float] = [1], list of percent of focused training libraries
             ie. [1, 0.5, 0.25, 0.125]
+        - ft_first: bool = True, if ft size of the full lib is the first filter
+            if True, means first filter the focused training library then hm2 or 1
+                if 3-site, then [3*20^2, 1000] as the 0.125, 0.25, 0.5 only have the two valid
+                if 4-site, this is bascially just hm2
+                NOT a good way of doing hm2 but good for singles
+            if False, means first slices out all hm2, then calculates the focused training library sizes
+                if 3-site, then 0.125, 0.25, 0.5, 1 of the 3*20^2
+                if 4-site, then 0.125, 0.25, 0.5, 1 of the 4*20^2
+                should be used for doubles
         - model_class: str, model class
             ie. 'boosting'
         - n_sample: int, number of samples to train on
@@ -393,26 +404,50 @@ class MLDESim(MLDEDataset):
         self._encoding = encoding
 
         if ft_libs != [1]:
-            ft_lib_mut_numbs = [
-                int(f * len(ALL_AAS) ** self.n_site) for f in ft_libs if f < 1
-            ]
-            print(
-                "{} focused training library sizes valid only if bigger than {} df size {}".format(
-                    ft_lib_mut_numbs,
-                    n_mut_cutoff_dict[self._n_mut_cutoff],
-                    self.len_n_mut_cuttoff_df,
+            if ft_first:
+                ft_lib_mut_numbs = [
+                    int(f * len(ALL_AAS) ** self.n_site) for f in ft_libs if f < 1
+                ]
+                print(
+                    "{} focused training library sizes valid only if bigger than {} df size {}".format(
+                        ft_lib_mut_numbs,
+                        n_mut_cutoff_dict[self._n_mut_cutoff],
+                        self.len_n_mut_cuttoff_df,
+                    )
                 )
-            )
-            ft_lib_w_nums = [
-                ft_lib
-                if ft_lib <= self.len_n_mut_cuttoff_df
-                else self.len_n_mut_cuttoff_df
-                for ft_lib in ft_lib_mut_numbs
-            ]
-            # use set to filter out duplicates
-            self._ft_libs = deepcopy(sorted(list(set(ft_lib_w_nums)), reverse=True))
-            #  [x if x <= criteria else 0 for x in original_list]
-            print(f"Valid focused training library sizes: {self._ft_libs}")
+                ft_lib_w_nums = [
+                    ft_lib
+                    if ft_lib <= self.len_n_mut_cuttoff_df
+                    else self.len_n_mut_cuttoff_df
+                    for ft_lib in ft_lib_mut_numbs
+                ]
+                # use set to filter out duplicates
+                self._ft_libs = deepcopy(sorted(list(set(ft_lib_w_nums)), reverse=True))
+                #  [x if x <= criteria else 0 for x in original_list]
+                print(f"Valid focused training library sizes: {self._ft_libs}")
+            # filter out the hm2 first
+            # TODO: test more rigirously
+            else:
+                if self._n_mut_cutoff == 2:
+                    print("Filtering out all the double first")
+                    ft_lib_mut_numbs = [
+                        int(f * math.comb(self.n_site, 2) * len(ALL_AAS) ** 2) for f in ft_libs
+                    ]
+                    print(
+                        "{} focused training library sizes valid only if smaller than {} df size {}".format(
+                            ft_lib_mut_numbs,
+                            n_mut_cutoff_dict[self._n_mut_cutoff],
+                            self.len_n_mut_cuttoff_df,
+                        )
+                    )
+                    ft_lib_w_nums = [
+                        ft_lib
+                        if ft_lib <= self.len_n_mut_cuttoff_df
+                        else self.len_n_mut_cuttoff_df
+                        for ft_lib in ft_lib_mut_numbs
+                    ]
+
+                    self._ft_libs = deepcopy(sorted(list(set(ft_lib_w_nums)), reverse=True))
 
         else:
             self._ft_libs = [self.len_n_mut_cuttoff_df]
@@ -683,6 +718,7 @@ def run_mlde_lite(
     n_mut_cutoff: int = 0,
     encodings: list[str] = ["one-hot"],
     ft_libs: list[float] = [1],
+    ft_first: bool = True,
     model_classes: list[str] = ["boosting", "ridge"],
     n_samples: list[int] = [384],
     n_split: int = 5,
@@ -790,6 +826,7 @@ def run_mlde_lite(
                     zs_predictor=zs_predictor,
                     encoding=encoding,
                     ft_libs=ft_libs,
+                    ft_first=ft_first,
                     model_class=model_class,
                     n_sample=n_sample,
                     n_split=n_split,
@@ -950,6 +987,7 @@ def run_all_mlde(
     scale_type: str = "scale2max",
     zs_predictors: list[str] = ["none", "Triad", "ev", "esm", "esmif"],
     ft_lib_fracs: list[float] = [0.5, 0.25, 0.125],
+    ft_first: bool = True,
     encodings: list[str] = ["one-hot"],
     model_classes: list[str] = ["boosting", "ridge"],
     n_samples: list[int] = [384],
@@ -999,6 +1037,7 @@ def run_all_mlde(
                         n_mut_cutoff=n_mut_cutoff,
                         encodings=encodings,
                         ft_libs=ft_libs,
+                        ft_first=ft_first,
                         model_classes=model_classes,
                         n_samples=n_samples,
                         n_split=n_split,
@@ -1020,6 +1059,7 @@ def run_all_mlde_parallelized(
     scale_type: str = "scale2max",
     zs_predictors: list[str] = ["none", "Triad", "ev", "esm", "esmif"],
     ft_lib_fracs: list[float] = [0.5, 0.25, 0.125],
+    ft_first: bool = True,
     encodings: list[str] = ["one-hot"] + DEFAULT_LEARNED_EMB_COMBO,
     model_classes: list[str] = ["boosting", "ridge"],
     n_samples: list[int] = [384],
@@ -1125,6 +1165,7 @@ def run_all_mlde_parallelized(
                             "n_mut_cutoff": n_mut_cutoff,
                             "encodings": encodings,
                             "ft_libs": ft_libs,
+                            "ft_first": ft_first,
                             "model_classes": model_classes,
                             "n_samples": n_samples,
                             "n_split": n_split,
