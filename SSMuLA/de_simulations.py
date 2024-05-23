@@ -34,6 +34,7 @@ from SSMuLA.vis import (
     save_bokeh_hv,
     JSON_THEME,
     LIB_COLORS,
+    PRESENTATION_PALETTE_SATURATE,
     one_decimal_x,
     one_decimal_y,
     fixmargins,
@@ -51,6 +52,14 @@ warnings.filterwarnings("ignore", category=FutureWarning)
 # order of de simluation from simple to complex
 DE_TYPES = deepcopy(["recomb_SSM", "single_step_DE", "top96_SSM"])
 
+DE_COLORS = deepcopy(
+    {
+        "recomb_SSM": PRESENTATION_PALETTE_SATURATE["light_orange"],
+        "single_step_DE": PRESENTATION_PALETTE_SATURATE["light_brown"],
+        "top96_SSM": PRESENTATION_PALETTE_SATURATE["brown"],
+    }
+)
+
 DE_LINE_STYLES = deepcopy(
     {
         "recomb_SSM": "solid",
@@ -59,6 +68,13 @@ DE_LINE_STYLES = deepcopy(
     }
 )
 
+DE_LEGEND_MAP = deepcopy(
+    {
+        "recomb_SSM": "Recomb",
+        "single_step_DE": "Single step",
+        "top96_SSM": "Top96 recomb",
+    }
+)
 
 def simulate_single_step_DE(
     df: pd.DataFrame, seq_col: str, fitness_col: str, n_sites: int = 4

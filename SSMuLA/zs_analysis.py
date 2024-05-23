@@ -36,7 +36,7 @@ ZS_OPTS = ["Triad_score", "ev_score", "esm_score", "esmif_score"]
 ZS_COMB_OPTS = ["struc-comb_score", "msanoif-comb_score", "msa-comb_score", "structnmsa-comb_score"]
 
 SIMPLE_ZS_OPT_LEGNED = {
-    "none": "No ZS",
+    "none": "Random",
     "Triad_score": "Triad",
     "ev_score": "EVMutation",
     "esm_score": "ESM",
@@ -44,7 +44,7 @@ SIMPLE_ZS_OPT_LEGNED = {
 }
 
 ZS_OPTS_LEGEND = {
-    "none": "No ZS",
+    "none": "Random",
     "Triad_score": "Triad",
     "ev_score": "EVMutation",
     "esm_score": "ESM",

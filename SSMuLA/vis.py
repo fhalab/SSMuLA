@@ -15,14 +15,15 @@ from bokeh.io import export_svg
 from bokeh.models import NumeralTickFormatter
 from bokeh.themes.theme import Theme
 
-bokeh.io.output_notebook()
-
 import holoviews as hv
 
-hv.extension("bokeh", "matplotlib")
 
 from SSMuLA.landscape_global import LIB_NAMES
 from SSMuLA.util import checkNgen_folder
+
+bokeh.io.output_notebook()
+hv.extension("bokeh", "matplotlib")
+
 
 JSON_THEME = Theme(
     json={
@@ -116,7 +117,7 @@ SIMPLE_ZS_COLOR_MAP = {
     "Triad_score": PRESENTATION_PALETTE_SATURATE["blue"],
     "ev_score": PRESENTATION_PALETTE_SATURATE["green"],
     "esm_score": PRESENTATION_PALETTE_SATURATE["purple"],
-    "esmif_score": PRESENTATION_PALETTE_SATURATE["red"],
+    "esmif_score": PRESENTATION_PALETTE_SATURATE["orange"],
 }
 
 ZS_COLOR_MAP = {
@@ -124,12 +125,13 @@ ZS_COLOR_MAP = {
     "Triad_score": PRESENTATION_PALETTE_SATURATE["blue"],
     "ev_score": PRESENTATION_PALETTE_SATURATE["green"],
     "esm_score": PRESENTATION_PALETTE_SATURATE["purple"],
-    "esmif_score": PRESENTATION_PALETTE_SATURATE["red"],
+    "esmif_score": PRESENTATION_PALETTE_SATURATE["orange"],
     "struc-comb_score": PRESENTATION_PALETTE_SATURATE["light_blue"],
     "msanoif-comb_score": PRESENTATION_PALETTE_SATURATE["light_green"],
     "msa-comb_score": PRESENTATION_PALETTE_SATURATE["light_yellow"],
     "structnmsa-comb_score": PRESENTATION_PALETTE_SATURATE["light_brown"],
 }
+
 
 # define plot hooks
 def one_decimal_x(plot, element):
