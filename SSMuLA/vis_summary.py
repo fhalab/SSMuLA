@@ -1363,7 +1363,7 @@ def plot_de_mlde_ft_count_v_n_comb(
             ax.plot(
                 x,
                 ys,
-                color=DE_COLORS[de],
+                color=ZS_COLOR_MAP[zs],
                 marker="o",
                 linestyle=DE_LINE_STYLES[de],
                 linewidth=2,
