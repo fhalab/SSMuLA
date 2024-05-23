@@ -5,7 +5,7 @@ import os
 
 from datetime import datetime
 
-from SSMuLA.vis_summary import *
+from SSMuLA.vis_summary import vis_sum_de_mlde
 # plot_de_mlde_ft_v_n
 from SSMuLA.util import checkNgen_folder
 
@@ -29,58 +29,8 @@ if __name__ == "__main__":
     #     input_csv="results/zs_sum_2/none/zs_stat_scale2max.csv",
     #     output_folder="results/summary/ZS"
     # )
-
-    # plot_de_v_mlde(
-    #     plot_folder = "results/de_vs_mlde/onehot/collage2_wcombzs/n_samples", 
-    #     mlde_csv = "results/mlde/vis_4/all_df.csv",
-    #     de_folder = "results/de/DE-active/scale2max",
-    #     nsite = "double"
-    # )
-
-    # plot_n_ftmlde(
-    #     plot_folder = "results/de_vs_mlde/onehot/collage2_wcombzs/ftMLDE",
-    #     mlde_csv = "results/mlde/vis_4/all_df.csv",
-    #     de_folder = "results/de/DE-active/scale2max",
-    #     nsite = "double"
-    # )
-
-    # plot_de_mlde_ft_v_n(
-    #     plot_folder = "results/de_vs_mlde/onehot/collage/n_mean_frac",
-    #     mlde_csv = "results/mlde/vis_4/all_df.csv",
-    #     de_folder = "results/de/DE-active/scale2max",
-    #     nsite = "double"
-    # )
-
-    for simplezs in [True, False]:
-
-        plot_de_mlde_ft_mean_v_n(
-            plot_folder = "results/de_vs_mlde/onehot/collage/n_mean_frac",
-            # mlde_csv: str = "results/mlde/vis_4/all_df.csv",
-            # de_folder: str = "results/de/DE-active/scale2max",
-            simplezs=simplezs,
-            nsite = "double"
-        )
-        plot_de_mlde_ft_percent_v_n(
-            plot_folder = "results/de_vs_mlde/onehot/collage/n_mean_frac",
-            # mlde_csv: str = "results/mlde/vis_4/all_df.csv",
-            # de_folder: str = "results/de/DE-active/scale2max",
-            simplezs=simplezs,
-            nsite = "double"
-        )
-
-    for meanorfrac in ["mean", "frac"]:
-        for simplezs in [True, False]:
-            for min_ftlib in [True, False]:
-                plot_de_mlde_ft_meancount_v_n(
-                    plot_folder = "results/de_vs_mlde/onehot/collage/n_mean_count",
-                    mlde_csv = "results/mlde/vis_4/all_df.csv",
-                    de_folder = "results/de/DE-active/scale2max",
-                    meanorfrac = meanorfrac,
-                    simplezs = simplezs,
-                    min_ftlib = min_ftlib,
-                    nsite = "double"
-                )
-
+    vis_sum_de_mlde()
+    
     """
     DESumVis(SumVis):
         input_csv: str = "results/de/DE-active/scale2max/all_landscape_de_summary.csv",

@@ -288,7 +288,7 @@ def get_all_metric_df(mlde_results_dir: str = "results/mlde/saved") -> pd.DataFr
     return pd.concat([mlde_parser.metric_df for mlde_parser in mlde_parsers])
 
 
-class MLDEVis:
+class MLDESum:
 
     """A class for visualizing MLDE results"""
 
@@ -298,6 +298,7 @@ class MLDEVis:
         mlde_vis_dir: str = "results/mlde/vis",
         all_encoding: bool = True,
         encoding_lists: list[str] = [],
+        ifvis: bool = False,
     ) -> None:
 
         """
@@ -314,54 +315,55 @@ class MLDEVis:
         self._all_df = get_all_metric_df(self._mlde_results_dir)
         self._all_df.to_csv(os.path.join(self._mlde_vis_dir, "all_df.csv"), index=False)
 
-        if all_encoding or len(encoding_lists) == 0:
-            encoding_lists = deepcopy(
-                [[encoding] for encoding in self._all_df["encoding"].unique()]
-                + deepcopy([DEFAULT_LEARNED_EMB_COMBO])
-            )
-        else:
-            encoding_lists = [[encoding_list] for encoding_list in encoding_lists]
+        if ifvis:
+            if all_encoding or len(encoding_lists) == 0:
+                encoding_lists = deepcopy(
+                    [[encoding] for encoding in self._all_df["encoding"].unique()]
+                    + deepcopy([DEFAULT_LEARNED_EMB_COMBO])
+                )
+            else:
+                encoding_lists = [[encoding_list] for encoding_list in encoding_lists]
 
-        models = self._all_df["model"].unique()
-        n_tops = self._all_df["n_top"].unique()
-        n_samples = self._all_df["n_sample"].unique()
+            models = self._all_df["model"].unique()
+            n_tops = self._all_df["n_top"].unique()
+            n_samples = self._all_df["n_sample"].unique()
 
-        with tqdm() as pbar:
-            pbar.reset(
-                len(ZS_OPTS_LEGEND)
-                * len(encoding_lists)
-                * len(models)
-                * len(n_samples)
-                * len(n_tops)
-                * len(DEFAULT_MLDE_METRICS)
-            )
-
-            for metric in DEFAULT_MLDE_METRICS:
-                metric_subfolder = checkNgen_folder(
-                    os.path.join(self._mlde_vis_dir, metric)
+            with tqdm() as pbar:
+                pbar.reset(
+                    len(ZS_OPTS_LEGEND)
+                    * len(encoding_lists)
+                    * len(models)
+                    * len(n_samples)
+                    * len(n_tops)
+                    * len(DEFAULT_MLDE_METRICS)
                 )
 
-                for zs in ZS_OPTS_LEGEND.keys():
+                for metric in DEFAULT_MLDE_METRICS:
+                    metric_subfolder = checkNgen_folder(
+                        os.path.join(self._mlde_vis_dir, metric)
+                    )
 
-                    zs_subfolder = checkNgen_folder(os.path.join(metric_subfolder, zs))
+                    for zs in ZS_OPTS_LEGEND.keys():
 
-                    for encoding_list in encoding_lists:
-                        for model in models:
-                            for n_sample in n_samples:
-                                for n_top in n_tops:
+                        zs_subfolder = checkNgen_folder(os.path.join(metric_subfolder, zs))
 
-                                    self.zs_encode_model_ntop_metirc(
-                                        zs,
-                                        encoding_list,
-                                        model,
-                                        n_sample,
-                                        n_top,
-                                        metric,
-                                        zs_subfolder,
-                                    )
-                                    pbar.update()
+                        for encoding_list in encoding_lists:
+                            for model in models:
+                                for n_sample in n_samples:
+                                    for n_top in n_tops:
 
-            pbar.close()
+                                        self.zs_encode_model_ntop_metirc(
+                                            zs,
+                                            encoding_list,
+                                            model,
+                                            n_sample,
+                                            n_top,
+                                            metric,
+                                            zs_subfolder,
+                                        )
+                                        pbar.update()
+
+                pbar.close()
 
     def zs_encode_model_ntop_metirc(
         self,

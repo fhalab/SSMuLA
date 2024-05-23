@@ -15,7 +15,12 @@ import holoviews as hv
 
 
 from SSMuLA.de_simulations import DE_TYPES
-from SSMuLA.zs_analysis import ZS_OPTS, ZS_COMB_OPTS, ZS_OPTS_LEGEND, SIMPLE_ZS_OPT_LEGNED
+from SSMuLA.zs_analysis import (
+    ZS_OPTS,
+    ZS_COMB_OPTS,
+    ZS_OPTS_LEGEND,
+    SIMPLE_ZS_OPT_LEGNED,
+)
 from SSMuLA.landscape_global import LIB_INFO_DICT, LIB_NAMES, TrpB_names
 from SSMuLA.vis import (
     LIB_COLORS,
@@ -82,11 +87,18 @@ LIB3BY5 = [
     "TrpB3F",
     "",
     "TrpB3E",
-    "TrpB3H",
     "TrpB3A",
     "TrpB3C",
+    "TrpB3H",
     "TrpB3B",
 ]
+
+"""
+['ParD3', 'ParD2', 'DHFR', 'TrpB3I', 'GB1', 'TrpB3D', 'TrpB4',
+'TrpB3G', 'TrpB3F', 'TrpB3E', 'TrpB3A', 'TrpB3C', 'TrpB3H',
+'TrpB3B']
+df["numb_active"] / df["numb_loc_opt"] / df["fraction_non-magnitude"] / np.log(df["numb_measured"])    
+"""
 
 
 def de_sum_hook(plot, element):
@@ -396,7 +408,11 @@ def plot_de_v_mlde(
     plot_folder: str = "results/de_vs_mlde/onehot/collage/n_samples",
     mlde_csv: str = "results/mlde/vis_3/all_df.csv",
     de_folder: str = "results/de/DE-active/scale2max",
-    nsite: str = "all",
+    n_mut: str = "all",
+    n_top: int = 96,
+    min_ftlib: bool = True,
+    simplezs: bool = True,
+    liborderby: str = "single_step_DE",
 ) -> None:
 
     """
@@ -408,29 +424,36 @@ def plot_de_v_mlde(
     - mlde_csv: str, path to the MLDE csv file
     """
 
-    plot_folder = checkNgen_folder(os.path.join(plot_folder, nsite))
+    plot_folder = checkNgen_folder(os.path.join(plot_folder, n_mut, str(n_top)))
     mlde_all = pd.read_csv(mlde_csv).copy()
 
-    for zs, mlde_title in tqdm(
-        zip(
-            ["Triad_score", "ev_score", "esm_score", "esmif_score", "none"]
-            + ZS_COMB_OPTS,
-            ["Triad-ftMLDE", "EVmutation-ftMLDE", "ESM-ftMLDE", "ESMIF-ftMLDE", "MLDE"]
-            + [
-                "Triad + ESM-IF",
-                "EVMutation + ESM",
-                "EVMutation + ESM + ESM-IF",
-                "Triad + EVMutation + ESM + ESM-IF",
-            ],
-        )
-    ):
+    if simplezs:
+        zs_opts = ZS_OPTS + ["none"]
+    else:
+        zs_opts = ZS_OPTS + ZS_COMB_OPTS + ["none"]
 
-        """ "struc-comb_score": "Triad + ESM-IF",
+    for zs in tqdm(zs_opts):
+
+        """
+        "struc-comb_score": "Triad + ESM-IF",
         "msanoif-comb_score": "EVMutation + ESM",
         "msa-comb_score": "EVMutation + ESM + ESM-IF",
-        "structnmsa-comb_score": "Triad + EVMutation + ESM + ESM-IF","""
+        "structnmsa-comb_score": "Triad + EVMutation + ESM + ESM-IF"
+        """
 
-        sup_title = f"{mlde_title} vs DE"
+        if min_ftlib and zs != "none":
+            app_ftlib = " (12.5% ft)"
+        else:
+            app_ftlib = ""
+
+        if simplezs:
+            app_zs = ""
+        else:
+            app_zs = " with ZS ensemble"
+
+        sup_title = (
+            f"{ZS_OPTS_LEGEND[zs]} MLDE{app_ftlib} top{str(n_top)} vs DE{app_zs}"
+        )
 
         # organize into
         # first row easy de: pard2, pard3, dhfr, trpb3i
@@ -445,18 +468,20 @@ def plot_de_v_mlde(
         #            "GB1", "TrpB4", "TrpB3G", "TrpB3F", ""
         #            "TrpB3E", "TrpB3H", "TrpB3A", "TrpB3C", "TrpB3B",
         # ]
-        # fig, axs = plt.subplots(4, 3, figsize=(28, 16))
-        # for i, (ax, lib) in enumerate(zip(axs.flatten(), LIB_INFO_DICT.keys())):
-        # fig, axs = plt.subplots(4, 4, figsize=(28, 20))
-        # for i, (ax, lib) in enumerate(zip(axs.flatten()[:len(LIB4BY4)], LIB4BY4)):
 
-        # LIB3BY5
+        de_sumdf = pd.read_csv(f"{de_folder}/all_landscape_de_summary.csv")
+        liborder = (
+            de_sumdf[de_sumdf["de_type"] == liborderby]
+            .sort_values(by=["mean_all"])["lib"]
+            .values
+        )
+
         ncol = 5
         nrow = 3
         fig, axs = plt.subplots(nrow, ncol, figsize=(32, 16))
-        for i, (ax, lib) in enumerate(zip(axs.flatten(), LIB3BY5)):
+        for i, (ax, lib) in enumerate(zip(axs.flatten(), liborder)):
 
-            if lib != "":
+            if i < len(liborder):
 
                 ss_df = pd.read_csv(f"{de_folder}/{lib}-single_step_DE.csv").copy()
                 recomb_df = pd.read_csv(f"{de_folder}/{lib}-recomb_SSM.csv").copy()
@@ -464,8 +489,9 @@ def plot_de_v_mlde(
 
                 mlde_df = mlde_all[
                     (mlde_all["lib"] == lib)
-                    & (mlde_all["n_mut_cutoff"] == nsite)
+                    & (mlde_all["n_mut_cutoff"] == n_mut)
                     & (mlde_all["zs"] == zs)
+                    & (mlde_all["n_top"] == n_top)
                     & (mlde_all["encoding"] == "one-hot")
                 ].copy()
 
@@ -497,7 +523,7 @@ def plot_de_v_mlde(
                         mlde_df_n,
                         ecdf_transform(mlde_df_n),
                         ".",
-                        label=f"{mlde_title} - {str(n_samples)}",
+                        label=f"{ZS_OPTS_LEGEND[zs]} - {str(n_samples)}",
                         color=MLDE_COLORS[n + 2],
                     )
 
@@ -524,7 +550,11 @@ def plot_n_ftmlde(
     plot_folder: str = "results/de_vs_mlde/onehot/collage/ftMLDE",
     mlde_csv: str = "results/mlde/vis_3/all_df.csv",
     de_folder: str = "results/simulations/DE-active/scale2max",
-    nsite: str = "all",
+    simplezs: bool = True,
+    min_ftlib: bool = True,
+    n_mut: str = "all",
+    n_top: int = 96,
+    liborderby: str = "single_step_DE",
 ) -> None:
 
     """
@@ -536,12 +566,33 @@ def plot_n_ftmlde(
     - de_folder: str, path to the DE folder
     """
 
-    plot_folder = checkNgen_folder(os.path.join(plot_folder, nsite))
+    plot_folder = checkNgen_folder(os.path.join(plot_folder, n_mut, str(n_top)))
     mlde_all = pd.read_csv(mlde_csv).copy()
 
     for n in tqdm(N_SAMPLE_LIST):
 
-        sup_title = f"{str(n)} MLDE sample 12.5% ft library vs DE"
+        if min_ftlib:
+            app_ftlib = " (12.5% ft)"
+        else:
+            app_ftlib = ""
+
+        if simplezs:
+            zs_legend_map = SIMPLE_ZS_OPT_LEGNED
+            zs_color_map = SIMPLE_ZS_COLOR_MAP
+            app_zs = ""
+        else:
+            zs_legend_map = ZS_OPTS_LEGEND
+            zs_color_map = ZS_COLOR_MAP
+            app_zs = " with ZS ensemble"
+
+        sup_title = f"{str(n)} MLDE{app_ftlib} top{str(n_top)} vs DE{app_zs}"
+
+        de_sumdf = pd.read_csv(f"{de_folder}/all_landscape_de_summary.csv")
+        liborder = (
+            de_sumdf[de_sumdf["de_type"] == liborderby]
+            .sort_values(by=["mean_all"])["lib"]
+            .values
+        )
 
         # fig, axs = plt.subplots(3, 4, figsize=(28, 16))
         # for i, (ax, lib) in enumerate(zip(axs.flatten(), LIB_INFO_DICT.keys())):
@@ -549,13 +600,13 @@ def plot_n_ftmlde(
         # for i, (ax, lib) in enumerate(zip(axs.flatten(), LIB_INFO_DICT.keys())):
         # fig, axs = plt.subplots(4, 4, figsize=(28, 20))
         # for i, (ax, lib) in enumerate(zip(axs.flatten()[:len(LIB4BY4)], LIB4BY4)):
-        # LIB3BY5
+
         ncol = 5
         nrow = 3
         fig, axs = plt.subplots(nrow, ncol, figsize=(32, 16))
-        for i, (ax, lib) in enumerate(zip(axs.flatten(), LIB3BY5)):
+        for i, (ax, lib) in enumerate(zip(axs.flatten(), liborder)):
 
-            if lib != "":
+            if i < len(liborder):
 
                 ss_df = pd.read_csv(f"{de_folder}/{lib}-single_step_DE.csv").copy()
                 recomb_df = pd.read_csv(f"{de_folder}/{lib}-recomb_SSM.csv").copy()
@@ -563,8 +614,9 @@ def plot_n_ftmlde(
 
                 mlde_df = mlde_all[
                     (mlde_all["lib"] == lib)
-                    & (mlde_all["n_mut_cutoff"] == nsite)
+                    & (mlde_all["n_mut_cutoff"] == n_mut)
                     & (mlde_all["n_sample"] == n)
+                    & (mlde_all["n_top"] == n_top)
                     & (mlde_all["encoding"] == "one-hot")
                 ].copy()
 
@@ -590,7 +642,7 @@ def plot_n_ftmlde(
                     color=PRESENTATION_PALETTE_SATURATE["brown"],
                 )
 
-                for zs, zs_color in ZS_COLOR_MAP.items():
+                for zs, zs_color in zs_color_map.items():
 
                     if zs == "none":
                         mlde_df_n = mlde_df[(mlde_df["zs"] == zs)]["top_maxes"]
@@ -605,7 +657,7 @@ def plot_n_ftmlde(
                         mlde_df_n,
                         ecdf_transform(mlde_df_n),
                         ".",
-                        label=ZS_OPTS_LEGEND[zs],
+                        label=zs_legend_map[zs],
                         color=zs_color,
                     )
 
@@ -627,37 +679,54 @@ def plot_n_ftmlde(
             path2folder=plot_folder,
         )
 
+
 def plot_de_mlde_ft_mean_v_n(
     plot_folder: str = "results/de_vs_mlde/onehot/collage/n_mean_frac",
     mlde_csv: str = "results/mlde/vis_4/all_df.csv",
     de_folder: str = "results/de/DE-active/scale2max",
-    nsite: str = "all",
-    simplezs: bool = True
+    n_mut: str = "all",
+    n_top: int = 96,
+    min_ftlib: bool = True,
+    simplezs: bool = True,
+    liborderby: str = "single_step_DE",
 ) -> None:
     """"""
     # combine all in one
     # Create the figure and subplots
 
-    plot_folder = checkNgen_folder(os.path.join(plot_folder, nsite))
+    plot_folder = checkNgen_folder(os.path.join(plot_folder, n_mut, str(n_top)))
     mlde_all = pd.read_csv(mlde_csv).copy()
 
     ncol = 5
     nrow = 3
     fig, axs = plt.subplots(nrow, ncol, figsize=(32, 16), sharex=True, sharey=True)
 
+    if min_ftlib:
+        app_ftlib = " (12.5% ft)"
+    else:
+        app_ftlib = ""
+
     if simplezs:
         zs_legend_map = SIMPLE_ZS_OPT_LEGNED
         zs_color_map = SIMPLE_ZS_COLOR_MAP
-        sup_title = "DE vs MLDE mean of max fitness over sample size"
-
+        app_zs = ""
     else:
         zs_legend_map = ZS_OPTS_LEGEND
         zs_color_map = ZS_COLOR_MAP
-        sup_title = "DE vs MLDE mean of max fitness over sample size with ZS ensemble"
+        app_zs = " with ZS ensemble"
 
-    for i, (ax, lib) in enumerate(zip(axs.flatten(), LIB3BY5)):
+    sup_title = f"DE vs MLDE{app_ftlib} top{str(n_top)} mean of max fitness over sample size{app_zs}"
 
-        if lib != "":
+    de_sumdf = pd.read_csv(f"{de_folder}/all_landscape_de_summary.csv")
+    liborder = (
+        de_sumdf[de_sumdf["de_type"] == liborderby]
+        .sort_values(by=["mean_all"])["lib"]
+        .values
+    )
+
+    for i, (ax, lib) in enumerate(zip(axs.flatten(), liborder)):
+
+        if i < len(liborder):
 
             ss_df = pd.read_csv(f"{de_folder}/{lib}-single_step_DE.csv").copy()
             recomb_df = pd.read_csv(f"{de_folder}/{lib}-recomb_SSM.csv").copy()
@@ -666,13 +735,13 @@ def plot_de_mlde_ft_mean_v_n(
             ss_mean = ss_df["final_fitness"].mean()
             recomb_mean = recomb_df["final_fitness"].mean()
             toprecomb_mean = toprecomb_df["final_fitness"].mean()
-            
+
             for zs, zs_color in zs_color_map.items():
 
                 mlde_df = mlde_all[
                     (mlde_all["lib"] == lib)
-                    & (mlde_all["n_mut_cutoff"] == nsite)
-                    # & (mlde_all["zs"] == zs)
+                    & (mlde_all["n_mut_cutoff"] == n_mut)
+                    & (mlde_all["n_top"] == n_top)
                     & (mlde_all["encoding"] == "one-hot")
                 ].copy()
 
@@ -686,7 +755,7 @@ def plot_de_mlde_ft_mean_v_n(
                     ]
 
                 mean_fit_dict = {}
-                
+
                 for n_samples in N_SAMPLE_LIST:
                     # [24, 48, 96, 192, 288, 384, 480, 576, 960, 1920]
                     mlde_df_n = mlde_df[mlde_df["n_sample"] == n_samples]["top_maxes"]
@@ -755,34 +824,53 @@ def plot_de_mlde_ft_percent_v_n(
     plot_folder: str = "results/de_vs_mlde/onehot/collage/n_mean_frac",
     mlde_csv: str = "results/mlde/vis_4/all_df.csv",
     de_folder: str = "results/de/DE-active/scale2max",
-    nsite: str = "all",
-    simplezs: bool = True
+    n_mut: str = "all",
+    n_top: int = 96,
+    min_ftlib: bool = True,
+    simplezs: bool = True,
+    liborderby: str = "single_step_DE",
 ) -> None:
     """"""
     # combine all in one
     # Create the figure and subplots
 
-    plot_folder = checkNgen_folder(os.path.join(plot_folder, nsite))
+    plot_folder = checkNgen_folder(os.path.join(plot_folder, n_mut, str(n_top)))
     mlde_all = pd.read_csv(mlde_csv).copy()
 
     ncol = 5
     nrow = 3
     fig, axs = plt.subplots(nrow, ncol, figsize=(32, 16), sharex=True, sharey=True)
 
+    if min_ftlib:
+        app_ftlib = " (12.5% ft)"
+    else:
+        app_ftlib = ""
+
     if simplezs:
+        nrow = 2
         zs_legend_map = SIMPLE_ZS_OPT_LEGNED
         zs_color_map = SIMPLE_ZS_COLOR_MAP
-        sup_title = "DE vs MLDE fraction = 1 over sample size"
-
+        app_zs = ""
     else:
+        nrow = 3
         zs_legend_map = ZS_OPTS_LEGEND
         zs_color_map = ZS_COLOR_MAP
-        sup_title = "DE vs MLDE fraction = 1 over sample size with ZS ensemble"
+        app_zs = " with ZS ensemble"
 
+    sup_title = (
+        f"DE vs MLDE{app_ftlib} top{str(n_top)} fraction = 1 over sample size{app_zs}"
+    )
 
-    for i, (ax, lib) in enumerate(zip(axs.flatten(), LIB3BY5)):
-        
-        if lib != "":
+    de_sumdf = pd.read_csv(f"{de_folder}/all_landscape_de_summary.csv")
+    liborder = (
+        de_sumdf[de_sumdf["de_type"] == liborderby]
+        .sort_values(by=["mean_all"])["lib"]
+        .values
+    )
+
+    for i, (ax, lib) in enumerate(zip(axs.flatten(), liborder)):
+
+        if i < len(liborder):
 
             ss_df = pd.read_csv(f"{de_folder}/{lib}-single_step_DE.csv").copy()
             recomb_df = pd.read_csv(f"{de_folder}/{lib}-recomb_SSM.csv").copy()
@@ -794,14 +882,24 @@ def plot_de_mlde_ft_percent_v_n(
 
             for zs, zs_color in zs_color_map.items():
 
+                # Common condition
+                condition = (
+                    (mlde_all["lib"] == lib)
+                    & (mlde_all["n_mut_cutoff"] == n_mut)
+                    & (mlde_all["n_top"] == n_top)
+                    & (mlde_all["encoding"] == "one-hot")
+                    & (mlde_all["zs"] == zs)
+                )
+
+                """
                 mlde_df = mlde_all[
                     (mlde_all["lib"] == lib)
-                    & (mlde_all["n_mut_cutoff"] == nsite)
-                    # & (mlde_all["zs"] == zs)
+                    & (mlde_all["n_mut_cutoff"] == n_mut)
+                    & (mlde_all["n_top"] == n_top)
                     & (mlde_all["encoding"] == "one-hot")
                 ].copy()
 
-                if zs == "none":
+                                if zs == "none":
                     mlde_df = mlde_df[(mlde_df["zs"] == zs)]
 
                 else:
@@ -809,6 +907,35 @@ def plot_de_mlde_ft_percent_v_n(
                         (mlde_df["zs"] == zs)
                         & (mlde_df["ft_lib"] == mlde_df["ft_lib"].min())
                     ]
+
+
+                """
+
+                # Apply the additional condition if needed
+                if min_ftlib and zs != "none":
+                    condition &= mlde_all["ft_lib"] == mlde_all["ft_lib"].min()      
+
+                # Apply the conditions to filter the DataFrame
+                mlde_df = mlde_all[condition].copy()
+
+                # mlde_df = mlde_all[
+                #     (mlde_all["lib"] == lib)
+                #     & (mlde_all["n_mut_cutoff"] == n_mut)
+                #     & (mlde_all["n_top"] == n_top)
+                #     & (mlde_all["encoding"] == "one-hot")
+                # ].copy()
+
+                # if min_ftlib:
+                #     if zs == "none":
+                #         mlde_df = mlde_df[(mlde_df["zs"] == zs)]
+
+                #     else:
+                #         mlde_df = mlde_df[
+                #             (mlde_df["zs"] == zs)
+                #             & (mlde_df["ft_lib"] == mlde_df["ft_lib"].min())
+                #         ]
+                # else:
+                #     mlde_df = mlde_df[(mlde_df["zs"] == zs)]
 
                 max_percent_dict = {}
 
@@ -878,16 +1005,15 @@ def plot_de_mlde_ft_meancount_v_n(
     plot_folder: str = "results/de_vs_mlde/onehot/collage/n_mean_count",
     mlde_csv: str = "results/mlde/vis_4/all_df.csv",
     de_folder: str = "results/de/DE-active/scale2max",
-    nsite: str = "all",
+    n_mut: str = "all",
+    n_top: int = 96,
     meanorfrac: str = "mean",
     simplezs: bool = True,
     min_ftlib: bool = False,
 ):
-    """
-    
-    """
+    """ """
 
-    plot_folder = checkNgen_folder(os.path.join(plot_folder, nsite))
+    plot_folder = checkNgen_folder(os.path.join(plot_folder, n_mut, str(n_top)))
     mlde_all = pd.read_csv(mlde_csv).copy()
 
     if min_ftlib:
@@ -908,8 +1034,10 @@ def plot_de_mlde_ft_meancount_v_n(
         nrow = 3
         zs_map = ZS_COLOR_MAP
         app_zs = " with ZS ensemble"
-    
-    sup_title = f"DE vs MLDE{app_ftlib}{app_meanfrac} over sample size{app_zs}"
+
+    sup_title = (
+        f"DE vs MLDE{app_ftlib}{app_meanfrac} top{str(n_top)} over sample size{app_zs}"
+    )
 
     ncol = 3
 
@@ -918,7 +1046,7 @@ def plot_de_mlde_ft_meancount_v_n(
     for i, (ax, zs) in enumerate(zip(axs.flatten(), zs_map.keys())):
 
         mlde_df = mlde_all[
-            (mlde_all["n_mut_cutoff"] == nsite) & (mlde_all["encoding"] == "one-hot")
+            (mlde_all["n_mut_cutoff"] == n_mut) & (mlde_all["encoding"] == "one-hot")
         ].copy()
 
         # init benefit_count to zeros
@@ -932,42 +1060,66 @@ def plot_de_mlde_ft_meancount_v_n(
         for lib in LIB_INFO_DICT.keys():
             for de in DE_TYPES:
                 de_df = pd.read_csv(f"{de_folder}/{lib}-{de}.csv").copy()
-                de_mean = de_df["final_fitness"].mean()
+
+                if meanorfrac == "mean":
+                    de_val = de_df["final_fitness"].mean()
+                else:
+                    de_val = get_val_percent(s=de_df["final_fitness"], numb=1)
 
                 for n in N_SAMPLE_LIST:
 
-                    if min_ftlib:
-                        if zs == "none":
-                            mlde_df_n = mlde_df[
-                                (mlde_df["zs"] == zs)
-                                & (mlde_df["lib"] == lib)
-                                & (mlde_df["n_sample"] == n)
-                            ]["top_maxes"]
+                    condition = (
+                        (mlde_df["zs"] == zs)
+                        & (mlde_df["lib"] == lib)
+                        & (mlde_df["n_sample"] == n)
+                        & (mlde_df["n_top"] == n_top)
+                    )
 
-                        else:
-                            mlde_df_n = mlde_df[
-                                (mlde_df["zs"] == zs)
-                                & (mlde_df["lib"] == lib)
-                                & (mlde_df["n_sample"] == n)
-                                & (mlde_df["ft_lib"] == mlde_df["ft_lib"].min())
-                            ]["top_maxes"]
+                    if min_ftlib and zs != "none":
+                        condition &= mlde_df["ft_lib"] == mlde_df["ft_lib"].min()
+
+                    mlde_df_n = mlde_df[condition]["top_maxes"]
+
+                    # if min_ftlib:
+                    #     if zs == "none":
+                    #         mlde_df_n = mlde_df[
+                    #             (mlde_df["zs"] == zs)
+                    #             & (mlde_df["lib"] == lib)
+                    #             & (mlde_df["n_sample"] == n)
+                    #             & (mlde_df["n_top"] == n_top)
+                    #         ]["top_maxes"]
+
+                    #     else:
+                    #         mlde_df_n = mlde_df[
+                    #             (mlde_df["zs"] == zs)
+                    #             & (mlde_df["lib"] == lib)
+                    #             & (mlde_df["n_sample"] == n)
+                    #             & (mlde_df["n_top"] == n_top)
+                    #             & (mlde_df["ft_lib"] == mlde_df["ft_lib"].min())
+                    #         ]["top_maxes"]
+                    # else:
+                    #     # no ft lib size filter
+                    #     mlde_df_n = mlde_df[
+                    #         (mlde_df["zs"] == zs)
+                    #         & (mlde_df["lib"] == lib)
+                    #         & (mlde_df["n_sample"] == n)
+                    #         & (mlde_df["n_top"] == n_top)
+                    #     ]["top_maxes"]
+                    if meanorfrac == "mean":
+                        mlde_val = mlde_df_n.mean()
                     else:
-                        # no ft lib size filter
-                        mlde_df_n = mlde_df[
-                            (mlde_df["zs"] == zs)
-                            & (mlde_df["lib"] == lib)
-                            & (mlde_df["n_sample"] == n)
-                        ]["top_maxes"]
-
-                    mlde_mean = mlde_df_n.mean()
-                    if mlde_mean > de_mean:
+                        mlde_val = get_val_percent(s=mlde_df_n, numb=1)
+                    
+                    if mlde_val > de_val:
                         benefit_count[n][de] += 1
 
         x = list(benefit_count.keys())
         single_step_DE = [
             benefit_count[key]["single_step_DE"] / len(LIB_INFO_DICT) for key in x
         ]
-        recomb_SSM = [benefit_count[key]["recomb_SSM"] / len(LIB_INFO_DICT) for key in x]
+        recomb_SSM = [
+            benefit_count[key]["recomb_SSM"] / len(LIB_INFO_DICT) for key in x
+        ]
         top96_SSM = [benefit_count[key]["top96_SSM"] / len(LIB_INFO_DICT) for key in x]
 
         ax.plot(
@@ -1010,10 +1162,9 @@ def plot_de_mlde_ft_meancount_v_n(
             ax.set_ylabel("Fraction of MLDE > DE")
             ax.tick_params(axis="y")
 
-
             ax.set_title(ZS_OPTS_LEGEND[zs])
             ax.set_ylim(0, 1)
-    
+
     fig.tight_layout
     fig.suptitle(sup_title, fontsize=16, fontweight="bold", y=0.9125)
 
@@ -1022,3 +1173,64 @@ def plot_de_mlde_ft_meancount_v_n(
         plot_title=sup_title,
         path2folder=plot_folder,
     )
+
+
+def vis_sum_de_mlde(
+    plot_dir: str = "results/de_vs_mlde/onehot/collage",
+    mlde_csv: str = "results/mlde/vis_5/all_df.csv",
+    de_folder: str = "results/de/DE-active/scale2max",
+    liborderby: str = "single_step_DE",
+    min_ftlib: bool = True,
+    simplezs: bool = True,
+):
+
+    common_args = {
+        "mlde_csv": mlde_csv,
+        "de_folder": de_folder,
+        "min_ftlib": min_ftlib,
+        "simplezs": simplezs,
+    }
+
+    for n_mut in ["all", "double"]:
+        for n_top in [96, 384]:
+
+            plot_de_v_mlde(
+                plot_folder=f"{plot_dir}/n_samples",
+                n_mut=n_mut,
+                n_top=n_top,
+                liborderby=liborderby,
+                **common_args,
+            )
+
+            plot_n_ftmlde(
+                plot_folder=f"{plot_dir}/ftMLDE",
+                n_mut=n_mut,
+                n_top=n_top,
+                liborderby=liborderby,
+                **common_args,
+            )
+
+            plot_de_mlde_ft_mean_v_n(
+                plot_folder=f"{plot_dir}/n_mean_frac",
+                n_mut=n_mut,
+                n_top=n_top,
+                liborderby=liborderby,
+                **common_args,
+            )
+
+            plot_de_mlde_ft_percent_v_n(
+                plot_folder=f"{plot_dir}/n_mean_frac",
+                n_mut=n_mut,
+                n_top=n_top,
+                liborderby=liborderby,
+                **common_args,
+            )
+
+            for meanorfrac in ["mean", "frac"]:
+                plot_de_mlde_ft_meancount_v_n(
+                    plot_folder=f"{plot_dir}/n_mean_count",
+                    meanorfrac=meanorfrac,
+                    n_mut=n_mut,
+                    n_top=n_top,
+                    **common_args,
+                )

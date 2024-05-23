@@ -27,9 +27,9 @@ if __name__ == "__main__":
 
     MLDEVis(
         mlde_results_dir = "results/mlde/saved",
-        mlde_vis_dir = "results/mlde/vis_4",
-        all_encoding = False,
-        encoding_lists = ["one-hot"],
+        mlde_vis_dir = "results/mlde/vis_5",
+        all_encoding = True,
+        # encoding_lists = ["one-hot"],
     )
 
     f.close()
