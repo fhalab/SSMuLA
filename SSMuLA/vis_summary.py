@@ -423,15 +423,15 @@ def plot_de_v_mlde(
     - mlde_csv: str, path to the MLDE csv file
     """
 
-    plot_folder = checkNgen_folder(os.path.join(plot_folder, n_mut, str(n_top)))
-    mlde_all = pd.read_csv(mlde_csv).copy()
-
     if simplezs:
         app_zs = ""
         zs_opts = ["none"] + ZS_OPTS
     else:
         app_zs = " with ZS ensemble"
         zs_opts = ["none"] + ZS_OPTS + ZS_COMB_OPTS
+
+    plot_folder = checkNgen_folder(os.path.join("".join([plot_folder, app_zs.replace(" ", "_")]), n_mut, str(n_top)))
+    mlde_all = pd.read_csv(mlde_csv).copy()
 
     for zs in tqdm(zs_opts):
 
@@ -553,9 +553,6 @@ def plot_n_ftmlde(
     - de_folder: str, path to the DE folder
     """
 
-    plot_folder = checkNgen_folder(os.path.join(plot_folder, n_mut, str(n_top)))
-    mlde_all = pd.read_csv(mlde_csv).copy()
-
     if min_ftlib:
         app_ftlib = " (12.5% ft)"
     else:
@@ -567,6 +564,9 @@ def plot_n_ftmlde(
     else:
         app_zs = " with ZS ensemble"
         zs_opts = ["none"] + ZS_OPTS + ZS_COMB_OPTS
+
+    plot_folder = checkNgen_folder(os.path.join("".join([plot_folder, app_zs.replace(" ", "_")]), n_mut, str(n_top)))
+    mlde_all = pd.read_csv(mlde_csv).copy()
 
     for n in tqdm(N_SAMPLE_LIST):
 
@@ -682,9 +682,6 @@ def plot_de_mlde_ft_v_n(
     # combine all in one
     # Create the figure and subplots
 
-    plot_folder = checkNgen_folder(os.path.join(plot_folder, n_mut, str(n_top)))
-    mlde_all = pd.read_csv(mlde_csv).copy()
-
     ncol = 5
     nrow = 3
     fig, axs = plt.subplots(nrow, ncol, figsize=(32, 16), sharex=True, sharey=True)
@@ -707,6 +704,9 @@ def plot_de_mlde_ft_v_n(
     else:
         app_zs = " with ZS ensemble"
         zs_opts = ["none"] + ZS_OPTS + ZS_COMB_OPTS
+
+    plot_folder = checkNgen_folder(os.path.join("".join([plot_folder, app_zs.replace(" ", "_")]), n_mut, str(n_top)))
+    mlde_all = pd.read_csv(mlde_csv).copy()
 
     sup_title = (
         f"DE vs MLDE{app_ftlib} top{str(n_top)} {app_meanfrac} over sample size{app_zs}"
@@ -871,9 +871,6 @@ def plot_de_mlde_ft_v_n_comb(
     # combine all in one
     # Create the figure and subplots
 
-    plot_folder = checkNgen_folder(os.path.join(plot_folder, n_mut, str(n_top)))
-    mlde_all = pd.read_csv(mlde_csv).copy()
-
     ncol = 5
     nrow = 3
     fig, axs = plt.subplots(nrow, ncol, figsize=(32, 16), sharex=True, sharey=True)
@@ -897,6 +894,9 @@ def plot_de_mlde_ft_v_n_comb(
     else:
         app_zs = " with ZS ensemble"
         zs_opts = ["none"] + ZS_OPTS + ZS_COMB_OPTS
+
+    plot_folder = checkNgen_folder(os.path.join("".join([plot_folder, app_zs.replace(" ", "_")]), n_mut, str(n_top)))
+    mlde_all = pd.read_csv(mlde_csv).copy()
 
     sup_title = (
         f"DE vs MLDE{app_ftlib} top{str(n_top)} over sample size{app_zs}"
@@ -1142,9 +1142,6 @@ def plot_de_mlde_ft_count_v_n(
 ):
     """ """
 
-    plot_folder = checkNgen_folder(os.path.join(plot_folder, n_mut, str(n_top)))
-    mlde_all = pd.read_csv(mlde_csv).copy()
-
     if min_ftlib:
         app_ftlib = " (12.5% ft)"
     else:
@@ -1163,6 +1160,9 @@ def plot_de_mlde_ft_count_v_n(
         nrow = 3
         app_zs = " with ZS ensemble"
         zs_opts = ["none"] + ZS_OPTS + ZS_COMB_OPTS
+
+    plot_folder = checkNgen_folder(os.path.join("".join([plot_folder, app_zs.replace(" ", "_")]), n_mut, str(n_top)))
+    mlde_all = pd.read_csv(mlde_csv).copy()
 
     sup_title = (
         f"DE vs MLDE{app_ftlib} top{str(n_top)} {app_meanfrac} over sample size{app_zs}"
@@ -1278,9 +1278,6 @@ def plot_de_mlde_ft_count_v_n_comb(
 ):
     """ """
 
-    plot_folder = checkNgen_folder(os.path.join(plot_folder, n_mut, str(n_top)))
-    mlde_all = pd.read_csv(mlde_csv).copy()
-
     if min_ftlib:
         app_ftlib = " (12.5% ft)"
     else:
@@ -1297,6 +1294,9 @@ def plot_de_mlde_ft_count_v_n_comb(
     else:
         app_zs = " with ZS ensemble"
         zs_opts = ["none"] + ZS_OPTS + ZS_COMB_OPTS 
+
+    plot_folder = checkNgen_folder(os.path.join("".join([plot_folder, app_zs.replace(" ", "_")]), n_mut, str(n_top)))
+    mlde_all = pd.read_csv(mlde_csv).copy()
 
     sup_title = (
         f"DE vs MLDE{app_ftlib} top{str(n_top)} {app_meanfrac} over sample size comb{app_zs}"
@@ -1501,45 +1501,45 @@ def vis_sum_de_mlde(
     for n_mut in ["all", "double"]:
         for n_top in [96, 384]:
 
-            print(f"Plotting {n_mut} {n_top} DE vs MLDE...")
-            plot_de_v_mlde(
-                plot_folder=f"{plot_dir}/n_samples",
-                n_mut=n_mut,
-                n_top=n_top,
-                liborderby=liborderby,
-                **common_args,
-            )
+            # print(f"Plotting {n_mut} {n_top} DE vs MLDE...")
+            # plot_de_v_mlde(
+            #     plot_folder=f"{plot_dir}/n_samples",
+            #     n_mut=n_mut,
+            #     n_top=n_top,
+            #     liborderby=liborderby,
+            #     **common_args,
+            # )
 
-            print(f"Plotting {n_mut} {n_top} for different sample sizes...")
-            plot_n_ftmlde(
-                plot_folder=f"{plot_dir}/ftMLDE",
-                n_mut=n_mut,
-                n_top=n_top,
-                liborderby=liborderby,
-                **common_args,
-            )
+            # print(f"Plotting {n_mut} {n_top} for different sample sizes...")
+            # plot_n_ftmlde(
+            #     plot_folder=f"{plot_dir}/ftMLDE",
+            #     n_mut=n_mut,
+            #     n_top=n_top,
+            #     liborderby=liborderby,
+            #     **common_args,
+            # )
 
-            print(f"Plotting {n_mut} {n_top} over sample sizes...")
-            plot_de_mlde_ft_v_n_comb(
-                plot_folder=f"{plot_dir}/n_mean_frac",
-                    n_mut=n_mut,
-                    n_top=n_top,
-                    liborderby=liborderby,
-                    **common_args
-                )
+            # print(f"Plotting {n_mut} {n_top} over sample sizes...")
+            # plot_de_mlde_ft_v_n_comb(
+            #     plot_folder=f"{plot_dir}/n_mean_frac",
+            #         n_mut=n_mut,
+            #         n_top=n_top,
+            #         liborderby=liborderby,
+            #         **common_args
+            #     )
 
 
-            for meanorfrac in ["mean", "frac"]:
-                print(f"Plotting {n_mut} {n_top} {meanorfrac} over sample sizes...")
+            # for meanorfrac in ["mean", "frac"]:
+            #     print(f"Plotting {n_mut} {n_top} {meanorfrac} over sample sizes...")
 
-                plot_de_mlde_ft_v_n(
-                    plot_folder=f"{plot_dir}/n_mean_frac",
-                    meanorfrac=meanorfrac,
-                    n_mut=n_mut,
-                    n_top=n_top,
-                    liborderby=liborderby,
-                    **common_args,
-                )
+            #     plot_de_mlde_ft_v_n(
+            #         plot_folder=f"{plot_dir}/n_mean_frac",
+            #         meanorfrac=meanorfrac,
+            #         n_mut=n_mut,
+            #         n_top=n_top,
+            #         liborderby=liborderby,
+            #         **common_args,
+            #     )
 
             for meanorfrac in ["mean", "frac"]:
 
@@ -1547,13 +1547,13 @@ def vis_sum_de_mlde(
                     f"Plotting {n_mut} {n_top} {meanorfrac} zs counts over sample sizes..."
                 )
 
-                plot_de_mlde_ft_count_v_n(
-                    plot_folder=f"{plot_dir}/n_mean_count",
-                    meanorfrac=meanorfrac,
-                    n_mut=n_mut,
-                    n_top=n_top,
-                    **common_args,
-                )
+                # plot_de_mlde_ft_count_v_n(
+                #     plot_folder=f"{plot_dir}/n_mean_count",
+                #     meanorfrac=meanorfrac,
+                #     n_mut=n_mut,
+                #     n_top=n_top,
+                #     **common_args,
+                # )
 
                 plot_de_mlde_ft_count_v_n_comb(
                     plot_folder = f"{plot_dir}/n_mean_count",
