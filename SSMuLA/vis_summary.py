@@ -433,7 +433,11 @@ def plot_de_v_mlde(
         app_zs = " with ZS ensemble"
         zs_opts = ["none"] + ZS_OPTS + ZS_COMB_OPTS
 
-    plot_folder = checkNgen_folder(os.path.join("".join([plot_folder, app_zs.replace(" ", "_")]), n_mut, str(n_top)))
+    plot_folder = checkNgen_folder(
+        os.path.join(
+            "".join([plot_folder, app_zs.replace(" ", "_")]), n_mut, str(n_top)
+        )
+    )
     mlde_all = pd.read_csv(mlde_csv).copy()
 
     for zs in tqdm(zs_opts):
@@ -502,7 +506,7 @@ def plot_de_v_mlde(
                     label=DE_LEGEND_MAP[de],
                     color=DE_COLORS[de],
                 )
-            
+
             for n, n_samples in enumerate(N_SAMPLE_LIST):
                 # [24, 48, 96, 192, 288, 384, 480, 576, 960, 1920]
                 mlde_df_n = mlde_df[mlde_df["n_sample"] == n_samples]["top_maxes"]
@@ -568,7 +572,11 @@ def plot_n_ftmlde(
         app_zs = " with ZS ensemble"
         zs_opts = ["none"] + ZS_OPTS + ZS_COMB_OPTS
 
-    plot_folder = checkNgen_folder(os.path.join("".join([plot_folder, app_zs.replace(" ", "_")]), n_mut, str(n_top)))
+    plot_folder = checkNgen_folder(
+        os.path.join(
+            "".join([plot_folder, app_zs.replace(" ", "_")]), n_mut, str(n_top)
+        )
+    )
     mlde_all = pd.read_csv(mlde_csv).copy()
 
     for n in tqdm(N_SAMPLE_LIST):
@@ -708,7 +716,11 @@ def plot_de_mlde_ft_v_n(
         app_zs = " with ZS ensemble"
         zs_opts = ["none"] + ZS_OPTS + ZS_COMB_OPTS
 
-    plot_folder = checkNgen_folder(os.path.join("".join([plot_folder, app_zs.replace(" ", "_")]), n_mut, str(n_top)))
+    plot_folder = checkNgen_folder(
+        os.path.join(
+            "".join([plot_folder, app_zs.replace(" ", "_")]), n_mut, str(n_top)
+        )
+    )
     mlde_all = pd.read_csv(mlde_csv).copy()
 
     sup_title = (
@@ -770,7 +782,6 @@ def plot_de_mlde_ft_v_n(
                 else:
                     fit_dict[n_samples] = get_val_frac(mlde_df_n, numb=1)
 
-            
             # Plotting
             ax.plot(
                 list(fit_dict.keys()),
@@ -877,7 +888,7 @@ def plot_de_mlde_ft_v_n_comb(
     ncol = 5
     nrow = 3
     fig, axs = plt.subplots(nrow, ncol, figsize=(32, 16), sharex=True, sharey=True)
-    
+
     frac_axs = []
     for ax in axs.flatten():
         frac_axs.append(ax.twinx())
@@ -886,7 +897,6 @@ def plot_de_mlde_ft_v_n_comb(
         app_ftlib = " (12.5% ft)"
     else:
         app_ftlib = ""
-
 
     y1_label = "Mean of max fitness"
     y2_label = "Fraction of max fitness = 1"
@@ -898,12 +908,14 @@ def plot_de_mlde_ft_v_n_comb(
         app_zs = " with ZS ensemble"
         zs_opts = ["none"] + ZS_OPTS + ZS_COMB_OPTS
 
-    plot_folder = checkNgen_folder(os.path.join("".join([plot_folder, app_zs.replace(" ", "_")]), n_mut, str(n_top)))
+    plot_folder = checkNgen_folder(
+        os.path.join(
+            "".join([plot_folder, app_zs.replace(" ", "_")]), n_mut, str(n_top)
+        )
+    )
     mlde_all = pd.read_csv(mlde_csv).copy()
 
-    sup_title = (
-        f"DE vs MLDE{app_ftlib} top{str(n_top)} over sample size{app_zs}"
-    )
+    sup_title = f"DE vs MLDE{app_ftlib} top{str(n_top)} over sample size{app_zs}"
 
     de_sumdf = pd.read_csv(f"{de_folder}/all_landscape_de_summary.csv")
     liborder = list(
@@ -912,7 +924,9 @@ def plot_de_mlde_ft_v_n_comb(
         .values
     )
 
-    for i, (ax, frac_ax, lib) in tqdm(enumerate(zip(axs.flatten(), frac_axs, liborder))):
+    for i, (ax, frac_ax, lib) in tqdm(
+        enumerate(zip(axs.flatten(), frac_axs, liborder))
+    ):
 
         ss_df = pd.read_csv(f"{de_folder}/{lib}-single_step_DE.csv").copy()
         recomb_df = pd.read_csv(f"{de_folder}/{lib}-recomb_SSM.csv").copy()
@@ -957,7 +971,7 @@ def plot_de_mlde_ft_v_n_comb(
                 std_dict[n_samples] = mlde_df_n.std()
 
                 frac_dict[n_samples] = get_val_frac(mlde_df_n, numb=1)
-            
+
             # Plotting for mean
             ax.plot(
                 list(mean_dict.keys()),
@@ -1008,7 +1022,7 @@ def plot_de_mlde_ft_v_n_comb(
 
                 mean_dict[n_samples] = mlde_df_n.mean()
                 std_dict[n_samples] = mlde_df_n.std()
-                
+
                 frac_dict[n_samples] = get_val_frac(mlde_df_n, numb=1)
 
             ax.plot(
@@ -1039,7 +1053,9 @@ def plot_de_mlde_ft_v_n_comb(
             )
 
         for de, de_mean, de_frac in zip(
-            DE_TYPES, [ss_mean, recomb_mean, toprecomb_mean], [ss_frac, recomb_frac, toprecomb_frac]
+            DE_TYPES,
+            [ss_mean, recomb_mean, toprecomb_mean],
+            [ss_frac, recomb_frac, toprecomb_frac],
         ):
             ax.axhline(
                 y=de_mean,
@@ -1055,7 +1071,7 @@ def plot_de_mlde_ft_v_n_comb(
                 linestyle="dashed",
                 linewidth=2,
             )
-            
+
         # Setting labels and title
         ax.set_xlabel("Number of samples")
         ax.set_ylabel(y1_label)
@@ -1098,18 +1114,36 @@ def plot_de_mlde_ft_v_n_comb(
             # add single step, recomb, top96
             for de in DE_TYPES:
                 legend_list.append(
-                    Line2D([0], [0], color=DE_COLORS[de], marker="o",
-                    linestyle="solid", label=DE_LEGEND_MAP[de])
+                    Line2D(
+                        [0],
+                        [0],
+                        color=DE_COLORS[de],
+                        marker="o",
+                        linestyle="solid",
+                        label=DE_LEGEND_MAP[de],
+                    )
                 )
-            
+
             # add frac
             legend_list.append(
-                Line2D([0], [0], color="black", marker="o",
-                linestyle="solid", label="Mean of max fitness")
+                Line2D(
+                    [0],
+                    [0],
+                    color="black",
+                    marker="o",
+                    linestyle="solid",
+                    label="Mean of max fitness",
+                )
             )
             legend_list.append(
-                Line2D([0], [0], color="black", marker="*",
-                linestyle="dashed", label="Fraction of max fitness = 1")
+                Line2D(
+                    [0],
+                    [0],
+                    color="black",
+                    marker="*",
+                    linestyle="dashed",
+                    label="Fraction of max fitness = 1",
+                )
             )
 
             ax.legend(handles=legend_list, loc="upper left", bbox_to_anchor=(1.12, 1))
@@ -1164,7 +1198,11 @@ def plot_de_mlde_ft_count_v_n(
         app_zs = " with ZS ensemble"
         zs_opts = ["none"] + ZS_OPTS + ZS_COMB_OPTS
 
-    plot_folder = checkNgen_folder(os.path.join("".join([plot_folder, app_zs.replace(" ", "_")]), n_mut, str(n_top)))
+    plot_folder = checkNgen_folder(
+        os.path.join(
+            "".join([plot_folder, app_zs.replace(" ", "_")]), n_mut, str(n_top)
+        )
+    )
     mlde_all = pd.read_csv(mlde_csv).copy()
 
     sup_title = (
@@ -1244,7 +1282,7 @@ def plot_de_mlde_ft_count_v_n(
         if i == ncol - 1:
             # create labels
             ax.legend(loc="upper left", bbox_to_anchor=(1.12, 1))
-        
+
         # Adding labels and title
         ax.set_xlabel("Number of samples")
         ax.set_ylabel("Fraction of MLDE > DE")
@@ -1296,14 +1334,16 @@ def plot_de_mlde_ft_count_v_n_comb(
         zs_opts = ["none"] + ZS_OPTS
     else:
         app_zs = " with ZS ensemble"
-        zs_opts = ["none"] + ZS_OPTS + ZS_COMB_OPTS 
+        zs_opts = ["none"] + ZS_OPTS + ZS_COMB_OPTS
 
-    plot_folder = checkNgen_folder(os.path.join("".join([plot_folder, app_zs.replace(" ", "_")]), n_mut, str(n_top)))
+    plot_folder = checkNgen_folder(
+        os.path.join(
+            "".join([plot_folder, app_zs.replace(" ", "_")]), n_mut, str(n_top)
+        )
+    )
     mlde_all = pd.read_csv(mlde_csv).copy()
 
-    sup_title = (
-        f"DE vs MLDE{app_ftlib} top{str(n_top)} {app_meanfrac} over sample size comb{app_zs}"
-    )
+    sup_title = f"DE vs MLDE{app_ftlib} top{str(n_top)} {app_meanfrac} over sample size comb{app_zs}"
 
     fig, ax = plt.subplots(figsize=(6, 4))
 
@@ -1477,12 +1517,14 @@ def plot_de_mlde_ft_count_v_n_comb(
 
     ax.set_title(sup_title)
     ax.set_ylim(0, 1)
+    ax.set_xscale("log")
 
     save_plt(
         fig,
         plot_title=sup_title,
         path2folder=plot_folder,
     )
+
 
 def plot_ftlib_v_size(
     plot_folder: str = "results/mlde_vs_ftmlde/onehot/collage/lib_size",
@@ -1505,12 +1547,12 @@ def plot_ftlib_v_size(
         app_zs = " with ZS ensemble"
         zs_opts = ["none"] + ZS_OPTS + ZS_COMB_OPTS
 
-    plot_folder = checkNgen_folder(os.path.join("".join([plot_folder, app_zs.replace(" ", "_")]), n_mut))
+    plot_folder = checkNgen_folder(
+        os.path.join("".join([plot_folder, app_zs.replace(" ", "_")]), n_mut)
+    )
     mlde_all = pd.read_csv(mlde_csv).copy()
 
-    sup_title = (
-        f"Focused training library sampling {str(n_sample)} top{str(n_top)} over library size{app_zs}"
-    )
+    sup_title = f"Focused training library sampling {str(n_sample)} top{str(n_top)} over library size{app_zs}"
 
     de_sumdf = pd.read_csv(f"{de_folder}/all_landscape_de_summary.csv")
     liborder = list(
@@ -1519,7 +1561,12 @@ def plot_ftlib_v_size(
         .values
     )
 
-    mlde_df = mlde_all[(mlde_all["encoding"] == "one-hot") & (mlde_all["n_sample"] == n_sample) & (mlde_all["n_top"] == n_top) & (mlde_all["zs"].isin(zs_opts))].copy()
+    mlde_df = mlde_all[
+        (mlde_all["encoding"] == "one-hot")
+        & (mlde_all["n_sample"] == n_sample)
+        & (mlde_all["n_top"] == n_top)
+        & (mlde_all["zs"].isin(zs_opts))
+    ].copy()
 
     ncol = 5
     nrow = 3
@@ -1530,27 +1577,78 @@ def plot_ftlib_v_size(
     for ax in axs.flatten():
         frac_axs.append(ax.twinx())
 
-    for i, (ax, frac_ax, lib) in tqdm(enumerate(zip(axs.flatten(), frac_axs, liborder))):
+    for i, (ax, frac_ax, lib) in tqdm(
+        enumerate(zip(axs.flatten(), frac_axs, liborder))
+    ):
         # each subplot is a library with x axis as ft_lib and y axis as mean of top_maxes for each zs
-        lib_df = mlde_df[(mlde_df["lib"] == lib) & (mlde_df["n_mut_cutoff"] == "all")].copy()
-        lib_df["ft_lib"] = lib_df["ft_lib"].map({numb: frac for numb, frac in zip(sorted(lib_df["ft_lib"].unique()), FTLIB_FRAC_LIST)})
+        lib_df = mlde_df[
+            (mlde_df["lib"] == lib) & (mlde_df["n_mut_cutoff"] == "all")
+        ].copy()
+        lib_df["ft_lib"] = lib_df["ft_lib"].map(
+            {
+                numb: frac
+                for numb, frac in zip(
+                    sorted(lib_df["ft_lib"].unique()), FTLIB_FRAC_LIST
+                )
+            }
+        )
         # plot all none zs as a line
         rand_df = lib_df[lib_df["zs"] == "none"].copy()
         rand_mean = [rand_df["top_maxes"].mean()] * len(FTLIB_FRAC_LIST)
         rand_std = [rand_df["top_maxes"].std()] * len(FTLIB_FRAC_LIST)
         rand_frac = [get_val_frac(rand_df["top_maxes"])] * len(FTLIB_FRAC_LIST)
-        ax.plot(FTLIB_FRAC_LIST, rand_mean, color=PRESENTATION_PALETTE_SATURATE["gray"], linestyle="solid", linewidth=2)
-        ax.fill_between(FTLIB_FRAC_LIST, np.array(rand_mean) - np.array(rand_std), np.array(rand_mean) + np.array(rand_std), color=PRESENTATION_PALETTE_SATURATE["gray"], alpha=0.05)
-        frac_ax.plot(FTLIB_FRAC_LIST, rand_frac, color=PRESENTATION_PALETTE_SATURATE["gray"], linestyle="dotted", linewidth=2)
+        ax.plot(
+            FTLIB_FRAC_LIST,
+            rand_mean,
+            color=PRESENTATION_PALETTE_SATURATE["gray"],
+            linestyle="solid",
+            linewidth=2,
+        )
+        ax.fill_between(
+            FTLIB_FRAC_LIST,
+            np.array(rand_mean) - np.array(rand_std),
+            np.array(rand_mean) + np.array(rand_std),
+            color=PRESENTATION_PALETTE_SATURATE["gray"],
+            alpha=0.05,
+        )
+        frac_ax.plot(
+            FTLIB_FRAC_LIST,
+            rand_frac,
+            color=PRESENTATION_PALETTE_SATURATE["gray"],
+            linestyle="dotted",
+            linewidth=2,
+        )
 
         # plot double none zs as a line
-        hm2_df = mlde_df[(mlde_df["lib"] == lib) & (mlde_df["n_mut_cutoff"] == "double") & (mlde_df["zs"] == "none")]
+        hm2_df = mlde_df[
+            (mlde_df["lib"] == lib)
+            & (mlde_df["n_mut_cutoff"] == "double")
+            & (mlde_df["zs"] == "none")
+        ]
         hm2_mean = [hm2_df["top_maxes"].mean()] * len(FTLIB_FRAC_LIST)
         hm2_std = [hm2_df["top_maxes"].std()] * len(FTLIB_FRAC_LIST)
         hm2_frac = [get_val_frac(hm2_df["top_maxes"])] * len(FTLIB_FRAC_LIST)
-        ax.plot(FTLIB_FRAC_LIST, hm2_mean, color=PRESENTATION_PALETTE_SATURATE["yellow"], linestyle="solid", linewidth=2)
-        ax.fill_between(FTLIB_FRAC_LIST, np.array(hm2_mean) - np.array(hm2_std), np.array(hm2_mean) + np.array(hm2_std), color=PRESENTATION_PALETTE_SATURATE["yellow"], alpha=0.05)
-        frac_ax.plot(FTLIB_FRAC_LIST, hm2_frac, color=PRESENTATION_PALETTE_SATURATE["yellow"], linestyle="dotted", linewidth=2)
+        ax.plot(
+            FTLIB_FRAC_LIST,
+            hm2_mean,
+            color=PRESENTATION_PALETTE_SATURATE["yellow"],
+            linestyle="solid",
+            linewidth=2,
+        )
+        ax.fill_between(
+            FTLIB_FRAC_LIST,
+            np.array(hm2_mean) - np.array(hm2_std),
+            np.array(hm2_mean) + np.array(hm2_std),
+            color=PRESENTATION_PALETTE_SATURATE["yellow"],
+            alpha=0.05,
+        )
+        frac_ax.plot(
+            FTLIB_FRAC_LIST,
+            hm2_frac,
+            color=PRESENTATION_PALETTE_SATURATE["yellow"],
+            linestyle="dotted",
+            linewidth=2,
+        )
 
         for zs in zs_opts:
             if zs != "none":
@@ -1558,15 +1656,37 @@ def plot_ftlib_v_size(
                 zs_mean = zs_df.groupby("ft_lib")["top_maxes"].mean()
                 zs_std = zs_df.groupby("ft_lib")["top_maxes"].std()
                 zs_frac = zs_df.groupby("ft_lib")["top_maxes"].apply(get_val_frac)
-                ax.plot(zs_mean.index, zs_mean, label=zs, color=ZS_COLOR_MAP[zs], marker="o", linestyle="solid", linewidth=2)
-                ax.fill_between(zs_mean.index, zs_mean - zs_std, zs_mean + zs_std, color=ZS_COLOR_MAP[zs], alpha=0.05)
-                frac_ax.plot(zs_frac.index, zs_frac, label=zs, color=ZS_COLOR_MAP[zs], marker="*", linestyle="dotted", linewidth=2)
+                ax.plot(
+                    zs_mean.index,
+                    zs_mean,
+                    label=zs,
+                    color=ZS_COLOR_MAP[zs],
+                    marker="o",
+                    linestyle="solid",
+                    linewidth=2,
+                )
+                ax.fill_between(
+                    zs_mean.index,
+                    zs_mean - zs_std,
+                    zs_mean + zs_std,
+                    color=ZS_COLOR_MAP[zs],
+                    alpha=0.05,
+                )
+                frac_ax.plot(
+                    zs_frac.index,
+                    zs_frac,
+                    label=zs,
+                    color=ZS_COLOR_MAP[zs],
+                    marker="*",
+                    linestyle="dotted",
+                    linewidth=2,
+                )
 
         ax.set_title(lib)
         ax.set_xlabel("Fraction of library")
         ax.set_ylabel("Mean of max fitness")
         frac_ax.set_ylabel("Fraction of fitness = 1")
-        
+
         # cut off the last one
         ax.set_xlim(0.125, 0.5)
         ax.set_ylim(0, 1)
@@ -1605,12 +1725,24 @@ def plot_ftlib_v_size(
 
             # add frac
             legend_list.append(
-                Line2D([0], [0], color="black", marker="o",
-                linestyle="solid", label="Mean of max fitness")
+                Line2D(
+                    [0],
+                    [0],
+                    color="black",
+                    marker="o",
+                    linestyle="solid",
+                    label="Mean of max fitness",
+                )
             )
             legend_list.append(
-                Line2D([0], [0], color="black", marker="*",
-                linestyle="dashed", label="Fraction of max fitness = 1")
+                Line2D(
+                    [0],
+                    [0],
+                    color="black",
+                    marker="*",
+                    linestyle="dashed",
+                    label="Fraction of max fitness = 1",
+                )
             )
 
             ax.legend(handles=legend_list, loc="upper left", bbox_to_anchor=(1.12, 1))
@@ -1633,25 +1765,226 @@ def plot_ftlib_v_size(
         path2folder=plot_folder,
     )
 
+
+def plot_countzs(
+    plot_folder: str = "results/mlde_vs_ftmlde/onehot/collage/zs_count",
+    mlde_csv: str = "results/mlde/vis_5/all_df.csv",
+    n_mut: str = "all",
+    n_sample: int = 384,
+    n_top: int = 96,
+    simplezs: bool = True,
+    meanorfrac: str = "mean",
+    liborderby: str = "single_step_DE",
+):
+    """bar plots for counting"""
+
+    if simplezs:
+        app_zs = ""
+        zs_opts = ["none"] + ZS_OPTS
+    else:
+        app_zs = " with ZS ensemble"
+        zs_opts = ["none"] + ZS_OPTS + ZS_COMB_OPTS
+
+    if meanorfrac == "mean":
+        app_meanfrac = "mean of max fitness"
+    else:
+        app_meanfrac = "fraction of max fitness = 1"
+
+    plot_folder = checkNgen_folder(
+        os.path.join("".join([plot_folder, app_zs.replace(" ", "_")]), n_mut)
+    )
+    mlde_all = pd.read_csv(mlde_csv).copy()
+
+    sup_title = f"Best occurance sampling {str(n_sample)} top{str(n_top)} {app_meanfrac}{app_zs}"
+
+    mlde_df = mlde_all[
+        (mlde_all["encoding"] == "one-hot")
+        & (mlde_all["n_sample"] == n_sample)
+        & (mlde_all["n_top"] == n_top)
+        & (mlde_all["zs"].isin(zs_opts))
+    ].copy()
+
+    # init list
+    all_calc_df_list = []
+
+    # prep df
+    for lib in LIB_INFO_DICT.keys():
+        # get double
+        hm2_df = mlde_df[
+            (mlde_df["lib"] == lib)
+            & (mlde_df["n_mut_cutoff"] == "double")
+            & (mlde_df["zs"] == "none")
+        ]
+
+        append_hm_df = pd.DataFrame(
+            {
+                "lib": [lib] * len(FTLIB_FRAC_LIST),
+                "zs": ["hm2"] * len(FTLIB_FRAC_LIST),
+                "ft_lib": FTLIB_FRAC_LIST,
+                "mean": [hm2_df["top_maxes"].mean()] * len(FTLIB_FRAC_LIST),
+                "frac": [get_val_frac(hm2_df["top_maxes"])] * len(FTLIB_FRAC_LIST),
+            }
+        )
+
+        append_zs = deepcopy(ZS_OPTS_LEGEND)
+        append_zs["hm2"] = "Hamming distance ≤ 2"
+
+        # get no zs
+        nozs_df = mlde_df[
+            (mlde_df["lib"] == lib)
+            & (mlde_df["n_mut_cutoff"] == "all")
+            & (mlde_df["zs"] == "none")
+        ]
+
+        append_df = pd.concat(
+            [
+                append_hm_df,
+                pd.DataFrame(
+                    {
+                        "lib": [lib] * len(FTLIB_FRAC_LIST),
+                        "zs": ["none"] * len(FTLIB_FRAC_LIST),
+                        "ft_lib": FTLIB_FRAC_LIST,
+                        "mean": [nozs_df["top_maxes"].mean()] * len(FTLIB_FRAC_LIST),
+                        "frac": [get_val_frac(nozs_df["top_maxes"])]
+                        * len(FTLIB_FRAC_LIST),
+                    }
+                ),
+            ]
+        )
+
+        # get mean for the rest
+        lib_df = mlde_df[(mlde_df["lib"] == lib) & (mlde_df["n_mut_cutoff"] == "all")][
+            ["lib", "zs", "ft_lib", "top_maxes"]
+        ]
+
+        # map ft_lib size
+        lib_df["ft_lib"] = lib_df["ft_lib"].map(
+            {
+                numb: frac
+                for numb, frac in zip(
+                    sorted(lib_df["ft_lib"].unique()), FTLIB_FRAC_LIST
+                )
+            }
+        )
+
+        all_calc_df_list.append(
+            pd.concat(
+                [
+                    append_df,
+                    lib_df.groupby(["lib", "zs", "ft_lib"])["top_maxes"]
+                    .agg(["mean", get_val_frac])
+                    .rename(columns={"get_val_frac": "frac"})
+                    .reset_index(),
+                ]
+            ).reset_index(drop=True)
+        )
+
+    all_calc_df = pd.concat(all_calc_df_list).reset_index(drop=True)
+    all_calc_df["zs"] = all_calc_df["zs"].map(append_zs)
+    all_calc_df["type"] = all_calc_df["lib"].map(
+        {n: v["type"] for n, v in LIB_INFO_DICT.items()}
+    )
+
+    color_map = deepcopy(ZS_COLOR_MAP)
+    color_map["hm2"] = PRESENTATION_PALETTE_SATURATE["yellow"]
+
+    # now plot
+
+    # Create subplots for each type
+    types = list(all_calc_df["type"].unique())
+
+    # top enzyme bind best
+    # bottom enzyme bind worst
+    fig, axes = plt.subplots(
+        nrows=2, ncols=len(types), figsize=(8, 6), sharex=True, sharey=True
+    )
+
+    # Plot stacked bar plots
+    for i, (ax, t) in enumerate(zip(axes.flatten(), types + types)):
+
+        if i // 2 == 0:
+            # Group by 'type', 'ft_lib', and 'zs' to get the counts
+            grouped = (
+                all_calc_df.loc[
+                    all_calc_df.groupby(["lib", "ft_lib"])[meanorfrac].idxmax()
+                ]
+                .groupby(["type", "ft_lib", "zs"])
+                .size()
+                .unstack(fill_value=0)
+            )
+            ax.set_title(t)
+            ax.set_ylabel("Count of best")
+        else:
+            grouped = (
+                all_calc_df.loc[
+                    all_calc_df.groupby(["lib", "ft_lib"])[meanorfrac].idxmin()
+                ]
+                .groupby(["type", "ft_lib", "zs"])
+                .size()
+                .unstack(fill_value=0)
+            )
+            ax.set_ylabel("Count of worst")
+
+        group = grouped.loc[t]
+        group.plot(
+            kind="bar",
+            stacked=True,
+            ax=ax,
+            color=[
+                color_map[{v: k for k, v in append_zs.items()}[col]]
+                for col in group.columns
+            ],
+        )
+
+        ax.set_xlabel("Fraction of library")
+        ax.set_xticklabels(ax.get_xticklabels(), rotation=0)
+
+        if i == 1:
+            ax.legend(bbox_to_anchor=(1.05, 1), loc="upper left")
+        else:
+            ax.legend().set_visible(False)
+
+    fig.suptitle(sup_title, fontsize=16, fontweight="bold")
+
+    save_plt(
+        fig,
+        plot_title=sup_title,
+        path2folder=plot_folder,
+    )
+
+
 def vis_sum_ftlib_v_size(
-    plot_folder: str = "results/mlde_vs_ftmlde/onehot/collage/lib_size",
+    plot_dir: str = "results/mlde_vs_ftmlde/onehot/collage/",
     mlde_csv: str = "results/mlde/vis_5/all_df.csv",
     de_folder: str = "results/de/DE-active/scale2max",
     n_mut: str = "all",
     simplezs: bool = True,
     liborderby: str = "single_step_DE",
 ):
-    for n_sample in N_SAMPLE_LIST:
+    for n_sample in tqdm(N_SAMPLE_LIST):
         for n_top in [96, 384]:
 
-            plot_ftlib_v_size(
-                plot_folder = plot_folder,
-                mlde_csv = mlde_csv,
-                de_folder = de_folder,
-                n_mut = n_mut,
-                n_sample = n_sample,
-                n_top = n_top
-            )
+            common_args = {
+                "mlde_csv": mlde_csv,
+                "n_mut": n_mut,
+                "n_sample": n_sample,
+                "n_top": n_top,
+                "simplezs": simplezs,
+                "liborderby": liborderby,
+            }
+
+            # plot_ftlib_v_size(
+            #     plot_folder = os.path.join(plot_dir, "lib_size"),
+            #     de_folder = de_folder,
+            #     **common_args
+            # )
+
+            for meanorfrac in ["mean", "frac"]:
+                plot_countzs(
+                    plot_folder=os.path.join(plot_dir, "zs_count"),
+                    meanorfrac=meanorfrac,
+                    **common_args,
+                )
 
 
 def vis_sum_de_mlde(
@@ -1700,7 +2033,6 @@ def vis_sum_de_mlde(
             #         **common_args
             #     )
 
-
             # for meanorfrac in ["mean", "frac"]:
             #     print(f"Plotting {n_mut} {n_top} {meanorfrac} over sample sizes...")
 
@@ -1728,7 +2060,7 @@ def vis_sum_de_mlde(
                 # )
 
                 plot_de_mlde_ft_count_v_n_comb(
-                    plot_folder = f"{plot_dir}/n_mean_count",
+                    plot_folder=f"{plot_dir}/n_mean_count",
                     meanorfrac=meanorfrac,
                     n_mut=n_mut,
                     n_top=n_top,

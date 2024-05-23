@@ -29,7 +29,8 @@ if __name__ == "__main__":
     #     input_csv="results/zs_sum_2/none/zs_stat_scale2max.csv",
     #     output_folder="results/summary/ZS"
     # )
-    vis_sum_de_mlde()
+    vis_sum_de_mlde(simplezs=True)
+    vis_sum_de_mlde(simplezs=False)
     
     """
     DESumVis(SumVis):
