@@ -7,7 +7,7 @@ from glob import glob
 
 from datetime import datetime
 
-from SSMuLA.mlde_analysis import MLDEVis
+from SSMuLA.mlde_analysis import MLDESum
 from SSMuLA.util import checkNgen_folder
 
 if __name__ == "__main__":
@@ -22,7 +22,7 @@ if __name__ == "__main__":
     )
     sys.stdout = f
 
-    MLDEVis(
+    MLDESum(
         mlde_results_dir = "results/mlde/saved",
         mlde_vis_dir = "results/mlde/vis"
     )
