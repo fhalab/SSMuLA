@@ -5,7 +5,7 @@ import os
 
 from datetime import datetime
 
-from SSMuLA.vis_summary import vis_sum_ftlib_v_size
+from SSMuLA.vis_summary import vis_sum_ftlib_v_size, plot_de_mlde_ft_v_n_comb
 # plot_de_mlde_ft_v_n
 from SSMuLA.util import checkNgen_folder
 
@@ -29,7 +29,7 @@ if __name__ == "__main__":
     #     input_csv="results/zs_sum_2/none/zs_stat_scale2max.csv",
     #     output_folder="results/summary/ZS"
     # )
-    vis_sum_ftlib_v_size(simplezs=True)
+    # vis_sum_ftlib_v_size(simplezs=True)
     vis_sum_ftlib_v_size(simplezs=False)
     
     """

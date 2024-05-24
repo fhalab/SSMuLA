@@ -2241,21 +2241,20 @@ def vis_sum_ftlib_v_size(
                 "simplezs": simplezs, 
             }
 
-        plot_count_zs_v_n(
-            plot_folder=os.path.join(plot_dir,"zs_count_n"),
-            **common_args
-        )    
+        # plot_count_zs_v_n(
+        #     plot_folder=os.path.join(plot_dir,"zs_count_n"),
+        #     **common_args
+        # )    
 
-        # for n_sample in tqdm(N_SAMPLE_LIST):
+        for n_sample in tqdm(N_SAMPLE_LIST):
         
-            
-        #     # plot_ftlib_v_size(
-        #     #     plot_folder = os.path.join(plot_dir, "lib_size"),
-        #     #     de_folder = de_folder,
-        #     #     n_sample=n_sample,
-        #     #     liborderby=liborderby,
-        #     #     **common_args
-        #     # )
+            plot_ftlib_v_size(
+                plot_folder = os.path.join(plot_dir, "lib_size"),
+                de_folder = de_folder,
+                n_sample=n_sample,
+                liborderby=liborderby,
+                **common_args
+            )
 
         #     for meanorfrac in ["mean", "frac"]:
         #         plot_countzs(
