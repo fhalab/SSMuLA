@@ -70,11 +70,11 @@ ZS_COMB_VIS_OPTS = ["both", "nocomb", "comb"]
 
 ZS_OPTS_APPENDED = deepcopy(ZS_OPTS_LEGEND)
 for n_mut_sub in N_MUT_SUBS:
-    ZS_OPTS_APPENDED[n_mut_sub] = n_mut_sub
+    ZS_OPTS_APPENDED[n_mut_sub] = N_MUT_LEGEND[n_mut_sub]
 
 ZS_COLOR_MAP_APPENDED = deepcopy(ZS_COLOR_MAP)
 for n_mut_sub in N_MUT_SUBS:
-    ZS_COLOR_MAP_APPENDED[n_mut_sub] = n_mut_sub
+    ZS_COLOR_MAP_APPENDED[n_mut_sub] = N_MUT_COLOR[n_mut_sub]
 
 N_SAMPLE_LIST = [24, 48, 96, 192, 288, 384, 480, 576, 960, 1920]
 
@@ -1812,10 +1812,10 @@ def plot_countzs(
 
     if simplezs:
         app_zs = ""
-        zs_opts = ["none"] + ZS_OPTS
+        zs_opts = ["none"] + N_MUT_SUBS + ZS_OPTS
     else:
         app_zs = " with ZS ensemble"
-        zs_opts = ["none"] + ZS_OPTS + ZS_COMB_OPTS
+        zs_opts = ["none"] + N_MUT_SUBS + ZS_OPTS + ZS_COMB_OPTS
 
     if meanorfrac == "mean":
         app_meanfrac = "mean of max fitness"
@@ -1841,46 +1841,27 @@ def plot_countzs(
 
     # prep df
     for lib in LIB_INFO_DICT.keys():
-        # get double
-        for n_mut_sub in N_MUT_SUBS:
-            hm_df = mlde_df[
+        append_df_list = []
+        # get no zs double and singles
+        for n_mut_sub in ["all"] + N_MUT_SUBS:
+            nozs_df = mlde_df[
                 (mlde_df["lib"] == lib)
                 & (mlde_df["n_mut_cutoff"] == n_mut_sub)
                 & (mlde_df["zs"] == "none")
             ]
 
-            append_hm_df = pd.DataFrame(
-                {
-                    "lib": [lib] * len(FTLIB_FRAC_LIST),
-                    "zs": N_MUT_LEGEND[n_mut_sub].lower() * len(FTLIB_FRAC_LIST),
-                    "ft_lib": FTLIB_FRAC_LIST,
-                    "mean": [hm_df["top_maxes"].mean()] * len(FTLIB_FRAC_LIST),
-                    "frac": [get_val_frac(hm_df["top_maxes"])] * len(FTLIB_FRAC_LIST),
-                }
-            )
-
-        # get no zs
-        nozs_df = mlde_df[
-            (mlde_df["lib"] == lib)
-            & (mlde_df["n_mut_cutoff"] == "all")
-            & (mlde_df["zs"] == "none")
-        ]
-
-        append_df = pd.concat(
-            [
-                append_hm_df,
+            append_df_list.append(
                 pd.DataFrame(
-                    {
-                        "lib": [lib] * len(FTLIB_FRAC_LIST),
-                        "zs": ["none"] * len(FTLIB_FRAC_LIST),
-                        "ft_lib": FTLIB_FRAC_LIST,
-                        "mean": [nozs_df["top_maxes"].mean()] * len(FTLIB_FRAC_LIST),
-                        "frac": [get_val_frac(nozs_df["top_maxes"])]
-                        * len(FTLIB_FRAC_LIST),
-                    }
-                ),
-            ]
-        )
+                        {
+                            "lib": [lib] * len(FTLIB_FRAC_LIST),
+                            "zs": [n_mut_sub] * len(FTLIB_FRAC_LIST),
+                            "ft_lib": FTLIB_FRAC_LIST,
+                            "mean": [nozs_df["top_maxes"].mean()] * len(FTLIB_FRAC_LIST),
+                            "frac": [get_val_frac(nozs_df["top_maxes"])]
+                            * len(FTLIB_FRAC_LIST),
+                        }
+                    )
+            )
 
         # get mean for the rest
         lib_df = mlde_df[(mlde_df["lib"] == lib) & (mlde_df["n_mut_cutoff"] == "all")][
@@ -1899,8 +1880,7 @@ def plot_countzs(
 
         calc_df_list.append(
             pd.concat(
-                [
-                    append_df,
+                append_df_list + [
                     lib_df.groupby(["lib", "zs", "ft_lib"])["top_maxes"]
                     .agg(["mean", get_val_frac])
                     .rename(columns={"get_val_frac": "frac"})
@@ -2005,48 +1985,29 @@ def count_zs_v_n_df(
             ]
 
             for lib in LIB_INFO_DICT.keys():
-                for n_mut_sub in N_MUT_SUBS:
-                    # get double
+
+                append_df_list = []
+
+                for n_mut_sub in ["all"] + N_MUT_SUBS:
+                    # get double, single and all 
                     hm_df = n_mlde_df[
                         (n_mlde_df["lib"] == lib)
                         & (n_mlde_df["n_mut_cutoff"] == n_mut_sub)
                         & (n_mlde_df["zs"] == "none")
                     ]
 
-                    append_hm_df = pd.DataFrame(
-                        {
-                            "lib": [lib] * len(FTLIB_FRAC_LIST),
-                            "zs": N_MUT_LEGEND[n_mut_sub].lower() * len(FTLIB_FRAC_LIST),
-                            "ft_lib": FTLIB_FRAC_LIST,
-                            "mean": [hm_df["top_maxes"].mean()] * len(FTLIB_FRAC_LIST),
-                            "frac": [get_val_frac(hm_df["top_maxes"])]
-                            * len(FTLIB_FRAC_LIST),
-                        }
-                    )
-
-                # get no zs
-                nozs_df = n_mlde_df[
-                    (n_mlde_df["lib"] == lib)
-                    & (n_mlde_df["n_mut_cutoff"] == "all")
-                    & (n_mlde_df["zs"] == "none")
-                ]
-
-                append_df = pd.concat(
-                    [
-                        append_hm_df,
-                        pd.DataFrame(
+                    append_df_list.append(
+                            pd.DataFrame(
                             {
                                 "lib": [lib] * len(FTLIB_FRAC_LIST),
-                                "zs": ["none"] * len(FTLIB_FRAC_LIST),
+                                "zs": [n_mut_sub] * len(FTLIB_FRAC_LIST),
                                 "ft_lib": FTLIB_FRAC_LIST,
-                                "mean": [nozs_df["top_maxes"].mean()]
-                                * len(FTLIB_FRAC_LIST),
-                                "frac": [get_val_frac(nozs_df["top_maxes"])]
+                                "mean": [hm_df["top_maxes"].mean()] * len(FTLIB_FRAC_LIST),
+                                "frac": [get_val_frac(hm_df["top_maxes"])]
                                 * len(FTLIB_FRAC_LIST),
                             }
-                        ),
-                    ]
-                )
+                        )
+                    )
 
                 # get mean for the rest
                 lib_df = n_mlde_df[
@@ -2065,8 +2026,7 @@ def count_zs_v_n_df(
 
                 calc_df_list.append(
                     pd.concat(
-                        [
-                            append_df,
+                        append_df_list + [
                             lib_df.groupby(["lib", "zs", "ft_lib"])["top_maxes"]
                             .agg(["mean", get_val_frac])
                             .rename(columns={"get_val_frac": "frac"})
@@ -2217,6 +2177,10 @@ def plot_count_zs_v_n(
         ].sort_values(by=["n_sample"])
 
         for zs in zs_opts:
+
+            print(zs)
+            print(ZS_OPTS_APPENDED[zs])
+            print(mean_df.columns)
 
             ax.plot(
                 list(mean_df["n_sample"].values),
