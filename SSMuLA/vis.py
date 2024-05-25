@@ -117,7 +117,7 @@ SIMPLE_ZS_COLOR_MAP = {
     "Triad_score": PRESENTATION_PALETTE_SATURATE["blue"],
     "ev_score": PRESENTATION_PALETTE_SATURATE["green"],
     "esm_score": PRESENTATION_PALETTE_SATURATE["purple"],
-    "esmif_score": PRESENTATION_PALETTE_SATURATE["orange"],
+    "esmif_score": PRESENTATION_PALETTE_SATURATE["red"],
 }
 
 ZS_COLOR_MAP = {
@@ -125,7 +125,7 @@ ZS_COLOR_MAP = {
     "Triad_score": PRESENTATION_PALETTE_SATURATE["blue"],
     "ev_score": PRESENTATION_PALETTE_SATURATE["green"],
     "esm_score": PRESENTATION_PALETTE_SATURATE["purple"],
-    "esmif_score": PRESENTATION_PALETTE_SATURATE["orange"],
+    "esmif_score": PRESENTATION_PALETTE_SATURATE["red"],
     "struc-comb_score": PRESENTATION_PALETTE_SATURATE["light_blue"],
     "msanoif-comb_score": PRESENTATION_PALETTE_SATURATE["light_green"],
     "msa-comb_score": PRESENTATION_PALETTE_SATURATE["light_yellow"],

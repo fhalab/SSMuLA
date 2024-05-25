@@ -23,13 +23,74 @@ if __name__ == "__main__":
 
     mlde_folder = "results/mlde_hm2zs"
 
+    # run_all_mlde_parallelized(
+    #     encodings=["one-hot"],
+    #     n_mut_cutoffs=[2],
+    #     zs_predictors=["Triad", "ev", "esm", "esmif"],
+    #     n_samples=[384],
+    #     n_replicate=50,
+    #     n_job=256,
+    #     all_libs=True,
+    #     ft_first=False,
+    #     mlde_folder=mlde_folder,
+    # )
+
+    # run_all_mlde_parallelized(
+    #     encodings=["one-hot"],
+    #     n_mut_cutoffs=[2],
+    #     zs_predictors=["struc-comb", "msanoif-comb", "msa-comb", "structnmsa-comb"],
+    #     n_samples=[384],
+    #     n_replicate=50,
+    #     n_job=256,
+    #     all_libs=True,
+    #     ft_first=False,
+    #     mlde_folder=mlde_folder,
+    # )
+
+
+    # run_all_mlde_parallelized(
+    #     encodings=["one-hot"],
+    #     n_mut_cutoffs=[2],
+    #     zs_predictors=["Triad", "ev", "esm", "esmif"],
+    #     n_samples=[24, 48],
+    #     n_replicate=50,
+    #     n_job=256,
+    #     all_libs=True,
+    #     ft_first=False,
+    #     mlde_folder=mlde_folder,
+    # )
+
+    # run_all_mlde_parallelized(
+    #     encodings=["one-hot"],
+    #     n_mut_cutoffs=[2],
+    #     zs_predictors=["Triad", "ev", "esm", "esmif"],
+    #     n_samples=[96, 192, 288, 480, 576],
+    #     n_replicate=50,
+    #     n_job=256,
+    #     all_libs=True,
+    #     ft_first=False,
+    #     mlde_folder=mlde_folder,
+    # )
+
+    # run_all_mlde_parallelized(
+    #     encodings=["one-hot"],
+    #     n_mut_cutoffs=[2],
+    #     zs_predictors=["Triad", "ev", "esm", "esmif"],
+    #     n_samples=[960, 1920],
+    #     n_replicate=50,
+    #     n_job=256,
+    #     all_libs=True,
+    #     ft_first=False,
+    #     mlde_folder=mlde_folder,
+    # )
+
     run_all_mlde_parallelized(
         encodings=["one-hot"],
         n_mut_cutoffs=[2],
-        zs_predictors=["Triad", "ev", "esm", "esmif"],
-        n_samples=[384],
+        zs_predictors=["struc-comb", "msanoif-comb", "msa-comb", "structnmsa-comb"],
+        n_samples=[24, 48, 96],
         n_replicate=50,
-        n_job=256,
+        n_job=96,
         all_libs=True,
         ft_first=False,
         mlde_folder=mlde_folder,
@@ -39,22 +100,9 @@ if __name__ == "__main__":
         encodings=["one-hot"],
         n_mut_cutoffs=[2],
         zs_predictors=["struc-comb", "msanoif-comb", "msa-comb", "structnmsa-comb"],
-        n_samples=[384],
+        n_samples=[192, 288, 480, 576],
         n_replicate=50,
-        n_job=256,
-        all_libs=True,
-        ft_first=False,
-        mlde_folder=mlde_folder,
-    )
-
-
-    run_all_mlde_parallelized(
-        encodings=["one-hot"],
-        n_mut_cutoffs=[2],
-        zs_predictors=["Triad", "ev", "esm", "esmif"],
-        n_samples=[24, 48],
-        n_replicate=50,
-        n_job=256,
+        n_job=96,
         all_libs=True,
         ft_first=False,
         mlde_folder=mlde_folder,
@@ -63,26 +111,15 @@ if __name__ == "__main__":
     run_all_mlde_parallelized(
         encodings=["one-hot"],
         n_mut_cutoffs=[2],
-        zs_predictors=["Triad", "ev", "esm", "esmif"],
-        n_samples=[96, 192, 288, 480, 576],
-        n_replicate=50,
-        n_job=256,
-        all_libs=True,
-        ft_first=False,
-        mlde_folder=mlde_folder,
-    )
-
-    run_all_mlde_parallelized(
-        encodings=["one-hot"],
-        n_mut_cutoffs=[2],
-        zs_predictors=["Triad", "ev", "esm", "esmif"],
+        zs_predictors=["struc-comb", "msanoif-comb", "msa-comb", "structnmsa-comb"],
         n_samples=[960, 1920],
         n_replicate=50,
-        n_job=256,
+        n_job=96,
         all_libs=True,
         ft_first=False,
         mlde_folder=mlde_folder,
     )
+
 
     # zs_predictors=["struc-comb", "msanoif-comb", "msa-comb", "structnmsa-comb"],
     

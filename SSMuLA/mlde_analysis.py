@@ -426,3 +426,28 @@ def lib_ncut_hook(plot, element):
     # plot.handles['yaxis'].axis_label_text_font_size = '10pt'
     # plot.handles['yaxis'].axis_label_text_font_style = 'normal'
     # plot.handles['xaxis'].axis_label_text_font_style = 'normal'
+
+
+def comb_mlde_dfs(
+    mlde_csv: str = "results/mlde/vis_5/all_df.csv",
+    mlde_csv2: str = "results/mlde_hm2zs/vis/all_df.csv", 
+    save_path: str = "results/mlde/mlde_df_comb.csv",
+    onehotonly: bool = True
+):
+    """A function for combining the seperate mlde runs"""
+    
+    df = pd.read_csv(mlde_csv)
+    df2 = pd.read_csv(mlde_csv2)
+
+    if onehotonly:
+        df = df[df["encoding"] == "one-hot"].copy()
+        df2 = df2[df2["encoding"] == "one-hot"].copy()
+
+    # take all the single, all together with no zs double from the main
+    # add the new zs + ds from the second csv
+    df0 = df[df["n_mut_cutoff"].isin(["all", "single"])]
+    df1 = df[(df["n_mut_cutoff"] == "double") & (df["zs"] == "none")]
+
+    df_comb = pd.concat([df0, df1, df2])
+
+    df_comb.to_csv(save_path, index=False)
