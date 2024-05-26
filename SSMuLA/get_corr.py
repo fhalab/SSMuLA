@@ -152,12 +152,12 @@ class CorrPerfomanceCharacter:
         loc_opt_path: str = "results/local_optima/scale2max.csv",
         pwe_path: str = "results/pairwise_epistasis_vis/none/scale2max.csv",
         de_path: str = "results/de/DE-active/scale2max/all_landscape_de_summary.csv",
-        mlde_path: str = "results/mlde/vis_3/all_df.csv",
+        mlde_path: str = "results/mlde/all_df_comb.csv",
         corr_dir: str = "results/corr",
         n_mut_cuttoff: int = 0,
         n_sample: int = 384,
         n_top: int = 96,
-        models: list[str] = ["boosting"],
+        models: list[str] = ["boosting", "ridge"],
     ):
 
         self._lib_stat_path = lib_stat_path
@@ -564,7 +564,7 @@ def perfom_corr(
         loc_opt_path: str = "results/local_optima/scale2max.csv",
         pwe_path: str = "results/pairwise_epistasis_vis/none/scale2max.csv",
         de_path: str = "results/de/DE-active/scale2max/all_landscape_de_summary.csv",
-        mlde_path: str = "results/mlde/vis_3/all_df.csv",
+        mlde_path: str = "results/mlde/all_df_comb",
         corr_dir: str = "results/corr",
         n_mut_cuttoff: int = 0,
         n_top_list: list[int] = [96, 384],
