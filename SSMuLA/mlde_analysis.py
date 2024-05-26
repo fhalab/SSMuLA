@@ -442,6 +442,9 @@ def comb_mlde_dfs(
     if onehotonly:
         df = df[df["encoding"] == "one-hot"].copy()
         df2 = df2[df2["encoding"] == "one-hot"].copy()
+        
+        save_path = checkNgen_folder(save_path.replace(".csv", "_onehot.csv"))
+        checkNgen_folder(save_path)
 
     # take all the single, all together with no zs double from the main
     # add the new zs + ds from the second csv

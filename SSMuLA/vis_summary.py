@@ -256,9 +256,9 @@ class ZSSSumVis(SumVis):
 
         self._zs_df = self._get_zs_df()
 
-        for n_mut in ZS_N_MUTS:
-            for metric in ZS_METRICS:
-                for comb_opt in ZS_COMB_VIS_OPTS:
+        for n_mut in tqdm(ZS_N_MUTS):
+            for metric in tqdm(ZS_METRICS, leave=False):
+                for comb_opt in tqdm(ZS_COMB_VIS_OPTS, leave=False):
                     self._plot_zs_sum(
                         metric=metric,
                         n_mut=n_mut,
@@ -357,7 +357,21 @@ class ZSSSumVis(SumVis):
             hook = self._zs_combhook
             comb_dets = "-comb"
 
+        if metric == "rho":
+            ylim = (-0.2, 0.8)
+        else:
+            ylim = (0, 1)
+
         # Create the Holoviews Bars element
+        # if metric == "rocauc":
+        #     # Create a horizontal line
+        #     hline = hv.HLine(0.5).opts(
+        #         line_color=PRESENTATION_PALETTE_SATURATE["gray"],
+        #         line_width=1,
+        #         line_dash="dotted",
+        #     )
+        #     bar = (hline * bar.opts(multi_level=False)).opts(multiple_legends=True)
+
         save_bokeh_hv(
             hv.Bars(
                 self._zs_df[
@@ -371,12 +385,12 @@ class ZSSSumVis(SumVis):
                 width=1200,
                 height=400,
                 show_legend=True,
+                multi_level=False,
                 legend_position="top",
                 legend_offset=(0, 5),
-                multi_level=False,
                 title=f"ZS fitness {metric} correlation for {n_mut}",
                 xlabel="Library",
-                ylim=(0, 1),
+                ylim=ylim,
                 ylabel=f"{metric} correlation",
                 hooks=[fixmargins, one_decimal_y, hook],
             ),
@@ -736,10 +750,10 @@ def plot_de_mlde_ft_v_n(
 
     if simplezs:
         app_zs = ""
-        zs_opts = ["none"] + ZS_OPTS
+        zs_opts = ["none"] + N_MUT_SUBS + ZS_OPTS
     else:
         app_zs = " with ZS ensemble"
-        zs_opts = ["none"] + ZS_OPTS + ZS_COMB_OPTS
+        zs_opts = ["none"] + N_MUT_SUBS + ZS_OPTS + ZS_COMB_OPTS
 
     plot_folder = checkNgen_folder(
         os.path.join(
@@ -766,7 +780,6 @@ def plot_de_mlde_ft_v_n(
         toprecomb_df = pd.read_csv(f"{de_folder}/{lib}-top96_SSM.csv").copy()
 
         if meanorfrac == "mean":
-            std_dict = {}
 
             ss_val = ss_df["final_fitness"].mean()
             recomb_val = recomb_df["final_fitness"].mean()
@@ -779,43 +792,62 @@ def plot_de_mlde_ft_v_n(
 
         for zs in zs_opts:
 
-            # Common condition
-            df = mlde_all[
-                (mlde_all["lib"] == lib)
-                & (mlde_all["n_mut_cutoff"] == n_mut)
-                & (mlde_all["n_top"] == n_top)
-                & (mlde_all["encoding"] == "one-hot")
-                & (mlde_all["zs"] == zs)
-            ]
+            if zs in N_MUT_SUBS:
+                # N_MUT_SUBS = ["double", "single"]
+                df = mlde_all[
+                    (mlde_all["lib"] == lib)
+                    & (mlde_all["n_mut_cutoff"] == zs)
+                    & (mlde_all["n_top"] == n_top)
+                    & (mlde_all["encoding"] == "one-hot")
+                    & (mlde_all["zs"] == "none")
+                ]
 
-            # Apply the additional condition if needed
-            if min_ftlib and zs != "none":
-                df = df[(df["ft_lib"] == df["ft_lib"].min())]
+            else:
+                # Common condition
+                df = mlde_all[
+                    (mlde_all["lib"] == lib)
+                    & (mlde_all["n_mut_cutoff"] == n_mut)
+                    & (mlde_all["n_top"] == n_top)
+                    & (mlde_all["encoding"] == "one-hot")
+                    & (mlde_all["zs"] == zs)
+                ]
 
+                # Apply the additional condition if needed
+                if min_ftlib and zs != "none":
+                    df = df[(df["ft_lib"] == df["ft_lib"].min())]
+
+            if meanorfrac == "mean":
+                std_dict = {}
             fit_dict = {}
 
             for n_samples in N_SAMPLE_LIST:
-                # [24, 48, 96, 192, 288, 384, 480, 576, 960, 1920]
-                mlde_df_n = df[df["n_sample"] == n_samples]["top_maxes"]
-
-                if len(mlde_df_n) == 0:
-                    print(f"Empty mlde_df_n for {lib} {zs} {n_samples} {n_mut} {n_top}")
-
-                if meanorfrac == "mean":
-                    fit_dict[n_samples] = mlde_df_n.mean()
-                    std_dict[n_samples] = mlde_df_n.std()
+                if zs == "single" and n_samples > 100:
+                    fit_dict[n_samples] = fit_dict[96]
+                    if meanorfrac == "mean":
+                        std_dict[n_samples] = std_dict[96]
+                    
                 else:
-                    fit_dict[n_samples] = get_val_frac(mlde_df_n, numb=1)
+                    # [24, 48, 96, 192, 288, 384, 480, 576, 960, 1920]
+                    mlde_df_n = df[df["n_sample"] == n_samples]["top_maxes"]
+
+                    if len(mlde_df_n) == 0:
+                        print(f"Empty mlde_df_n for {lib} {zs} {n_samples} {n_mut} {n_top}")
+
+                    if meanorfrac == "mean":
+                        fit_dict[n_samples] = mlde_df_n.mean()
+                        std_dict[n_samples] = mlde_df_n.std()
+                    else:
+                        fit_dict[n_samples] = get_val_frac(mlde_df_n, numb=1)
 
             # Plotting
             ax.plot(
                 list(fit_dict.keys()),
                 list(fit_dict.values()),
-                color=ZS_COLOR_MAP[zs],
+                color=ZS_COLOR_MAP_APPENDED[zs],
                 marker="o",
                 linestyle="solid",
                 linewidth=2,
-                label=ZS_OPTS_LEGEND[zs],
+                label=ZS_OPTS_APPENDED[zs],
             )
 
             # add std if mean
@@ -824,47 +856,15 @@ def plot_de_mlde_ft_v_n(
                     list(fit_dict.keys()),
                     [fit_dict[k] - std_dict[k] for k in fit_dict.keys()],
                     [fit_dict[k] + std_dict[k] for k in fit_dict.keys()],
-                    color=ZS_COLOR_MAP[zs],
+                    color=ZS_COLOR_MAP_APPENDED[zs],
                     alpha=0.05,
-                )
-
-        # append double if all
-        if n_mut == "all":
-            for n_mut_sub in N_MUT_SUBS:
-                hm_df = mlde_all[
-                    (mlde_all["lib"] == lib)
-                    & (mlde_all["n_mut_cutoff"] == n_mut_sub)
-                    & (mlde_all["n_top"] == n_top)
-                    & (mlde_all["encoding"] == "one-hot")
-                    & (mlde_all["zs"] == "none")
-                ]
-
-                fit_dict = {}
-
-                for n_samples in N_SAMPLE_LIST:
-                    # [24, 48, 96, 192, 288, 384, 480, 576, 960, 1920]
-                    mlde_df_n = hm_df[hm_df["n_sample"] == n_samples]["top_maxes"]
-
-                    if meanorfrac == "mean":
-                        fit_dict[n_samples] = mlde_df_n.mean()
-                    else:
-                        fit_dict[n_samples] = get_val_frac(mlde_df_n, numb=1)
-
-                ax.plot(
-                    list(fit_dict.keys()),
-                    list(fit_dict.values()),
-                    color=N_MUT_COLOR[n_mut_sub],
-                    marker="o",
-                    linestyle="solid",
-                    linewidth=2,
-                    label=N_MUT_LEGEND[n_mut_sub],
                 )
 
         for de, de_val in zip(DE_TYPES, [ss_val, recomb_val, toprecomb_val]):
             ax.axhline(
                 y=de_val,
                 color=DE_COLORS[de],
-                linestyle=DE_LINE_STYLES[de],
+                linestyle="dotted",
                 linewidth=2,
                 label=f"DE: {DE_LEGEND_MAP[de]}",
             )
@@ -929,10 +929,10 @@ def plot_de_mlde_ft_v_n_comb(
 
     if simplezs:
         app_zs = ""
-        zs_opts = ["none"] + ZS_OPTS
+        zs_opts = ["none"] + N_MUT_SUBS + ZS_OPTS
     else:
         app_zs = " with ZS ensemble"
-        zs_opts = ["none"] + ZS_OPTS + ZS_COMB_OPTS
+        zs_opts = ["none"] + N_MUT_SUBS + ZS_OPTS + ZS_COMB_OPTS
 
     plot_folder = checkNgen_folder(
         os.path.join(
@@ -958,8 +958,6 @@ def plot_de_mlde_ft_v_n_comb(
         recomb_df = pd.read_csv(f"{de_folder}/{lib}-recomb_SSM.csv").copy()
         toprecomb_df = pd.read_csv(f"{de_folder}/{lib}-top96_SSM.csv").copy()
 
-        std_dict = {}
-
         ss_mean = ss_df["final_fitness"].mean()
         recomb_mean = recomb_df["final_fitness"].mean()
         toprecomb_mean = toprecomb_df["final_fitness"].mean()
@@ -970,39 +968,54 @@ def plot_de_mlde_ft_v_n_comb(
 
         for zs in zs_opts:
 
-            # Common condition
-            df = mlde_all[
-                (mlde_all["lib"] == lib)
-                & (mlde_all["n_mut_cutoff"] == n_mut)
-                & (mlde_all["n_top"] == n_top)
-                & (mlde_all["encoding"] == "one-hot")
-                & (mlde_all["zs"] == zs)
-            ]
+            if zs in N_MUT_SUBS:
+                # N_MUT_SUBS = ["double", "single"]
+                df = mlde_all[
+                    (mlde_all["lib"] == lib)
+                    & (mlde_all["n_mut_cutoff"] == zs)
+                    & (mlde_all["n_top"] == n_top)
+                    & (mlde_all["encoding"] == "one-hot")
+                    & (mlde_all["zs"] == "none")
+                ]
+            else:
+                # Common condition
+                df = mlde_all[
+                    (mlde_all["lib"] == lib)
+                    & (mlde_all["n_mut_cutoff"] == n_mut)
+                    & (mlde_all["n_top"] == n_top)
+                    & (mlde_all["encoding"] == "one-hot")
+                    & (mlde_all["zs"] == zs)
+                ]
 
-            # Apply the additional condition if needed
-            if min_ftlib and zs != "none":
-                df = df[(df["ft_lib"] == df["ft_lib"].min())]
-
+                # Apply the additional condition if needed
+                if min_ftlib and zs != "none":
+                    df = df[(df["ft_lib"] == df["ft_lib"].min())]
+            
+            std_dict = {}
             mean_dict = {}
             frac_dict = {}
 
             for n_samples in N_SAMPLE_LIST:
-                # [24, 48, 96, 192, 288, 384, 480, 576, 960, 1920]
-                mlde_df_n = df[df["n_sample"] == n_samples]["top_maxes"]
+                if zs == "single" and n_samples > 100:
+                    mean_dict[n_samples] = mean_dict[96]
+                    std_dict[n_samples] = std_dict[96]
+                    frac_dict[n_samples] = frac_dict[96]
+                else:
+                    # [24, 48, 96, 192, 288, 384, 480, 576, 960, 1920]
+                    mlde_df_n = df[df["n_sample"] == n_samples]["top_maxes"]
 
-                if len(mlde_df_n) == 0:
-                    print(f"Empty mlde_df_n for {lib} {zs} {n_samples} {n_mut} {n_top}")
+                    if len(mlde_df_n) == 0:
+                        print(f"Empty mlde_df_n for {lib} {zs} {n_samples} {n_mut} {n_top}")
 
-                mean_dict[n_samples] = mlde_df_n.mean()
-                std_dict[n_samples] = mlde_df_n.std()
-
-                frac_dict[n_samples] = get_val_frac(mlde_df_n, numb=1)
+                    mean_dict[n_samples] = mlde_df_n.mean()
+                    std_dict[n_samples] = mlde_df_n.std()
+                    frac_dict[n_samples] = get_val_frac(mlde_df_n, numb=1)
 
             # Plotting for mean
             ax.plot(
                 list(mean_dict.keys()),
                 list(mean_dict.values()),
-                color=ZS_COLOR_MAP[zs],
+                color=ZS_COLOR_MAP_APPENDED[zs],
                 marker="o",
                 linestyle="solid",
                 linewidth=2,
@@ -1014,7 +1027,7 @@ def plot_de_mlde_ft_v_n_comb(
                 list(mean_dict.keys()),
                 [mean_dict[k] - std_dict[k] for k in mean_dict.keys()],
                 [mean_dict[k] + std_dict[k] for k in mean_dict.keys()],
-                color=ZS_COLOR_MAP[zs],
+                color=ZS_COLOR_MAP_APPENDED[zs],
                 alpha=0.05,
             )
 
@@ -1022,62 +1035,11 @@ def plot_de_mlde_ft_v_n_comb(
             frac_ax.plot(
                 list(frac_dict.keys()),
                 list(frac_dict.values()),
-                color=ZS_COLOR_MAP[zs],
+                color=ZS_COLOR_MAP_APPENDED[zs],
                 marker="*",
-                linestyle="dashed",
+                linestyle="dotted",
                 linewidth=2,
             )
-
-        # append double if all
-        if n_mut == "all":
-            for n_mut_sub in N_MUT_SUBS:
-                hm_df = mlde_all[
-                    (mlde_all["lib"] == lib)
-                    & (mlde_all["n_mut_cutoff"] == n_mut_sub)
-                    & (mlde_all["n_top"] == n_top)
-                    & (mlde_all["encoding"] == "one-hot")
-                    & (mlde_all["zs"] == "none")
-                ]
-
-                mean_dict = {}
-                std_dict = {}
-                frac_dict = {}
-
-                for n_samples in N_SAMPLE_LIST:
-                    # [24, 48, 96, 192, 288, 384, 480, 576, 960, 1920]
-                    mlde_df_n = hm_df[hm_df["n_sample"] == n_samples]["top_maxes"]
-
-                    mean_dict[n_samples] = mlde_df_n.mean()
-                    std_dict[n_samples] = mlde_df_n.std()
-
-                    frac_dict[n_samples] = get_val_frac(mlde_df_n, numb=1)
-
-                ax.plot(
-                    list(mean_dict.keys()),
-                    list(mean_dict.values()),
-                    color=N_MUT_COLOR[n_mut_sub],
-                    marker="o",
-                    linestyle="solid",
-                    linewidth=2,
-                    # label="HD2",
-                )
-
-                ax.fill_between(
-                    list(mean_dict.keys()),
-                    [mean_dict[k] - std_dict[k] for k in mean_dict.keys()],
-                    [mean_dict[k] + std_dict[k] for k in mean_dict.keys()],
-                    color=N_MUT_COLOR[n_mut_sub],
-                    alpha=0.05,
-                )
-
-                frac_ax.plot(
-                    list(frac_dict.keys()),
-                    list(frac_dict.values()),
-                    color=N_MUT_COLOR[n_mut_sub],
-                    marker="*",
-                    linestyle="dashed",
-                    linewidth=2,
-                )
 
         for de, de_mean, de_frac in zip(
             DE_TYPES,
@@ -1095,7 +1057,7 @@ def plot_de_mlde_ft_v_n_comb(
             frac_ax.axhline(
                 y=de_frac,
                 color=DE_COLORS[de],
-                linestyle="dashed",
+                linestyle="dotted",
                 linewidth=2,
             )
 
@@ -1121,21 +1083,8 @@ def plot_de_mlde_ft_v_n_comb(
                         [0],
                         marker="o",
                         linestyle="solid",
-                        color=ZS_COLOR_MAP[zs],
-                        label=ZS_OPTS_LEGEND[zs],
-                    )
-                )
-
-            # add double
-            for n_mut_sub in N_MUT_SUBS:
-                legend_list.append(
-                    Line2D(
-                        [0],
-                        [0],
-                        marker="o",
-                        linestyle="solid",
-                        color=N_MUT_COLOR[n_mut_sub],
-                        label=N_MUT_LEGEND[n_mut_sub],
+                        color=ZS_COLOR_MAP_APPENDED[zs],
+                        label=ZS_OPTS_APPENDED[zs],
                     )
                 )
 
@@ -1146,7 +1095,6 @@ def plot_de_mlde_ft_v_n_comb(
                         [0],
                         [0],
                         color=DE_COLORS[de],
-                        marker="o",
                         linestyle="solid",
                         label=f"DE: {DE_LEGEND_MAP[de]}",
                     )
@@ -1169,7 +1117,7 @@ def plot_de_mlde_ft_v_n_comb(
                     [0],
                     color="black",
                     marker="*",
-                    linestyle="dashed",
+                    linestyle="dotted",
                     label="Fraction of max fitness = 1",
                 )
             )
@@ -1220,11 +1168,11 @@ def plot_de_mlde_ft_count_v_n(
     if simplezs:
         nrow = 2
         app_zs = ""
-        zs_opts = ["none"] + ZS_OPTS
+        zs_opts = ["none"] + N_MUT_SUBS + ZS_OPTS
     else:
         nrow = 3
         app_zs = " with ZS ensemble"
-        zs_opts = ["none"] + ZS_OPTS + ZS_COMB_OPTS
+        zs_opts = ["none"] + N_MUT_SUBS + ZS_OPTS + ZS_COMB_OPTS
 
     plot_folder = checkNgen_folder(
         os.path.join(
@@ -1237,9 +1185,9 @@ def plot_de_mlde_ft_count_v_n(
         f"DE vs MLDE{app_ftlib} top{str(n_top)} {app_meanfrac} over sample size"
     )
 
-    ncol = 3
+    ncol = 4
 
-    fig, axs = plt.subplots(nrow, ncol, figsize=(20, 12), sharex=True, sharey=True)
+    fig, axs = plt.subplots(nrow, ncol, figsize=(24, 12), sharex=True, sharey=True)
 
     for i, (ax, zs) in tqdm(enumerate(zip(axs.flatten(), zs_opts))):
 
@@ -1262,17 +1210,27 @@ def plot_de_mlde_ft_count_v_n(
 
                 for n in N_SAMPLE_LIST:
 
-                    df = mlde_all[
-                        (mlde_all["n_mut_cutoff"] == n_mut)
-                        & (mlde_all["encoding"] == "one-hot")
-                        & (mlde_all["zs"] == zs)
-                        & (mlde_all["lib"] == lib)
-                        & (mlde_all["n_sample"] == n)
-                        & (mlde_all["n_top"] == n_top)
-                    ]
+                    if zs in N_MUT_SUBS:
+                        df = mlde_all[
+                            (mlde_all["n_mut_cutoff"] == zs)
+                            & (mlde_all["encoding"] == "one-hot")
+                            & (mlde_all["zs"] == "none")
+                            & (mlde_all["lib"] == lib)
+                            & (mlde_all["n_sample"] == n)
+                            & (mlde_all["n_top"] == n_top)
+                        ]
+                    else:
+                        df = mlde_all[
+                            (mlde_all["n_mut_cutoff"] == n_mut)
+                            & (mlde_all["encoding"] == "one-hot")
+                            & (mlde_all["zs"] == zs)
+                            & (mlde_all["lib"] == lib)
+                            & (mlde_all["n_sample"] == n)
+                            & (mlde_all["n_top"] == n_top)
+                        ]
 
-                    if min_ftlib and zs != "none":
-                        df = df[df["ft_lib"] == df["ft_lib"].min()]
+                        if min_ftlib and zs not in ["none"] + N_MUT_SUBS:
+                            df = df[df["ft_lib"] == df["ft_lib"].min()]
 
                     mlde_df_n = df["top_maxes"]
 
@@ -1316,7 +1274,7 @@ def plot_de_mlde_ft_count_v_n(
         ax.set_ylabel("Fraction of MLDE > DE")
         ax.tick_params(axis="y")
 
-        ax.set_title(ZS_OPTS_LEGEND[zs])
+        ax.set_title(ZS_OPTS_APPENDED[zs])
         ax.set_ylim(0, 1)
 
         extra_len = len(axs.flatten()) - len(zs_opts)
@@ -1359,10 +1317,10 @@ def plot_de_mlde_ft_count_v_n_comb(
 
     if simplezs:
         app_zs = ""
-        zs_opts = ["none"] + ZS_OPTS
+        zs_opts = ["none"] + N_MUT_SUBS + ZS_OPTS
     else:
         app_zs = " with ZS ensemble"
-        zs_opts = ["none"] + ZS_OPTS + ZS_COMB_OPTS
+        zs_opts = ["none"] + N_MUT_SUBS + ZS_OPTS + ZS_COMB_OPTS
 
     plot_folder = checkNgen_folder(
         os.path.join(
@@ -1396,17 +1354,28 @@ def plot_de_mlde_ft_count_v_n_comb(
 
                 for n in N_SAMPLE_LIST:
 
-                    df = mlde_all[
-                        (mlde_all["n_mut_cutoff"] == n_mut)
-                        & (mlde_all["encoding"] == "one-hot")
-                        & (mlde_all["zs"] == zs)
-                        & (mlde_all["lib"] == lib)
-                        & (mlde_all["n_sample"] == n)
-                        & (mlde_all["n_top"] == n_top)
-                    ]
+                    if zs in N_MUT_SUBS:
+                        df = mlde_all[
+                            (mlde_all["n_mut_cutoff"] == zs)
+                            & (mlde_all["encoding"] == "one-hot")
+                            & (mlde_all["zs"] == "none")
+                            & (mlde_all["lib"] == lib)
+                            & (mlde_all["n_sample"] == n)
+                            & (mlde_all["n_top"] == n_top)
+                        ]
+                    else:
 
-                    if min_ftlib and zs != "none":
-                        df = df[df["ft_lib"] == df["ft_lib"].min()]
+                        df = mlde_all[
+                            (mlde_all["n_mut_cutoff"] == n_mut)
+                            & (mlde_all["encoding"] == "one-hot")
+                            & (mlde_all["zs"] == zs)
+                            & (mlde_all["lib"] == lib)
+                            & (mlde_all["n_sample"] == n)
+                            & (mlde_all["n_top"] == n_top)
+                        ]
+
+                        if min_ftlib and zs not in ["none"] + N_MUT_SUBS:
+                            df = df[df["ft_lib"] == df["ft_lib"].min()]
 
                     mlde_df_n = df["top_maxes"]
 
@@ -1434,75 +1403,12 @@ def plot_de_mlde_ft_count_v_n_comb(
             ax.plot(
                 x,
                 ys,
-                color=ZS_COLOR_MAP[zs],
+                color=ZS_COLOR_MAP_APPENDED[zs],
                 marker="o",
                 linestyle=DE_LINE_STYLES[de],
                 linewidth=2,
                 # label=f"DE: {DE_LEGEND_MAP[de]}",
             )
-
-    # add double
-    if n_mut == "all":
-        for n_mut_sub in N_MUT_SUBS:
-            benefit_count = {}
-            for n in N_SAMPLE_LIST:
-                benefit_count[n] = {}
-
-                for de in DE_TYPES:
-                    benefit_count[n][de] = 0
-
-            for lib in LIB_INFO_DICT.keys():
-                for de in DE_TYPES:
-                    de_df = pd.read_csv(f"{de_folder}/{lib}-{de}.csv").copy()
-
-                    if meanorfrac == "mean":
-                        de_val = de_df["final_fitness"].mean()
-                    else:
-                        de_val = get_val_frac(s=de_df["final_fitness"], numb=1)
-
-                    for n in N_SAMPLE_LIST:
-
-                        df = mlde_all[
-                            (mlde_all["n_mut_cutoff"] == n_mut_sub)
-                            & (mlde_all["encoding"] == "one-hot")
-                            & (mlde_all["zs"] == "none")
-                            & (mlde_all["lib"] == lib)
-                            & (mlde_all["n_sample"] == n)
-                            & (mlde_all["n_top"] == n_top)
-                        ]
-
-                        mlde_df_n = df["top_maxes"]
-
-                        if len(mlde_df_n) == 0:
-                            print(f"Empty mlde_df_n for {lib} {zs} {n} {n_mut} {n_top}")
-
-                        if meanorfrac == "mean":
-                            mlde_val = mlde_df_n.mean()
-                        else:
-                            mlde_val = get_val_frac(s=mlde_df_n, numb=1)
-
-                        if mlde_val > de_val:
-                            benefit_count[n][de] += 1
-
-            x = list(benefit_count.keys())
-            single_step_DE = [
-                benefit_count[key]["single_step_DE"] / len(LIB_INFO_DICT) for key in x
-            ]
-            recomb_SSM = [
-                benefit_count[key]["recomb_SSM"] / len(LIB_INFO_DICT) for key in x
-            ]
-            top96_SSM = [benefit_count[key]["top96_SSM"] / len(LIB_INFO_DICT) for key in x]
-
-            for de, ys in zip(DE_TYPES, [single_step_DE, recomb_SSM, top96_SSM]):
-                ax.plot(
-                    x,
-                    ys,
-                    color=N_MUT_COLOR[n_mut_sub],
-                    marker="o",
-                    linestyle=DE_LINE_STYLES[de],
-                    linewidth=2,
-                    # label="HD2",
-                )
 
     # manually create legend
     legend_list = []
@@ -1514,20 +1420,8 @@ def plot_de_mlde_ft_count_v_n_comb(
                 [0],
                 marker="o",
                 linestyle="none",
-                color=ZS_COLOR_MAP[zs],
-                label=ZS_OPTS_LEGEND[zs],
-            )
-        )
-    # add double only
-    for n_mut_sub in N_MUT_SUBS:
-        legend_list.append(
-            Line2D(
-                [0],
-                [0],
-                marker="o",
-                linestyle="none",
-                color=N_MUT_COLOR[n_mut_sub],
-                label=N_MUT_LEGEND[n_mut_sub],
+                color=ZS_COLOR_MAP_APPENDED[zs],
+                label=ZS_OPTS_APPENDED[zs],
             )
         )
 
@@ -2275,23 +2169,23 @@ def vis_sum_de_mlde(
     for n_mut in ["all", "double"]:
         for n_top in [96, 384]:
 
-            print(f"Plotting {n_mut} {n_top} DE vs MLDE...")
-            plot_de_v_mlde(
-                plot_folder=f"{plot_dir}/n_samples",
-                n_mut=n_mut,
-                n_top=n_top,
-                liborderby=liborderby,
-                **common_args,
-            )
+            # print(f"Plotting {n_mut} {n_top} DE vs MLDE...")
+            # plot_de_v_mlde(
+            #     plot_folder=f"{plot_dir}/n_samples",
+            #     n_mut=n_mut,
+            #     n_top=n_top,
+            #     liborderby=liborderby,
+            #     **common_args,
+            # )
 
-            print(f"Plotting {n_mut} {n_top} for different sample sizes...")
-            plot_n_ftmlde(
-                plot_folder=f"{plot_dir}/ftMLDE",
-                n_mut=n_mut,
-                n_top=n_top,
-                liborderby=liborderby,
-                **common_args,
-            )
+            # print(f"Plotting {n_mut} {n_top} for different sample sizes...")
+            # plot_n_ftmlde(
+            #     plot_folder=f"{plot_dir}/ftMLDE",
+            #     n_mut=n_mut,
+            #     n_top=n_top,
+            #     liborderby=liborderby,
+            #     **common_args,
+            # )
 
             print(f"Plotting {n_mut} {n_top} over sample sizes...")
             plot_de_mlde_ft_v_n_comb(

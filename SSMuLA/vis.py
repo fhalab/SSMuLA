@@ -75,6 +75,7 @@ PRESENTATION_PALETTE_SATURATE = {
     "purple": "#8064a2",
     "brown": "#6e4a2eff",
     "gray": "#666666",
+    "light_gray": "#D3D3D3",
     "light_blue":"#849895",
     "light_green": "#9DAE88",
     "light_yellow": "#F1D384",

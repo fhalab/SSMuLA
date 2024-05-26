@@ -35,6 +35,7 @@ hv.extension("bokeh", "matplotlib")
 N_SAMPLE_LIST = [24, 48, 96, 192, 288, 384, 480, 576, 960, 1920]
 
 LANDSCAPE_ATTRIBUTES = [
+            "n_site",
             "numb_measured",
             "percent_measured",
             "numb_active",
