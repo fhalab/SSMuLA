@@ -2166,7 +2166,8 @@ def vis_sum_de_mlde(
         "simplezs": simplezs,
     }
 
-    for n_mut in ["all", "double"]:
+    # for n_mut in ["all", "double"]:
+    for n_mut in ["double"]:
         for n_top in [96, 384]:
 
             # print(f"Plotting {n_mut} {n_top} DE vs MLDE...")

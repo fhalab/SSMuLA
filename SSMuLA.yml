@@ -74,6 +74,7 @@ dependencies:
     - bioservices
     - biovec
     - blackcellmagic
+    - dataframe_image
     - fair-esm
     - graphein
     - iqplot==0.3.1
