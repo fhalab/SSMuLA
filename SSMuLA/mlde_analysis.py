@@ -443,7 +443,8 @@ def comb_mlde_dfs(
         df = df[df["encoding"] == "one-hot"].copy()
         df2 = df2[df2["encoding"] == "one-hot"].copy()
         
-        save_path = checkNgen_folder(save_path.replace(".csv", "_onehot.csv"))
+        save_path = save_path.replace(".csv", "_onehot.csv")
+        # check the folder
         checkNgen_folder(save_path)
 
     # take all the single, all together with no zs double from the main
