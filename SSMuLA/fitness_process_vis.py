@@ -1522,7 +1522,7 @@ class LibStat(LibData):
         return deepcopy(
             {
                 "mean": np.mean(self.fitness),
-                "std": np.median(self.fitness),
+                "median": np.median(self.fitness),
                 # Variability
                 "range": np.max(self.fitness) - np.min(self.fitness),
                 "iqr": np.percentile(self.fitness, 75)

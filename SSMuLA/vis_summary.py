@@ -523,9 +523,9 @@ def plot_de_v_mlde(
 
         for i, (ax, lib) in enumerate(zip(axs.flatten(), liborder)):
 
-            ss_df = pd.read_csv(f"{de_folder}/{lib}-single_step_DE.csv").copy()
-            recomb_df = pd.read_csv(f"{de_folder}/{lib}-recomb_SSM.csv").copy()
-            toprecomb_df = pd.read_csv(f"{de_folder}/{lib}-top96_SSM.csv").copy()
+            # ss_df = pd.read_csv(f"{de_folder}/{lib}-single_step_DE.csv").copy()
+            # recomb_df = pd.read_csv(f"{de_folder}/{lib}-recomb_SSM.csv").copy()
+            # toprecomb_df = pd.read_csv(f"{de_folder}/{lib}-top96_SSM.csv").copy()
 
             mlde_df = mlde_all[
                 (mlde_all["lib"] == lib)
@@ -535,7 +535,9 @@ def plot_de_v_mlde(
                 & (mlde_all["encoding"] == "one-hot")
             ].copy()
 
-            for de, de_df in zip(DE_TYPES, [ss_df, recomb_df, toprecomb_df]):
+            for de in DE_TYPES:
+
+                de_df = pd.read_csv(f"{de_folder}/{lib}-{de}.csv").copy()
 
                 ax.plot(
                     de_df["final_fitness"],
@@ -634,9 +636,9 @@ def plot_n_ftmlde(
 
         for i, (ax, lib) in enumerate(zip(axs.flatten(), liborder)):
 
-            ss_df = pd.read_csv(f"{de_folder}/{lib}-single_step_DE.csv").copy()
-            recomb_df = pd.read_csv(f"{de_folder}/{lib}-recomb_SSM.csv").copy()
-            toprecomb_df = pd.read_csv(f"{de_folder}/{lib}-top96_SSM.csv").copy()
+            # ss_df = pd.read_csv(f"{de_folder}/{lib}-single_step_DE.csv").copy()
+            # recomb_df = pd.read_csv(f"{de_folder}/{lib}-recomb_SSM.csv").copy()
+            # toprecomb_df = pd.read_csv(f"{de_folder}/{lib}-top96_SSM.csv").copy()
 
             mlde_df = mlde_all[
                 (mlde_all["lib"] == lib)
@@ -646,7 +648,9 @@ def plot_n_ftmlde(
                 & (mlde_all["encoding"] == "one-hot")
             ].copy()
 
-            for de, de_df in zip(DE_TYPES, [ss_df, recomb_df, toprecomb_df]):
+            for de in DE_TYPES:
+
+                de_df = pd.read_csv(f"{de_folder}/{lib}-{de}.csv").copy()
 
                 ax.plot(
                     de_df["final_fitness"],
@@ -775,21 +779,6 @@ def plot_de_mlde_ft_v_n(
 
     for i, (ax, lib) in tqdm(enumerate(zip(axs.flatten(), liborder))):
 
-        ss_df = pd.read_csv(f"{de_folder}/{lib}-single_step_DE.csv").copy()
-        recomb_df = pd.read_csv(f"{de_folder}/{lib}-recomb_SSM.csv").copy()
-        toprecomb_df = pd.read_csv(f"{de_folder}/{lib}-top96_SSM.csv").copy()
-
-        if meanorfrac == "mean":
-
-            ss_val = ss_df["final_fitness"].mean()
-            recomb_val = recomb_df["final_fitness"].mean()
-            toprecomb_val = toprecomb_df["final_fitness"].mean()
-
-        else:
-            ss_val = get_val_frac(ss_df["final_fitness"], numb=1)
-            recomb_val = get_val_frac(recomb_df["final_fitness"], numb=1)
-            toprecomb_val = get_val_frac(toprecomb_df["final_fitness"], numb=1)
-
         for zs in zs_opts:
 
             if zs in N_MUT_SUBS:
@@ -860,7 +849,15 @@ def plot_de_mlde_ft_v_n(
                     alpha=0.05,
                 )
 
-        for de, de_val in zip(DE_TYPES, [ss_val, recomb_val, toprecomb_val]):
+        for de in DE_TYPES:
+
+            de_df = pd.read_csv(f"{de_folder}/{lib}-{de}.csv").copy()
+
+            if meanorfrac == "mean":
+                de_val = de_df["final_fitness"].mean()
+            else:
+                de_val = get_val_frac(de_df["final_fitness"], numb=1)
+
             ax.axhline(
                 y=de_val,
                 color=DE_COLORS[de],
@@ -1246,18 +1243,13 @@ def plot_de_mlde_ft_count_v_n(
                         benefit_count[n][de] += 1
 
         x = list(benefit_count.keys())
-        single_step_DE = [
-            benefit_count[key]["single_step_DE"] / len(LIB_INFO_DICT) for key in x
-        ]
-        recomb_SSM = [
-            benefit_count[key]["recomb_SSM"] / len(LIB_INFO_DICT) for key in x
-        ]
-        top96_SSM = [benefit_count[key]["top96_SSM"] / len(LIB_INFO_DICT) for key in x]
-
-        for de, ys in zip(DE_TYPES, [single_step_DE, recomb_SSM, top96_SSM]):
+  
+        for de in DE_TYPES:
             ax.plot(
                 x,
-                ys,
+                [
+                    benefit_count[key][de] / len(LIB_INFO_DICT) for key in x
+                ],
                 color=DE_COLORS[de],
                 marker="o",
                 linestyle=DE_LINE_STYLES[de],
@@ -1391,18 +1383,13 @@ def plot_de_mlde_ft_count_v_n_comb(
                         benefit_count[n][de] += 1
 
         x = list(benefit_count.keys())
-        single_step_DE = [
-            benefit_count[key]["single_step_DE"] / len(LIB_INFO_DICT) for key in x
-        ]
-        recomb_SSM = [
-            benefit_count[key]["recomb_SSM"] / len(LIB_INFO_DICT) for key in x
-        ]
-        top96_SSM = [benefit_count[key]["top96_SSM"] / len(LIB_INFO_DICT) for key in x]
 
-        for de, ys in zip(DE_TYPES, [single_step_DE, recomb_SSM, top96_SSM]):
+        for de in DE_TYPES:
             ax.plot(
                 x,
-                ys,
+                [
+                    benefit_count[key][de] / len(LIB_INFO_DICT) for key in x
+                ],
                 color=ZS_COLOR_MAP_APPENDED[zs],
                 marker="o",
                 linestyle=DE_LINE_STYLES[de],
@@ -2166,8 +2153,8 @@ def vis_sum_de_mlde(
         "simplezs": simplezs,
     }
 
-    # for n_mut in ["all", "double"]:
-    for n_mut in ["double"]:
+    for n_mut in ["all", "double"]:
+    # for n_mut in ["double"]:
         for n_top in [96, 384]:
 
             # print(f"Plotting {n_mut} {n_top} DE vs MLDE...")

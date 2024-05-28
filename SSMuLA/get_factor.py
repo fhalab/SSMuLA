@@ -16,10 +16,11 @@ from selenium import webdriver
 from selenium.webdriver.firefox.service import Service
 from selenium.webdriver.firefox.options import Options
 
+from SSMuLA.de_simulations import DE_TYPES
 from SSMuLA.zs_analysis import ZS_OPTS, ZS_COMB_OPTS
 from SSMuLA.vis_summary import ZS_METRICS
 from SSMuLA.get_corr import LANDSCAPE_ATTRIBUTES, val_list, zs_list
-from SSMuLA.vis import PRESENTATION_PALETTE_SATURATE
+from SSMuLA.vis import PRESENTATION_PALETTE_SATURATE, save_plt
 from SSMuLA.util import checkNgen_folder
 
 # Custom colormap for the MSE row, using greens
@@ -40,11 +41,20 @@ custom_cmap = LinearSegmentedColormap.from_list(
 
 geckodriver_path = "/disk2/fli/miniconda3/envs/SSMuLA/bin/geckodriver"
 
-simple_de = {
-    "recomb_SSM_mean_all": "Recomb",
-    "single_step_DE_mean_all": "Single step",
-    "top96_SSM_mean_all": "Top96 recomb",
+de_metrics = ["mean_all", "fraction_max"]
+
+simple_des = {
+    "recomb_SSM": "Recomb",
+    "single_step_DE": "Single step",
+    "top96_SSM": "Top96 recomb",
 }
+
+simple_de_metric_map = {}
+
+for de_type in DE_TYPES:
+    for de_metric in de_metrics:
+        simple_de_metric_map[f"{de_type}_{de_metric}"] = simple_des[de_type]
+
 
 # Styling the DataFrame
 def style_dataframe(df):
@@ -127,30 +137,60 @@ def get_lib_stat(
     )
 
 
-def get_corr_heatmap(
+def get_zs_corr(
     corr_csv: str = "results/corr_all/384/boosting|ridge-top96/corr.csv",
+    de_calc: str = "mean_all",  # or fraction_max
+    n_mut: str = "all",
 ):
 
+    de_list = [f"{de_type}_{de_calc}" for de_type in DE_TYPES]
+
     df = pd.read_csv(corr_csv)
+
     style_df = (
         df[
-            [
-                "descriptor",
-                "recomb_SSM_mean_all",
-                "single_step_DE_mean_all",
-                "top96_SSM_mean_all",
-            ]
-        ]
-        .rename(columns={"descriptor": "Landscape attributes", **simple_de})
+            df["descriptor"].isin(
+                [zs for zs in zs_list if n_mut in zs and "ndcg" not in zs]
+            )
+        ][["descriptor"] + de_list]
+        .rename(columns={"descriptor": "Landscape attributes", **simple_de_metric_map})
         .iloc[0:33]
         .set_index("Landscape attributes")
+        .rename(index=lambda x: x.replace("double", "hd2"))
         .style.format("{:.2f}")
-        .background_gradient(cmap=custom_cmap)
+        .background_gradient(cmap=custom_cmap, vmin=-1, vmax=1)
     )
 
     return styledf2png(
         style_df,
-        "corr_heatmap_384-boosting|ridge-top96",
+        f"zs_{n_mut}_heatmap_384-boosting|ridge-top96_{de_calc}",
+        sub_dir="results/style_dfs",
+        absolute_dir="/disk2/fli/SSMuLA/",
+        width=625,
+        height=550,
+    )
+
+
+def get_corr_heatmap(
+    corr_csv: str = "results/corr_all/384/boosting|ridge-top96/corr.csv",
+    de_calc: str = "mean_all",  # or fraction_max
+):
+
+    de_list = [f"{de_type}_{de_calc}" for de_type in DE_TYPES]
+
+    df = pd.read_csv(corr_csv)
+    style_df = (
+        df[["descriptor"] + de_list]
+        .rename(columns={"descriptor": "Landscape attributes", **simple_de_metric_map})
+        .iloc[0:33]
+        .set_index("Landscape attributes")
+        .style.format("{:.2f}")
+        .background_gradient(cmap=custom_cmap, vmin=-1, vmax=1)
+    )
+
+    return styledf2png(
+        style_df,
+        f"corr_heatmap_384-boosting|ridge-top96_{de_calc}",
         sub_dir="results/style_dfs",
         absolute_dir="/disk2/fli/SSMuLA/",
         width=720,
@@ -160,7 +200,11 @@ def get_corr_heatmap(
 
 def get_importance_heatmap(
     lib_csv: str = "results/corr_all/384/boosting|ridge-top96/merge_all.csv",
+    de_calc: str = "mean_all",  # or fraction_max
 ):
+
+    de_list = [f"{de_type}_{de_calc}" for de_type in DE_TYPES]
+
     df = pd.read_csv(lib_csv)
 
     # Load your dataset
@@ -187,15 +231,15 @@ def get_importance_heatmap(
     lr_df.index.names = ["Landscape attributes"]
 
     style_df = (
-        lr_df[["recomb_SSM_mean_all", "single_step_DE_mean_all", "top96_SSM_mean_all"]]
-        .rename(columns=simple_de)
+        lr_df[de_list]
+        .rename(columns=simple_de_metric_map)
         .style.format("{:.2f}")
         .background_gradient(cmap=custom_cmap)
     )
 
     return styledf2png(
         style_df,
-        "importance_heatmap_384-boosting|ridge-top96",
+        f"importance_heatmap_384-boosting|ridge-top96_{de_calc}",
         sub_dir="results/style_dfs",
         absolute_dir="/disk2/fli/SSMuLA/",
         width=720,

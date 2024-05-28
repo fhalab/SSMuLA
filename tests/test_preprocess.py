@@ -25,7 +25,7 @@ if __name__ == "__main__":
     #     "scale2max": "scaled_to_max",
     #     "scale2parent": "scaled_to_parent",
     # })
-    get_all_sda()
-    # get_all_lib_stats()
+    # get_all_sda()
+    get_all_lib_stats()
 
     f.close()

@@ -44,7 +44,7 @@ LANDSCAPE_ATTRIBUTES = [
     "parent_rank",
     "parent_rank_percent",
     "mean",
-    "std",
+    "median",
     "range",
     "iqr",
     "std_dev",

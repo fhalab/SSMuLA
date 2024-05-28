@@ -5,7 +5,7 @@ import os
 
 from datetime import datetime
 
-from SSMuLA.get_factor import get_lib_stat, get_corr_heatmap, get_importance_heatmap
+from SSMuLA.get_factor import get_lib_stat, get_corr_heatmap, get_importance_heatmap, get_zs_corr
 from SSMuLA.util import checkNgen_folder
 
 
@@ -18,7 +18,11 @@ if __name__ == "__main__":
     sys.stdout = f
 
     # get_lib_stat()
-    get_corr_heatmap()
-    get_importance_heatmap()
+
+    for de_calc in ["mean_all", "fraction_max"]:
+        get_zs_corr(de_calc=de_calc, n_mut="double")
+        get_zs_corr(de_calc=de_calc, n_mut="all")
+        # get_corr_heatmap(de_calc=de_calc)
+        # get_importance_heatmap(de_calc=de_calc)
 
     f.close()
