@@ -374,8 +374,8 @@ class CorrPerfomanceCharacter:
         ]
 
         # append the singles and doubles
-        if self._n_mut == "all":
-            zs_list += N_MUT_SUBS
+        # if self._n_mut == "all":
+        zs_list += N_MUT_SUBS
 
         for zs in zs_list:
             rename_cols = {
@@ -534,10 +534,10 @@ class CorrPerfomanceCharacter:
         ].max(axis=1)
 
         # add double
-        merge_df["delta_hd2_mlde"] = -merge_df["maxes_double"] - merge_df["top_maxes"]
+        merge_df["delta_hd2_mlde"] = merge_df["maxes_double"] - merge_df["top_maxes"]
 
         # add single
-        merge_df["delta_hd1_mlde"] = -merge_df["maxes_single"] - merge_df["top_maxes"]
+        merge_df["delta_hd1_mlde"] = merge_df["maxes_single"] - merge_df["top_maxes"]
 
         for ft_des, ft_df in zip(["ft", "fb_comb"], [best_ft, best_ftcomb]):
             # add vs mlde

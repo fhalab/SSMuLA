@@ -254,6 +254,8 @@ class ZSSSumVis(SumVis):
 
         super().__init__(input_csv, output_folder)
 
+        self._zs_filter = os.path.basename(os.path.dirname(input_csv))
+
         self._zs_df = self._get_zs_df()
 
         for n_mut in tqdm(ZS_N_MUTS):
@@ -394,7 +396,7 @@ class ZSSSumVis(SumVis):
                 ylabel=f"{metric} correlation",
                 hooks=[fixmargins, one_decimal_y, hook],
             ),
-            plot_name=f"{self.zs_dets}-{metric}{comb_dets}-{n_mut}",
+            plot_name=f"{self.zs_dets}_{self._zs_filter}-{metric}{comb_dets}-{n_mut}",
             plot_path=self._output_folder,
         )
 

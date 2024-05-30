@@ -24,13 +24,13 @@ if __name__ == "__main__":
     #     input_csv = "results/de/DE-active/scale2max/all_landscape_de_summary.csv",
     #     output_folder = "results/summary/DE")
 
-    # ZSSSumVis(
-    #     input_csv="results/zs_sum/none/zs_stat_scale2max.csv",
-    #     output_folder="results/summary/ZS"
-    # )
+    ZSSSumVis(
+        input_csv="results/zs_sum/min0/zs_stat_scale2max.csv",
+        output_folder="results/summary/ZS"
+    )
 
-    vis_sum_de_mlde(simplezs=True)
-    vis_sum_de_mlde(simplezs=False)
+    # vis_sum_de_mlde(simplezs=True)
+    # vis_sum_de_mlde(simplezs=False)
         
     """
     DESumVis(SumVis):

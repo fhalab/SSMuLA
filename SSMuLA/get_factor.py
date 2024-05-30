@@ -136,23 +136,97 @@ def get_lib_stat(
         height=950,
     )
 
-
-def get_zs_corr(
+def get_zs_zs_corr(
     corr_csv: str = "results/corr_all/384/boosting|ridge-top96/corr.csv",
-    de_calc: str = "mean_all",  # or fraction_max
     n_mut: str = "all",
+    metric: str = "rho"
 ):
+    df = pd.read_csv(corr_csv)
 
-    de_list = [f"{de_type}_{de_calc}" for de_type in DE_TYPES]
+    simple_zs = [zs for zs in zs_list if n_mut in zs and metric in zs]
+
+    style_df = (
+        df[
+            df["descriptor"].isin(
+                simple_zs
+            )
+        ][["descriptor"] + simple_zs]
+        .loc[df['descriptor'].isin(simple_zs)]
+        .rename(columns={"descriptor": "ZS predictions"})
+        .set_index("ZS predictions")
+        .rename(index=lambda x: x.replace("double", "hd2"))
+        .rename(columns=lambda x: x.replace("double", "hd2"))
+        .style.format("{:.2f}")
+        .background_gradient(cmap=custom_cmap, vmin=0, vmax=1)
+    )
+
+    return styledf2png(
+        style_df,
+        f"zs_{n_mut}_{metric}_heatmap_384-boosting|ridge-top96_zs",
+        sub_dir="results/style_dfs",
+        absolute_dir="/disk2/fli/SSMuLA/",
+        width=1250,
+        height=450,
+    )
+
+
+
+def get_zs_corr_ls(
+    corr_csv: str = "results/corr_all/384/boosting|ridge-top96/corr.csv",
+    n_mut: str = "all",
+    metric: str = "rho"
+):
 
     df = pd.read_csv(corr_csv)
 
     style_df = (
         df[
             df["descriptor"].isin(
+                [zs for zs in zs_list if n_mut in zs and metric in zs]
+            )
+        ][["descriptor"] + LANDSCAPE_ATTRIBUTES]
+        .rename(columns={"descriptor": "Landscape attributes", **simple_de_metric_map})
+        .iloc[0:33]
+        .set_index("Landscape attributes")
+        .rename(index=lambda x: x.replace("double", "hd2")).T
+        .style.format("{:.2f}")
+        .background_gradient(cmap=custom_cmap, vmin=-1, vmax=1)
+    )
+
+    return styledf2png(
+        style_df,
+        f"zs_{n_mut}_{metric}_heatmap_384-boosting|ridge-top96_landscape_attributes",
+        sub_dir="results/style_dfs",
+        absolute_dir="/disk2/fli/SSMuLA/",
+        width=1450,
+        height=950,
+    )
+
+
+def get_zs_corr(
+    corr_csv: str = "results/corr_all/384/boosting|ridge-top96/corr.csv",
+    deorls: str = "de",
+    de_calc: str = "mean_all",  # or fraction_max
+    n_mut: str = "all",
+):
+
+    df = pd.read_csv(corr_csv)
+
+    if deorls == "de":
+        comp_list = [f"{de_type}_{de_calc}" for de_type in DE_TYPES]
+        dets = de_calc
+        width=625
+    else:
+        comp_list = LANDSCAPE_ATTRIBUTES
+        dets = "landscape_attributes"
+        width=1800
+
+    style_df = (
+        df[
+            df["descriptor"].isin(
                 [zs for zs in zs_list if n_mut in zs and "ndcg" not in zs]
             )
-        ][["descriptor"] + de_list]
+        ][["descriptor"] + comp_list]
         .rename(columns={"descriptor": "Landscape attributes", **simple_de_metric_map})
         .iloc[0:33]
         .set_index("Landscape attributes")
@@ -163,10 +237,10 @@ def get_zs_corr(
 
     return styledf2png(
         style_df,
-        f"zs_{n_mut}_heatmap_384-boosting|ridge-top96_{de_calc}",
+        f"zs_{n_mut}_heatmap_384-boosting|ridge-top96_{dets}",
         sub_dir="results/style_dfs",
         absolute_dir="/disk2/fli/SSMuLA/",
-        width=625,
+        width=width,
         height=550,
     )
 
