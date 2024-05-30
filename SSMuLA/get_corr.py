@@ -107,7 +107,7 @@ de_list = [f"{de}_{m}" for de in DE_TYPES for m in de_metric]
 
 ftmlde_list = [
     f"{m}_{zs}"
-    for m in ["maxes", "means", "ndcgs", "rhos", "if_truemaxs"]
+    for m in ["top_maxes", "top_means", "ndcgs", "rhos", "if_truemaxs"]
     for zs in zs_no_score_list
 ]
 # "maxes_Triad",
@@ -183,7 +183,7 @@ class CorrPerfomanceCharacter:
         pwe_path: str = "results/pairwise_epistasis_vis/none/scale2max.csv",
         zs_path: str = "results/zs_sum/none/zs_stat_scale2max.csv",
         de_path: str = "results/de/DE-active/scale2max/all_landscape_de_summary.csv",
-        mlde_path: str = "results/mlde/all_df_comb.csv",
+        mlde_path: str = "results/mlde/all_df_comb_onehot.csv",
         corr_dir: str = "results/corr",
         n_mut_cuttoff: int = 0,
         n_sample: int = 384,
@@ -294,7 +294,7 @@ class CorrPerfomanceCharacter:
 
         zs_df_expend = pd.concat(zs_df_list, axis=1)
 
-        zs_mut_df_list = [zs_df_expend[zs_df_expend["n_mut"] == "all"]["lib"]]
+        zs_mut_df_list = [zs_df_expend[zs_df_expend["n_mut"] == self._n_mut]["lib"]]
         for n_mut in ZS_N_MUTS:
             slice_df = (
                 zs_df_expend[zs_df_expend["n_mut"] == n_mut]
@@ -379,8 +379,8 @@ class CorrPerfomanceCharacter:
 
         for zs in zs_list:
             rename_cols = {
-                "top_maxes": f"maxes_{zs}",
-                "top_means": f"means_{zs}",
+                "top_maxes": f"top_maxes_{zs}",
+                "top_means": f"top_means_{zs}",
                 "ndcgs": f"ndcgs_{zs}",
                 "rhos": f"rhos_{zs}",
                 "if_truemaxs": f"if_truemaxs_{zs}",
@@ -415,6 +415,7 @@ class CorrPerfomanceCharacter:
                 )
 
             else:
+
                 mlde_avg = pd.merge(
                     mlde_avg,
                     (
@@ -454,7 +455,7 @@ class CorrPerfomanceCharacter:
 
         df_pw_s_rs = (
             df_pw[
-                (df_pw["n_mut"] == self._n_mut)
+                (df_pw["n_mut"] == "all")
                 & (df_pw["summary_type"] == "fraction")
                 & (df_pw["epistasis_type"] != "magnitude")
             ][["lib", "value"]]
@@ -464,7 +465,7 @@ class CorrPerfomanceCharacter:
         )
 
         df_pw_rs = df_pw[
-            (df_pw["n_mut"] == self._n_mut)
+            (df_pw["n_mut"] == "all")
             & (df_pw["summary_type"] == "fraction")
             & (df_pw["epistasis_type"] == "reciprocal sign")
         ][["lib", "value"]].rename(columns={"value": "fraction_reciprocal-sign"})
@@ -491,7 +492,7 @@ class CorrPerfomanceCharacter:
                     )
                 else:
                     merge_df[f"{ft_col}_{de}_delta"] = (
-                        merge_df[f"maxes_{ft_col}"] - merge_df[f"{de}_mean_all"]
+                        merge_df[f"top_maxes_{ft_col}"] - merge_df[f"{de}_mean_all"]
                     )
 
         # numb_loc_opt
@@ -527,17 +528,17 @@ class CorrPerfomanceCharacter:
         # )
 
         best_ft = merge_df[
-            ["".join(["maxes_", zs.replace("_score", "")]) for zs in ZS_OPTS]
+            ["".join(["top_maxes_", zs.replace("_score", "")]) for zs in ZS_OPTS]
         ].max(axis=1)
         best_ftcomb = merge_df[
-            ["".join(["maxes_", zs]) for zs in zs_no_score_list]
+            ["".join(["top_maxes_", zs]) for zs in zs_no_score_list]
         ].max(axis=1)
 
         # add double
-        merge_df["delta_hd2_mlde"] = merge_df["maxes_double"] - merge_df["top_maxes"]
+        merge_df["delta_hd2_mlde"] = merge_df["top_maxes_double"] - merge_df["top_maxes"]
 
         # add single
-        merge_df["delta_hd1_mlde"] = merge_df["maxes_single"] - merge_df["top_maxes"]
+        merge_df["delta_hd1_mlde"] = merge_df["top_maxes_single"] - merge_df["top_maxes"]
 
         for ft_des, ft_df in zip(["ft", "fb_comb"], [best_ft, best_ftcomb]):
             # add vs mlde
@@ -707,7 +708,7 @@ def perfom_corr(
     loc_opt_path: str = "results/local_optima/scale2max.csv",
     pwe_path: str = "results/pairwise_epistasis_vis/none/scale2max.csv",
     de_path: str = "results/de/DE-active/scale2max/all_landscape_de_summary.csv",
-    mlde_path: str = "results/mlde/all_df_comb.csv",
+    mlde_path: str = "results/mlde/all_df_comb_onehot.csv",
     corr_dir: str = "results/corr",
     n_mut_cuttoff: int = 0,
     n_top_list: list[int] = [96, 384],

@@ -169,6 +169,43 @@ def get_zs_zs_corr(
         height=450,
     )
 
+def get_zs_ft_corr(
+    corr_csv: str = "results/corr_all/384/boosting|ridge-top96/corr.csv",
+    n_mut: str = "all",
+    metric: str = "rho"
+):
+    """
+    Correlate ZS with ftMLDE
+    """
+    df = pd.read_csv(corr_csv)
+
+    simple_zs = [zs for zs in zs_list if n_mut in zs and metric in zs]
+    simple_ft = []
+
+
+    style_df = (
+        df[
+            df["descriptor"].isin(
+                simple_zs
+            )
+        ][["descriptor"] + simple_zs]
+        .loc[df['descriptor'].isin(simple_zs)]
+        .rename(columns={"descriptor": "ZS predictions"})
+        .set_index("ZS predictions")
+        .rename(index=lambda x: x.replace("double", "hd2"))
+        .rename(columns=lambda x: x.replace("double", "hd2"))
+        .style.format("{:.2f}")
+        .background_gradient(cmap=custom_cmap, vmin=0, vmax=1)
+    )
+
+    return styledf2png(
+        style_df,
+        f"zs_{n_mut}_{metric}_heatmap_384-boosting|ridge-top96_zs",
+        sub_dir="results/style_dfs",
+        absolute_dir="/disk2/fli/SSMuLA/",
+        width=1250,
+        height=450,
+    )
 
 
 def get_zs_corr_ls(

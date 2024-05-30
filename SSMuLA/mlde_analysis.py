@@ -27,8 +27,8 @@ hv.extension("bokeh")
 warnings.filterwarnings("ignore")
 
 DEFAULT_MLDE_METRICS = [
-    "all_maxes", # change to all_maxes
-    "all_means", # change to all_means
+    "all_maxes", # max of predicted values
+    "all_means", # mean of predicted values
     "top_maxes",  # topn
     "top_means",  # topn
     "ndcgs",
