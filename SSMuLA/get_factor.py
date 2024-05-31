@@ -117,7 +117,12 @@ def styledf2png(
 
 def get_lib_stat(
     lib_csv: str = "results/corr_all/384/boosting|ridge-top96/merge_all.csv",
+    n_mut: str = "all",
 ):
+    if n_mut != "all":
+        corr_det = f"corr_{n_mut}" 
+        if corr_det not in lib_csv:
+            lib_csv = lib_csv.replace("corr_all", corr_det)
 
     df = pd.read_csv(lib_csv)
     style_df = (
@@ -129,7 +134,7 @@ def get_lib_stat(
 
     return styledf2png(
         style_df,
-        "lib_stat",
+        f"lib_stat_{n_mut}_heatmap_384-boosting|ridge-top96",
         sub_dir="results/style_dfs",
         absolute_dir="/disk2/fli/SSMuLA/",
         width=1450,

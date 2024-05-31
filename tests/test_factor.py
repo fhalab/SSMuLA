@@ -17,11 +17,11 @@ if __name__ == "__main__":
     f = open(os.path.join(log_folder, f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}.out"), 'w')
     sys.stdout = f
 
-    # get_lib_stat()
+    get_lib_stat(n_mut="double")
 
-    for metric in ["rho", "rocauc"]:
-        get_zs_zs_corr(n_mut="double", metric=metric)
-        get_zs_zs_corr(n_mut="all", metric=metric)
+    # for metric in ["rho", "rocauc"]:
+    #     get_zs_zs_corr(n_mut="double", metric=metric)
+    #     get_zs_zs_corr(n_mut="all", metric=metric)
 
     # for metric in ["rho", "rocauc"]:
     #     get_zs_corr_ls(n_mut="double", metric=metric)
