@@ -32,11 +32,12 @@ from SSMuLA.util import ndcg_scale, checkNgen_folder
 hv.extension("bokeh")
 hv.renderer("bokeh").theme = JSON_THEME
 
-ZS_OPTS = ["Triad_score", "ev_score", "esm_score", "esmif_score"]
+ZS_OPTS = ["ed_score", "Triad_score", "ev_score", "esm_score", "esmif_score"]
 ZS_COMB_OPTS = ["struc-comb_score", "msanoif-comb_score", "msa-comb_score", "structnmsa-comb_score"]
 
 SIMPLE_ZS_OPT_LEGNED = {
     "none": "Random",
+    "ed_score": "Edited distance",
     "Triad_score": "Triad",
     "ev_score": "EVMutation",
     "esm_score": "ESM",
@@ -45,6 +46,7 @@ SIMPLE_ZS_OPT_LEGNED = {
 
 ZS_OPTS_LEGEND = {
     "none": "Random",
+    "ed_score": "Edited distance",
     "Triad_score": "Triad",
     "ev_score": "EVMutation",
     "esm_score": "ESM",
@@ -315,6 +317,16 @@ class ZS_Analysis(LibData):
 
         df = self.input_df[~self.input_df["AAs"].str.contains("\*")].copy()
 
+        # check wt n_mut = 0 and update to 0 if not
+        if df[df["muts"] == "WT"]["n_mut"].values[0] != 0:
+            print("WT n_mut is not 0 -> update to 0")
+            df.loc[df["muts"] == "WT", "n_mut"] = 0
+
+        # add ed_score and rank based on n_mut
+        df["ed_score"] = df["n_mut"]
+        # rank the smaller the better
+        df["ed_rank"] = df["ed_score"].rank(ascending=True)
+
         if self._filter_min_by in ["none", "", None]:
             return df.copy()
         elif self._filter_min_by == "active":
@@ -512,7 +524,7 @@ class ZS_Analysis(LibData):
 
 
 def run_zs_analysis(
-    scale_types: list = ["max", "parent"],
+    scale_types: list = ["max"],
     data_folder: str = "data",
     ev_esm_folder: str = "ev_esm",
     triad_folder: str = "triad",

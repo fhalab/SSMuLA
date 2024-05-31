@@ -129,6 +129,9 @@ class ProcessData(LibData):
         # add mut number
         df_appended["n_mut"] = df_appended["muts"].str.split(":").str.len()
 
+        # change WT n_mut to 0
+        df_appended.loc[df_appended["muts"] == "WT", "n_mut"] = 0
+
         return df_appended.copy()
 
     def _split_aa(self, df: pd.DataFrame) -> pd.DataFrame:
@@ -1231,7 +1234,7 @@ class SDA(LibData):
     @property
     def s_df(self) -> pd.DataFrame:
         """Return the single mutation dataframe"""
-        return self.m_df[self.m_df["n_mut"] == 1]
+        return self.m_df[self.m_df["n_mut"] <= 1]
 
     @property
     def s_fit(self) -> pd.Series:
