@@ -69,7 +69,7 @@ LANDSCAPE_ATTRIBUTES = [
     "norm_reciprocal-sign",
 ]
 
-zs_no_score_list = [zs.replace("_score", "") for zs in ZS_OPTS + ZS_COMB_OPTS]
+zs_no_score_list = [zs.replace("_score", "") for zs in ZS_OPTS + ZS_COMB_OPTS if zs != "ed_score"]
 zs_list = [
     f"{mut}_{opt}_{metric}"
     for mut in ZS_N_MUTS
@@ -188,6 +188,7 @@ class CorrPerfomanceCharacter:
         n_mut_cuttoff: int = 0,
         n_sample: int = 384,
         n_top: int = 96,
+        filter_active: float = 1,
         models: list[str] = ["boosting", "ridge"],
     ):
 
@@ -203,6 +204,7 @@ class CorrPerfomanceCharacter:
         self._n_mut = n_mut_cutoff_dict[self._n_mut_cuttoff]
         self._n_sample = n_sample
         self._n_top = n_top
+        self._filter_active = filter_active
         self._models = models
 
         join_model = "|".join(models)
@@ -211,6 +213,7 @@ class CorrPerfomanceCharacter:
                 "_".join([self._corr_dir, self._n_mut]),
                 str(n_sample),
                 f"{join_model}-top{str(n_top)}",
+                f"actcut-{str(filter_active)}",
             )
         )
 
@@ -223,7 +226,10 @@ class CorrPerfomanceCharacter:
 
         # now merge all
         self._merge_all_df = self._get_merge_all()
-        self._merge_all_df.to_csv(f"{self._corr_subdir}/merge_all.csv", index=False)
+
+        self._active_lib_list = self._merge_all_df[self._merge_all_df["percent_active"]>self._filter_active]["lib"].tolist()
+        self._actcutt_df = self._merge_all_df[self._merge_all_df["lib"].isin(self._active_lib_list)]
+        self._actcutt_df.to_csv(f"{self._corr_subdir}/merge_all.csv", index=False)
 
         self._corr_df = self._get_corr_df()
         self._corr_df.to_csv(f"{self._corr_subdir}/corr.csv", index=False)
@@ -283,14 +289,15 @@ class CorrPerfomanceCharacter:
         zs_df_list = [zs_df[["lib", "n_mut"]]]
         # Create new columns for each score type
         for c in ZS_OPTS + ZS_COMB_OPTS:
-            zs_name = c.replace("_score", "")
-            zs_df_list.append(
-                zs_df[f"{zs_name}_score"]
-                .str.replace(": nan", ": None")
-                .apply(literal_eval)
-                .apply(pd.Series)
-                .rename(columns={m: f"{zs_name}_{m}" for m in ZS_METRICS})
-            )
+            if c != "ed_score":
+                zs_name = c.replace("_score", "")
+                zs_df_list.append(
+                    zs_df[f"{zs_name}_score"]
+                    .str.replace(": nan", ": None")
+                    .apply(literal_eval)
+                    .apply(pd.Series)
+                    .rename(columns={m: f"{zs_name}_{m}" for m in ZS_METRICS})
+                )
 
         zs_df_expend = pd.concat(zs_df_list, axis=1)
 
@@ -485,6 +492,7 @@ class CorrPerfomanceCharacter:
 
         # append delta
         for ft_col in [""] + self._zs_list:
+
             for de in self._de_types:
                 if ft_col == "":
                     merge_df[f"mlde_{de}_delta"] = (
@@ -528,10 +536,10 @@ class CorrPerfomanceCharacter:
         # )
 
         best_ft = merge_df[
-            ["".join(["top_maxes_", zs.replace("_score", "")]) for zs in ZS_OPTS]
+            ["".join(["top_maxes_", zs.replace("_score", "")]) for zs in ZS_OPTS if zs != "ed_score"] + ["top_maxes_double"]
         ].max(axis=1)
         best_ftcomb = merge_df[
-            ["".join(["top_maxes_", zs]) for zs in zs_no_score_list]
+            ["".join(["top_maxes_", zs]) for zs in zs_no_score_list if zs != "ed"] + ["top_maxes_double"]
         ].max(axis=1)
 
         # add double
@@ -576,7 +584,7 @@ class CorrPerfomanceCharacter:
             for val in LANDSCAPE_ATTRIBUTES + zs_list + val_list:
 
                 corr_row[val] = spearmanr(
-                    self._merge_all_df[des], self._merge_all_df[val]
+                    self._actcutt_df[des], self._actcutt_df[val]
                 )[0]
 
             corr_df = corr_df._append(
@@ -638,7 +646,7 @@ class CorrPerfomanceCharacter:
 
                     save_bokeh_hv(
                         plot_obj=hv.Scatter(
-                            self._merge_all_df, fac, [delta_type, "lib"]
+                            self._actcutt_df, fac, [delta_type, "lib"]
                         )
                         .opts(
                             marker="o", size=10, color=dim("lib").categorize(LIB_COLORS)
@@ -702,6 +710,16 @@ class CorrPerfomanceCharacter:
         """Return the correlation dataframe"""
         return self._corr_df
 
+    @property
+    def active_lib_list(self) -> list[str]:
+        """Return the list of active libraries"""
+        return self._active_lib_list
+
+    @property
+    def actcutt_df(self) -> pd.DataFrame:
+        """Return the dataframe with active libraries"""
+        return self._actcutt_df
+
 
 def perfom_corr(
     lib_stat_path: str = "results/fitness_distribution/max/all_lib_stats.csv",
@@ -711,8 +729,9 @@ def perfom_corr(
     mlde_path: str = "results/mlde/all_df_comb_onehot.csv",
     corr_dir: str = "results/corr",
     n_mut_cuttoff: int = 0,
+    filter_active: float = 1,
     n_top_list: list[int] = [96, 384],
-    models_list: list[list[str]] = [["boosting"], ["ridge"], ["boosting", "ridge"]],
+    models_list: list[list[str]] = [["boosting", "ridge"], ["boosting"], ["ridge"]],
 ):
 
     for models in models_list:
@@ -728,5 +747,6 @@ def perfom_corr(
                     n_mut_cuttoff=n_mut_cuttoff,
                     n_sample=n,
                     n_top=n_top,
+                    filter_active=filter_active,
                     models=models,
                 )

@@ -5,7 +5,7 @@ import os
 
 from datetime import datetime
 
-from SSMuLA.get_factor import get_lib_stat, get_corr_heatmap, get_importance_heatmap, get_zs_corr, get_zs_corr_ls, get_zs_zs_corr
+from SSMuLA.get_factor import plot_all_factor, get_lib_stat, get_corr_heatmap, get_importance_heatmap, get_zs_corr, get_zs_corr_ls, get_zs_zs_corr
 from SSMuLA.util import checkNgen_folder
 
 
@@ -17,7 +17,13 @@ if __name__ == "__main__":
     f = open(os.path.join(log_folder, f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}.out"), 'w')
     sys.stdout = f
 
-    get_lib_stat(n_mut="double")
+    plot_all_factor(
+        corr_csv = "results/corr_all/384/boosting|ridge-top96/actcut-1/corr.csv",
+        sub_dir="results/style_dfs_actcut-1",
+        absolute_dir="/disk2/fli/SSMuLA/",
+    )
+
+    # get_lib_stat(n_mut="double")
 
     # for metric in ["rho", "rocauc"]:
     #     get_zs_zs_corr(n_mut="double", metric=metric)

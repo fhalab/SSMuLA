@@ -117,6 +117,8 @@ def styledf2png(
 
 def get_lib_stat(
     lib_csv: str = "results/corr_all/384/boosting|ridge-top96/merge_all.csv",
+    sub_dir="results/style_dfs",
+    absolute_dir="/disk2/fli/SSMuLA/",
     n_mut: str = "all",
 ):
     if n_mut != "all":
@@ -135,14 +137,16 @@ def get_lib_stat(
     return styledf2png(
         style_df,
         f"lib_stat_{n_mut}_heatmap_384-boosting|ridge-top96",
-        sub_dir="results/style_dfs",
-        absolute_dir="/disk2/fli/SSMuLA/",
+        sub_dir=sub_dir,
+        absolute_dir=absolute_dir,
         width=1450,
         height=950,
     )
 
 def get_zs_zs_corr(
-    corr_csv: str = "results/corr_all/384/boosting|ridge-top96/corr.csv",
+    corr_csv: str = "results/corr_all/384/boosting|ridge-top96/actcut-1/corr.csv",
+    sub_dir="results/style_dfs",
+    absolute_dir="/disk2/fli/SSMuLA/",
     n_mut: str = "all",
     metric: str = "rho"
 ):
@@ -168,14 +172,16 @@ def get_zs_zs_corr(
     return styledf2png(
         style_df,
         f"zs_{n_mut}_{metric}_heatmap_384-boosting|ridge-top96_zs",
-        sub_dir="results/style_dfs",
-        absolute_dir="/disk2/fli/SSMuLA/",
+        sub_dir=sub_dir,
+        absolute_dir=absolute_dir,
         width=1250,
         height=450,
     )
 
 def get_zs_ft_corr(
-    corr_csv: str = "results/corr_all/384/boosting|ridge-top96/corr.csv",
+    corr_csv: str = "results/corr_all/384/boosting|ridge-top96/actcut-1/corr.csv",
+    sub_dir="results/style_dfs",
+    absolute_dir="/disk2/fli/SSMuLA/",
     n_mut: str = "all",
     metric: str = "rho"
 ):
@@ -185,7 +191,7 @@ def get_zs_ft_corr(
     df = pd.read_csv(corr_csv)
 
     simple_zs = [zs for zs in zs_list if n_mut in zs and metric in zs]
-    simple_ft = []
+    # simple_ft = []
 
 
     style_df = (
@@ -206,15 +212,17 @@ def get_zs_ft_corr(
     return styledf2png(
         style_df,
         f"zs_{n_mut}_{metric}_heatmap_384-boosting|ridge-top96_zs",
-        sub_dir="results/style_dfs",
-        absolute_dir="/disk2/fli/SSMuLA/",
+        sub_dir=sub_dir,
+        absolute_dir=absolute_dir,
         width=1250,
         height=450,
     )
 
 
 def get_zs_corr_ls(
-    corr_csv: str = "results/corr_all/384/boosting|ridge-top96/corr.csv",
+    corr_csv: str = "results/corr_all/384/boosting|ridge-top96/actcut-1/corr.csv",
+    sub_dir="results/style_dfs",
+    absolute_dir="/disk2/fli/SSMuLA/",
     n_mut: str = "all",
     metric: str = "rho"
 ):
@@ -238,15 +246,17 @@ def get_zs_corr_ls(
     return styledf2png(
         style_df,
         f"zs_{n_mut}_{metric}_heatmap_384-boosting|ridge-top96_landscape_attributes",
-        sub_dir="results/style_dfs",
-        absolute_dir="/disk2/fli/SSMuLA/",
+        sub_dir=sub_dir,
+        absolute_dir=absolute_dir,
         width=1450,
         height=950,
     )
 
 
 def get_zs_corr(
-    corr_csv: str = "results/corr_all/384/boosting|ridge-top96/corr.csv",
+    corr_csv: str = "results/corr_all/384/boosting|ridge-top96/actcut-1/corr.csv",
+    sub_dir="results/style_dfs",
+    absolute_dir="/disk2/fli/SSMuLA/",
     deorls: str = "de",
     de_calc: str = "mean_all",  # or fraction_max
     n_mut: str = "all",
@@ -280,15 +290,17 @@ def get_zs_corr(
     return styledf2png(
         style_df,
         f"zs_{n_mut}_heatmap_384-boosting|ridge-top96_{dets}",
-        sub_dir="results/style_dfs",
-        absolute_dir="/disk2/fli/SSMuLA/",
+        sub_dir=sub_dir,
+        absolute_dir=absolute_dir,
         width=width,
         height=550,
     )
 
 
 def get_corr_heatmap(
-    corr_csv: str = "results/corr_all/384/boosting|ridge-top96/corr.csv",
+    corr_csv: str = "results/corr_all/384/boosting|ridge-top96/actcut-1/corr.csv",
+    sub_dir="results/style_dfs",
+    absolute_dir="/disk2/fli/SSMuLA/",
     de_calc: str = "mean_all",  # or fraction_max
 ):
 
@@ -307,15 +319,17 @@ def get_corr_heatmap(
     return styledf2png(
         style_df,
         f"corr_heatmap_384-boosting|ridge-top96_{de_calc}",
-        sub_dir="results/style_dfs",
-        absolute_dir="/disk2/fli/SSMuLA/",
+        sub_dir=sub_dir,
+        absolute_dir=absolute_dir,
         width=720,
         height=975,
     )
 
 
 def get_importance_heatmap(
-    lib_csv: str = "results/corr_all/384/boosting|ridge-top96/merge_all.csv",
+    lib_csv: str = "results/corr_all/384/boosting|ridge-top96/actcut-1/merge_all.csv",
+    sub_dir="results/style_dfs",
+    absolute_dir="/disk2/fli/SSMuLA/",
     de_calc: str = "mean_all",  # or fraction_max
 ):
 
@@ -356,8 +370,76 @@ def get_importance_heatmap(
     return styledf2png(
         style_df,
         f"importance_heatmap_384-boosting|ridge-top96_{de_calc}",
-        sub_dir="results/style_dfs",
-        absolute_dir="/disk2/fli/SSMuLA/",
+        sub_dir=sub_dir,
+        absolute_dir=absolute_dir,
         width=720,
         height=975,
     )
+
+
+def plot_all_factor(
+    corr_csv: str = "results/corr_all/384/boosting|ridge-top96/actcut-1/corr.csv",
+    sub_dir="results/style_dfs_actcut-1",
+    absolute_dir="/disk2/fli/SSMuLA/",
+):
+
+    for n_mut in ["all", "double"]:
+
+        for metric in ["rho", "rocauc"]:
+            get_zs_zs_corr(
+                corr_csv=corr_csv,
+                n_mut=n_mut, 
+                metric=metric,
+                sub_dir=checkNgen_folder(os.path.join(sub_dir, "zs_zs_corr")),
+                absolute_dir=absolute_dir,
+            )
+
+            get_zs_corr_ls(
+                corr_csv=corr_csv,
+                n_mut=n_mut, 
+                metric=metric,
+                sub_dir=checkNgen_folder(os.path.join(sub_dir, "zs_corr_ls")),
+                absolute_dir=absolute_dir,
+          )
+
+            
+            get_zs_ft_corr(
+                corr_csv=corr_csv,
+                n_mut=n_mut, 
+                metric=metric,
+                sub_dir=checkNgen_folder(os.path.join(sub_dir, "zs_ft_corr")),
+                absolute_dir=absolute_dir,
+            )
+
+        for de_calc in ["mean_all", "fraction_max"]:
+            for deorls in ["de", "ls"]:
+                get_zs_corr(
+                    corr_csv=corr_csv,
+                    de_calc=de_calc,
+                    n_mut=n_mut,
+                    deorls=deorls,
+                    sub_dir=checkNgen_folder(os.path.join(sub_dir, "zs_corr")),
+                    absolute_dir=absolute_dir,
+                )
+                
+            get_corr_heatmap(
+                corr_csv=corr_csv,
+                de_calc=de_calc,
+                sub_dir=checkNgen_folder(os.path.join(sub_dir, "corr_heatmap")),
+                absolute_dir=absolute_dir,
+            )
+
+            get_importance_heatmap(
+                lib_csv=corr_csv.replace("corr.csv", "merge_all.csv"),
+                de_calc=de_calc,
+                sub_dir=checkNgen_folder(os.path.join(sub_dir, "importance_heatmap")),
+                absolute_dir=absolute_dir,
+            )
+
+        get_lib_stat(
+            lib_csv=corr_csv.replace("corr.csv", "merge_all.csv"),
+            n_mut=n_mut,
+            sub_dir=checkNgen_folder(os.path.join(sub_dir, "lib_stat")),
+            absolute_dir=absolute_dir,
+        )
+    

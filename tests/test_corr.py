@@ -17,7 +17,7 @@ if __name__ == "__main__":
     f = open(os.path.join(log_folder, f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}.out"), 'w')
     sys.stdout = f
 
-    # perfom_corr(n_mut_cuttoff=0)
+    perfom_corr(n_mut_cuttoff=0)
     perfom_corr(n_mut_cuttoff=2)
 
     """
