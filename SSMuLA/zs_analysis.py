@@ -37,9 +37,9 @@ ZS_COMB_OPTS = ["struc-comb_score", "msanoif-comb_score", "msa-comb_score", "str
 
 SIMPLE_ZS_OPT_LEGNED = {
     "none": "Random",
-    "ed_score": "Edited distance",
+    "ed_score": "Edited-distance",
     "Triad_score": "Triad",
-    "ev_score": "EVMutation",
+    "ev_score": "EVmutation",
     "esm_score": "ESM",
     "esmif_score": "ESM-IF",
 }

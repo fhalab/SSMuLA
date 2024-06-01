@@ -17,6 +17,7 @@ dependencies:
   - biopandas
   - biopython
   - bokeh
+  - brokenaxes
   - cairosvg
   - colorcet
   - cudatoolkit=11.8

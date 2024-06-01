@@ -54,8 +54,8 @@ DE_TYPES = deepcopy(["recomb_SSM", "single_step_DE", "top96_SSM"])
 
 DE_COLORS = deepcopy(
     {
-        "recomb_SSM": PRESENTATION_PALETTE_SATURATE["light_orange"],
-        "single_step_DE": PRESENTATION_PALETTE_SATURATE["light_brown"],
+        "recomb_SSM": PRESENTATION_PALETTE_SATURATE["light_brown"],
+        "single_step_DE": PRESENTATION_PALETTE_SATURATE["light_orange"],
         "top96_SSM": PRESENTATION_PALETTE_SATURATE["brown"],
     }
 )
