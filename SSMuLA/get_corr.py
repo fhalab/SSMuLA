@@ -131,8 +131,12 @@ ftmlde_list = [
 # "rhos_esmif",
 # "if_truemaxs_esmif",
 
+DELTA_OPTS = ["delta", "deltafrac"]
+FT_OPTS = ["ft", "ft-comb"]
+
 ft_de_delta_list = [
-    f"{ft}_{de}_delta"
+    f"{ft}_{de}_{dt}"
+    for dt in DELTA_OPTS
     for ft in (["mlde"] + N_MUT_SUBS + zs_no_score_list)
     for de in DE_TYPES
 ]
@@ -152,9 +156,9 @@ ft_de_delta_list = [
 # "esmif_recomb_SSM_delta",
 # "esmif_top96_SSM_delta",
 
-delta_bestft_mlde_list = [f"delta_{ft_des}_mlde" for ft_des in ["ft", "fb_comb"]]
+delta_bestft_mlde_list = [f"{dt}_{ft_des}_mlde" for dt in DELTA_OPTS for ft_des in FT_OPTS]
 delta_bestft_de_list = [
-    f"delta_{ft_des}_{de}" for ft_des in ["ft", "fb_comb"] for de in DE_TYPES
+    f"{dt}_{ft_des}_{de}" for dt in DELTA_OPTS for ft_des in FT_OPTS for de in DE_TYPES
 ]
 
 val_list = (
@@ -166,6 +170,9 @@ val_list = (
     + delta_bestft_de_list
 )
 
+DT_METRIC = {
+            "delta": {"de": "mean_all", "mlde": "top_maxes"},
+            "deltafrac": {"de":"fraction_max", "mlde": "if_truemaxs"}}
 
 class CorrPerfomanceCharacter:
     """
@@ -494,14 +501,25 @@ class CorrPerfomanceCharacter:
         for ft_col in [""] + self._zs_list:
 
             for de in self._de_types:
-                if ft_col == "":
-                    merge_df[f"mlde_{de}_delta"] = (
-                        merge_df["top_maxes"] - merge_df[f"{de}_mean_all"]
-                    )
-                else:
-                    merge_df[f"{ft_col}_{de}_delta"] = (
-                        merge_df[f"top_maxes_{ft_col}"] - merge_df[f"{de}_mean_all"]
-                    )
+                for dt in DELTA_OPTS:
+
+                    de_col_name = f"{de}_{DT_METRIC[dt]['de']}"
+                    
+                    if ft_col == "":
+                        merge_df[f"mlde_{de}_{dt}"] = (
+                            merge_df[DT_METRIC[dt]["mlde"]] - merge_df[de_col_name]
+                        )
+                        # merge_df[f"mlde_{de}_deltafrac"] = (
+                        #     merge_df["if_truemaxs"] - merge_df[f"{de}_fraction_max"]
+                        # )
+                    else:
+                        mlde_name = DT_METRIC[dt]["mlde"]
+                        merge_df[f"{ft_col}_{de}_{dt}"] = (
+                            merge_df[f"{mlde_name}_{ft_col}"] - merge_df[de_col_name]
+                        )
+                        # merge_df[f"{ft_col}_{de}_deltafrac"] = (
+                        #     merge_df[f"if_truemaxs_{ft_col}"] - merge_df[f"{de}_fraction_max"]
+                        # )
 
         # numb_loc_opt
         # frac_loc_opt_total
@@ -535,25 +553,38 @@ class CorrPerfomanceCharacter:
         #     - merge_df["top_maxes"]
         # )
 
-        best_ft = merge_df[
-            ["".join(["top_maxes_", zs.replace("_score", "")]) for zs in ZS_OPTS if zs != "ed_score"] + ["top_maxes_double"]
-        ].max(axis=1)
-        best_ftcomb = merge_df[
-            ["".join(["top_maxes_", zs]) for zs in zs_no_score_list if zs != "ed"] + ["top_maxes_double"]
-        ].max(axis=1)
+        """
+        ["top_maxes", "if_truemaxs"],
+        ["mean_all", "fraction_max"],
+        """
 
-        # add double
-        merge_df["delta_hd2_mlde"] = merge_df["top_maxes_double"] - merge_df["top_maxes"]
+        for dt in DELTA_OPTS:
 
-        # add single
-        merge_df["delta_hd1_mlde"] = merge_df["top_maxes_single"] - merge_df["top_maxes"]
+            mlde_name = DT_METRIC[dt]["mlde"]
+            de_name = DT_METRIC[dt]["de"]
+            
+            # add double
+            merge_df[f"{dt}_hd2_mlde"] = merge_df[f"{mlde_name}_double"] - merge_df[mlde_name]
+            # merge_df["deltafrac_hd2_mlde"] = merge_df["if_truemaxs_double"] - merge_df["if_truemaxs"]
 
-        for ft_des, ft_df in zip(["ft", "fb_comb"], [best_ft, best_ftcomb]):
-            # add vs mlde
-            merge_df[f"delta_{ft_des}_mlde"] = ft_df - merge_df["top_maxes"]
-            # add vs de
-            for de in DE_TYPES:
-                merge_df[f"delta_{ft_des}_{de}"] = ft_df - merge_df[f"{de}_mean_all"]
+            # add single
+            merge_df[f"{dt}_hd1_mlde"] = merge_df[f"{mlde_name}_single"] - merge_df[mlde_name]
+            # merge_df["deltafrac_hd1_mlde"] = merge_df["if_truemaxs_single"] - merge_df["if_truemaxs"]
+
+            best_ft = merge_df[
+                ["".join([f"{mlde_name}_", zs.replace("_score", "")]) for zs in ZS_OPTS if zs != "ed_score"] + [f"{mlde_name}_double"]
+            ].max(axis=1)
+            best_ftcomb = merge_df[
+                ["".join([f"{mlde_name}_", zs]) for zs in zs_no_score_list if zs != "ed"] + [f"{mlde_name}_double"]
+            ].max(axis=1)
+
+            for ft_des, ft_df in zip(FT_OPTS, [best_ft, best_ftcomb]):
+
+                # add vs mlde
+                merge_df[f"{dt}_{ft_des}_mlde"] = ft_df - merge_df[mlde_name]
+                # add vs de
+                for de in DE_TYPES:
+                    merge_df[f"{dt}_{ft_des}_{de}"] = ft_df - merge_df[f"{de}_{de_name}"]
 
         # merge_df["delta_ft_dessm"] = (
         #     np.maximum.reduce(
