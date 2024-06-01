@@ -323,9 +323,9 @@ class ZS_Analysis(LibData):
             df.loc[df["muts"] == "WT", "n_mut"] = 0
 
         # add ed_score and rank based on n_mut
-        df["ed_score"] = df["n_mut"]
+        df["ed_score"] = -1 * df["n_mut"]
         # rank the smaller the better
-        df["ed_rank"] = df["ed_score"].rank(ascending=True)
+        df["ed_rank"] = df["ed_score"].rank(ascending=False)
 
         if self._filter_min_by in ["none", "", None]:
             return df.copy()
