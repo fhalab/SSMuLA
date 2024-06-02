@@ -17,16 +17,17 @@ if __name__ == "__main__":
     f = open(os.path.join(log_folder, f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}.out"), 'w')
     sys.stdout = f
 
-    perfom_corr(n_mut_cuttoff=0)
-    perfom_corr(n_mut_cuttoff=2)
+    perfom_corr(n_mut_cuttoff=0, zs_path="results/zs_sum_2/none/zs_stat_scale2max.csv")
+    perfom_corr(n_mut_cuttoff=2, zs_path="results/zs_sum_2/none/zs_stat_scale2max.csv")
 
     """
     perfom_corr(
         lib_stat_path: str = "results/fitness_distribution/max/all_lib_stats.csv",
         loc_opt_path: str = "results/local_optima/scale2max.csv",
         pwe_path: str = "results/pairwise_epistasis_vis/none/scale2max.csv",
+        zs_path: str = "results/zs_sum/none/zs_stat_scale2max.csv",
         de_path: str = "results/de/DE-active/scale2max/all_landscape_de_summary.csv",
-        mlde_path: str = "results/mlde/vis_3/all_df.csv",
+        mlde_path: str = "results/mlde/all_df_comb_onehot.csv",
         corr_dir: str = "results/corr",
         n_mut_cuttoff: int = 0,
         n_samples: list[int] = [384],

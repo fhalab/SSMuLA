@@ -39,12 +39,19 @@ if __name__ == "__main__":
     ) -> None:
     """
 
-    # MLDESum(
-    #     mlde_results_dir = "results/mlde_hm2zs/saved",
-    #     mlde_vis_dir = "results/mlde_hm2zs/vis",
-    #     all_encoding = True,
-    #     # encoding_lists = ["one-hot"],
-    # )
+    MLDESum(
+        mlde_results_dir = "results/mlde/saved",
+        mlde_vis_dir = "results/mlde/vis_5",
+        all_encoding = True,
+        # encoding_lists = ["one-hot"],
+    )
+
+    MLDESum(
+        mlde_results_dir = "results/mlde_hm2zs/saved",
+        mlde_vis_dir = "results/mlde_hm2zs/vis",
+        all_encoding = True,
+        # encoding_lists = ["one-hot"],
+    )
 
     comb_mlde_dfs(
         mlde_csv = "results/mlde/vis_5/all_df.csv",
