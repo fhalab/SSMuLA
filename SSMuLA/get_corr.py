@@ -69,7 +69,9 @@ LANDSCAPE_ATTRIBUTES = [
     "norm_reciprocal-sign",
 ]
 
-zs_no_score_list = [zs.replace("_score", "") for zs in ZS_OPTS + ZS_COMB_OPTS if zs != "ed_score"]
+zs_no_score_list = [
+    zs.replace("_score", "") for zs in ZS_OPTS + ZS_COMB_OPTS if zs != "ed_score"
+]
 zs_list = [
     f"{mut}_{opt}_{metric}"
     for mut in ZS_N_MUTS
@@ -108,7 +110,7 @@ de_list = [f"{de}_{m}" for de in DE_TYPES for m in de_metric]
 ftmlde_list = [
     f"{m}_{zs}"
     for m in ["top_maxes", "top_means", "ndcgs", "rhos", "if_truemaxs"]
-    for zs in zs_no_score_list
+    for zs in zs_no_score_list + ["double"]
 ]
 # "maxes_Triad",
 # "means_Triad",
@@ -146,17 +148,13 @@ ft_de_delta_list = [
 # "Triad_single_step_DE_delta",
 # "Triad_recomb_SSM_delta",
 # "Triad_top96_SSM_delta",
-# "ev_single_step_DE_delta",
-# "ev_recomb_SSM_delta",
-# "ev_top96_SSM_delta",
-# "esm_single_step_DE_delta",
-# "esm_recomb_SSM_delta",
-# "esm_top96_SSM_delta",
-# "esmif_single_step_DE_delta",
-# "esmif_recomb_SSM_delta",
-# "esmif_top96_SSM_delta",
 
-delta_bestft_mlde_list = [f"{dt}_{ft_des}_mlde" for dt in DELTA_OPTS for ft_des in FT_OPTS]
+delta_allft_mlde_list = [
+    f"{dt}_{ft}_mlde" for dt in DELTA_OPTS for ft in zs_no_score_list + N_MUT_SUBS
+]
+delta_bestft_mlde_list = [
+    f"{dt}_{ft_des}_mlde" for dt in DELTA_OPTS for ft_des in FT_OPTS
+]
 delta_bestft_de_list = [
     f"{dt}_{ft_des}_{de}" for dt in DELTA_OPTS for ft_des in FT_OPTS for de in DE_TYPES
 ]
@@ -166,13 +164,16 @@ val_list = (
     + ["top_maxes", "top_means", "ndcgs", "rhos", "if_truemaxs"]
     + ftmlde_list
     + ft_de_delta_list
+    + delta_allft_mlde_list
     + delta_bestft_mlde_list
     + delta_bestft_de_list
 )
 
 DT_METRIC = {
-            "delta": {"de": "mean_all", "mlde": "top_maxes"},
-            "deltafrac": {"de":"fraction_max", "mlde": "if_truemaxs"}}
+    "delta": {"de": "mean_all", "mlde": "top_maxes"},
+    "deltafrac": {"de": "fraction_max", "mlde": "if_truemaxs"},
+}
+
 
 class CorrPerfomanceCharacter:
     """
@@ -234,8 +235,12 @@ class CorrPerfomanceCharacter:
         # now merge all
         self._merge_all_df = self._get_merge_all()
 
-        self._active_lib_list = self._merge_all_df[self._merge_all_df["percent_active"]>self._filter_active]["lib"].tolist()
-        self._actcutt_df = self._merge_all_df[self._merge_all_df["lib"].isin(self._active_lib_list)]
+        self._active_lib_list = self._merge_all_df[
+            self._merge_all_df["percent_active"] > self._filter_active
+        ]["lib"].tolist()
+        self._actcutt_df = self._merge_all_df[
+            self._merge_all_df["lib"].isin(self._active_lib_list)
+        ]
         self._actcutt_df.to_csv(f"{self._corr_subdir}/merge_all.csv", index=False)
 
         self._corr_df = self._get_corr_df()
@@ -504,7 +509,7 @@ class CorrPerfomanceCharacter:
                 for dt in DELTA_OPTS:
 
                     de_col_name = f"{de}_{DT_METRIC[dt]['de']}"
-                    
+
                     if ft_col == "":
                         merge_df[f"mlde_{de}_{dt}"] = (
                             merge_df[DT_METRIC[dt]["mlde"]] - merge_df[de_col_name]
@@ -562,20 +567,41 @@ class CorrPerfomanceCharacter:
 
             mlde_name = DT_METRIC[dt]["mlde"]
             de_name = DT_METRIC[dt]["de"]
-            
+
             # add double
-            merge_df[f"{dt}_hd2_mlde"] = merge_df[f"{mlde_name}_double"] - merge_df[mlde_name]
+            merge_df[f"{dt}_hd2_mlde"] = (
+                merge_df[f"{mlde_name}_double"] - merge_df[mlde_name]
+            )
             # merge_df["deltafrac_hd2_mlde"] = merge_df["if_truemaxs_double"] - merge_df["if_truemaxs"]
 
             # add single
-            merge_df[f"{dt}_hd1_mlde"] = merge_df[f"{mlde_name}_single"] - merge_df[mlde_name]
+            merge_df[f"{dt}_hd1_mlde"] = (
+                merge_df[f"{mlde_name}_single"] - merge_df[mlde_name]
+            )
             # merge_df["deltafrac_hd1_mlde"] = merge_df["if_truemaxs_single"] - merge_df["if_truemaxs"]
 
+            # delta_allft_mlde_list = [f"{dt}_{ft}_mlde" for dt in DELTA_OPTS for ft in zs_no_score_lis]
+            for zs in zs_no_score_list + N_MUT_SUBS:
+                merge_df[f"{dt}_{zs}_mlde"] = (
+                    merge_df[f"{mlde_name}_{zs}"] - merge_df[mlde_name]
+                )
+
             best_ft = merge_df[
-                ["".join([f"{mlde_name}_", zs.replace("_score", "")]) for zs in ZS_OPTS if zs != "ed_score"] + [f"{mlde_name}_double"]
+                [
+                    "".join([f"{mlde_name}_", zs.replace("_score", "")])
+                    for zs in ZS_OPTS
+                    if zs != "ed_score"
+                ]
+                + [f"{mlde_name}_double"]
             ].max(axis=1)
+
             best_ftcomb = merge_df[
-                ["".join([f"{mlde_name}_", zs]) for zs in zs_no_score_list if zs != "ed"] + [f"{mlde_name}_double"]
+                [
+                    "".join([f"{mlde_name}_", zs])
+                    for zs in zs_no_score_list
+                    if zs != "ed"
+                ]
+                + [f"{mlde_name}_double"]
             ].max(axis=1)
 
             for ft_des, ft_df in zip(FT_OPTS, [best_ft, best_ftcomb]):
@@ -584,7 +610,9 @@ class CorrPerfomanceCharacter:
                 merge_df[f"{dt}_{ft_des}_mlde"] = ft_df - merge_df[mlde_name]
                 # add vs de
                 for de in DE_TYPES:
-                    merge_df[f"{dt}_{ft_des}_{de}"] = ft_df - merge_df[f"{de}_{de_name}"]
+                    merge_df[f"{dt}_{ft_des}_{de}"] = (
+                        ft_df - merge_df[f"{de}_{de_name}"]
+                    )
 
         # merge_df["delta_ft_dessm"] = (
         #     np.maximum.reduce(
@@ -614,9 +642,9 @@ class CorrPerfomanceCharacter:
 
             for val in LANDSCAPE_ATTRIBUTES + zs_list + val_list:
 
-                corr_row[val] = spearmanr(
-                    self._actcutt_df[des], self._actcutt_df[val]
-                )[0]
+                corr_row[val] = spearmanr(self._actcutt_df[des], self._actcutt_df[val])[
+                    0
+                ]
 
             corr_df = corr_df._append(
                 corr_row,
@@ -676,9 +704,7 @@ class CorrPerfomanceCharacter:
                         )
 
                     save_bokeh_hv(
-                        plot_obj=hv.Scatter(
-                            self._actcutt_df, fac, [delta_type, "lib"]
-                        )
+                        plot_obj=hv.Scatter(self._actcutt_df, fac, [delta_type, "lib"])
                         .opts(
                             marker="o", size=10, color=dim("lib").categorize(LIB_COLORS)
                         )
