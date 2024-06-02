@@ -33,7 +33,14 @@ hv.extension("bokeh")
 hv.renderer("bokeh").theme = JSON_THEME
 
 ZS_OPTS = ["ed_score", "Triad_score", "ev_score", "esm_score", "esmif_score"]
-ZS_COMB_OPTS = ["struc-comb_score", "msanoif-comb_score", "msa-comb_score", "structnmsa-comb_score"]
+ZS_COMB_OPTS = [
+    "Triad-ev_score",
+    "Triad-esm_score",
+    "struc-comb_score",
+    "msanoif-comb_score",
+    "msa-comb_score",
+    "structnmsa-comb_score",
+]
 
 SIMPLE_ZS_OPT_LEGNED = {
     "none": "Random",
@@ -48,13 +55,15 @@ ZS_OPTS_LEGEND = {
     "none": "Random",
     "ed_score": "Edited distance",
     "Triad_score": "Triad",
-    "ev_score": "EVMutation",
+    "ev_score": "EVmutation",
     "esm_score": "ESM",
     "esmif_score": "ESM-IF",
     "struc-comb_score": "Triad + ESM-IF",
-    "msanoif-comb_score": "EVMutation + ESM",
-    "msa-comb_score": "EVMutation + ESM + ESM-IF",
-    "structnmsa-comb_score": "Triad + EVMutation + ESM + ESM-IF",
+    "Triad-ev_score": "Triad + EVmutation",
+    "Triad-esm_score": "Triad + ESM",
+    "msanoif-comb_score": "EVmutation + ESM",
+    "msa-comb_score": "EVmutation + ESM + ESM-IF",
+    "structnmsa-comb_score": "Triad + EVmutation + ESM + ESM-IF",
 }
 
 
@@ -124,25 +133,42 @@ class ZS_Analysis(LibData):
         Get the ZS dataframe
         """
         df = pd.merge(
-            pd.merge(pd.merge(self.df_no_stop, self.ev_esm_df, on="muts"), self.esmif_df, on="muts"),
+            pd.merge(
+                pd.merge(self.df_no_stop, self.ev_esm_df, on="muts"),
+                self.esmif_df,
+                on="muts",
+            ),
             self.triad_df,
             on="AAs",
         )
 
         # some easy zs comb
+
+        df["Triad-ev_score"] = -1 * (df["Triad_rank"] + df["ev_rank"])
+        df["Triad-esm_score"] = -1 * (df["Triad_rank"] + df["esm_rank"])
+
         df["struc-comb_score"] = -1 * (df["Triad_rank"] + df["esmif_rank"])
         df["msa-comb_score"] = -1 * (df["ev_rank"] + df["esm_rank"] + df["esmif_rank"])
         df["msanoif-comb_score"] = -1 * (df["ev_rank"] + df["esm_rank"])
-        df["structnmsa-comb_score"] = -1 * (df["Triad_rank"] + df["ev_rank"] + df["esm_rank"] + df["esmif_rank"])
+        df["structnmsa-comb_score"] = -1 * (
+            df["Triad_rank"] + df["ev_rank"] + df["esm_rank"] + df["esmif_rank"]
+        )
 
-        for comb_opt in ["struc-comb", "msa-comb", "msanoif-comb", "structnmsa-comb"]:
+        for comb_opt in [
+            "Triad-ev",
+            "Triad-esm",
+            "struc-comb",
+            "msa-comb",
+            "msanoif-comb",
+            "structnmsa-comb",
+        ]:
             df[f"{comb_opt}_rank"] = df[f"{comb_opt}_score"].rank(ascending=False)
 
         if self._n_mut_cutoff > 0:
             return df[df["n_mut"] <= self._n_mut_cutoff].copy()
         else:
             return df.copy()
-    
+
     def _plot_roc(self) -> hv.Overlay:
 
         """
@@ -157,7 +183,7 @@ class ZS_Analysis(LibData):
 
         roc_plots = []
 
-        for zs in (ZS_OPTS + ZS_COMB_OPTS):
+        for zs in ZS_OPTS + ZS_COMB_OPTS:
 
             print(f"number of nan in {self.lib_name} {zs}: {np.sum(np.isnan(df[zs]))}")
 
@@ -165,7 +191,6 @@ class ZS_Analysis(LibData):
                 line_style = "solid"
             else:
                 line_style = "dashed"
-                
 
             df = df.dropna(subset=[zs])
             y_true_active = df["active"].values
@@ -241,7 +266,7 @@ class ZS_Analysis(LibData):
 
         zs_fit_plot_dict = {}
 
-        for zs in (ZS_OPTS + ZS_COMB_OPTS):
+        for zs in ZS_OPTS + ZS_COMB_OPTS:
 
             zs_title = f"{self.lib_name} {ZS_OPTS_LEGEND[zs]} vs fitness"
 
@@ -379,7 +404,7 @@ class ZS_Analysis(LibData):
 
         if "n_mut" in df.columns:
             drop_cols.append("n_mut")
-        
+
         return df.drop(columns=drop_cols).copy()
 
     @property
@@ -406,7 +431,7 @@ class ZS_Analysis(LibData):
 
     @property
     def esmif_path(self) -> str:
-            
+
         """
         Returns the path to the esm inverse folding scores
 
@@ -433,7 +458,6 @@ class ZS_Analysis(LibData):
 
         # Rename columns
         df.columns = ["muts", "esmif_score"]
-
 
         # Add rank column for each score
         df["esmif_rank"] = df["esmif_score"].rank(ascending=False)
