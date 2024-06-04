@@ -30,7 +30,7 @@ if __name__ == "__main__":
     # )
 
     ZSSSumVis(
-        input_csv="results/zs_sum_2/none/zs_stat_scale2max.csv",
+        input_csv="results/zs_sum_2/active/zs_stat_scale2max.csv",
         output_folder="results/summary/ZS_2"
     )
 

@@ -32,6 +32,8 @@ TrpB_names = deepcopy([*["TrpB3" + string for string in [chr(ord("A") + i) for i
 
 LIB_NAMES = deepcopy(["DHFR", *ParD_names, "GB1", *TrpB_names])
 
+LIB_TYPES = ["Binding", "Enzymatic activity"]
+
 # Dictionary with positions for mutation, parent codons, and parent amino acids
 LIB_INFO_DICT = deepcopy({
     "DHFR": {
