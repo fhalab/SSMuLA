@@ -4,7 +4,7 @@ A script for processing zs data
 """
 
 import warnings
-
+from copy import deepcopy
 import pandas as pd
 
 from Bio import SeqIO
@@ -458,4 +458,24 @@ EV_META = {
 
 }
 
-# 
+
+def get_msa_dict():
+    msa_dict = {}
+
+    for l, v in EV_META.items():
+        if l != "TrpB":
+            if "chosen" in v.keys():
+                msa_dict[l] = v["chosen"]["sequences"]
+            else:
+                msa_dict[l] = v["recommended"]["sequences"]
+        else:
+            ls = [l+ "3"+ app for app in [chr(i) for i in range(ord('A'), ord('I')+1)]]+ ["TrpB4"]
+            for t in ls:
+                if "chosen" in v.keys():
+                    msa_dict[t] = v["chosen"]["sequences"]
+                else:
+                    msa_dict[t] = v["recommended"]["sequences"]
+
+    return msa_dict
+
+MSA_DICT = deepcopy(get_msa_dict())
