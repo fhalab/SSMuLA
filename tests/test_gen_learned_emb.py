@@ -23,6 +23,20 @@ if __name__ == "__main__":
     )
     sys.stdout = f
 
-    gen_all_learned_emb()
+    gen_all_learned_emb(
+        input_folder = "results/zs_comb_2/none/scale2max/all",
+        all_libs = False,
+        lib_list = ["ParD2", "ParD3"],
+    )
 
     f.close()
+
+    """
+    input_folder: str = "results/zs_comb/none/scale2max",
+    encoder_name: str = DEFAULT_ESM,
+    batch_size: int = 128,
+    regen: bool = False,
+    emb_folder: str = "learned_emb",
+    all_libs: bool = True,
+    lib_list: list[str] = [],
+    """

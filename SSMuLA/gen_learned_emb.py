@@ -565,6 +565,8 @@ def gen_all_learned_emb(
     batch_size: int = 128,
     regen: bool = False,
     emb_folder: str = "learned_emb",
+    all_libs: bool = True,
+    lib_list: list[str] = [],
 ):
     """Generate all learned embeddings"""
 
@@ -574,7 +576,14 @@ def gen_all_learned_emb(
             os.path.join(emb_folder, emb_combo_dict["combo_folder"])
         )
 
-        for input_csv in sorted(glob(f"{input_folder}/*.csv")):
+        if all_libs or len(lib_list) == 0:
+            lib_csv_list = sorted(glob(f"{os.path.normpath(input_folder)}/*.csv"))
+        else:
+            lib_csv_list = sorted(
+                [f"{os.path.normpath(input_folder)}/{lib}.csv" for lib in lib_list]
+            )
+
+        for input_csv in lib_csv_list:
             print(f"Generating learned embeddings for {input_csv} ...")
 
             GenLearnedEmb(
