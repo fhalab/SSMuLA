@@ -1,0 +1,90 @@
+# For the general environment:
+# Install or update using
+# conda env update --file SSMuLA_2.yml --prune
+
+name: SSMuLA_2
+channels:
+  - pytorch
+  - pyg
+  - pytorch3d
+  - conda-forge
+  - salilab
+  - pyviz
+  - defaults
+  - anaconda
+dependencies:
+  - python=3.10
+  - biopandas
+  - biopython
+  - bokeh
+  - brokenaxes
+  - cairosvg
+  - colorcet
+  - cudatoolkit=11.8
+  - dask                    # for faster large df handling
+  - datashader
+  - dssp                    # optional for graphein, required for computing secondary structural features
+  - firefox
+  - flake8
+  - geckodriver
+  - hdf5
+  - holoviews
+  - hvplot
+  - ipykernel
+  - ipympl
+  - ipywidgets
+  - jinja2
+  - jupyterlab
+  - jupyter_bokeh
+  - matplotlib
+  - multipledispatch        # required by graphein
+  - mypy
+  - networkx
+  - nodejs
+  - numba
+  - numpy
+  - openpyxl
+  - pandas
+  - panel
+  - param
+  - pillow
+  - pip
+  - plotly                  # required by graphein
+  - pydantic                # required by graphein
+  - pyreadr                 # for reading R data files
+  - psutil
+  - pydantic                # required by graphein
+  - pyg>=2.0.3
+  - pytables
+  - python-wget             # required by graphein
+  - pytorch=2.2.0           # for h100
+  - pyviz_comms
+  - pyyaml
+  - requests
+  - rpy2                    # for reading R data files
+  - scikit-learn            # might not be evcouplings compatible 
+  - scipy
+  - seaborn
+  - selenium
+  - tensorflow
+  - tqdm
+  - versioneer
+  - xarray                  # required by graphein
+
+  - pip:
+    - bioservices
+    - biovec
+    - blackcellmagic
+    - fair-esm
+    - graphein
+    - iqplot==0.3.1
+    - ninetysix             # Helps data processing and visualization
+    - ogb
+    - ordered-set
+    - outdated
+    - propy3
+    - pyfasta
+    - pysam
+    - sequence-models
+    # - evcouplings==0.1.1 need to check if it is compatible with scikit-learn
+prefix: /disk2/fli/setup/miniconda3/
