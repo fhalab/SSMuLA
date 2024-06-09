@@ -198,7 +198,9 @@ class MLDEParser:
     @property
     def npy_item(self) -> dict:
         """Return the npy item"""
-        return np.load(self._mlde_npy_path, allow_pickle=True).item()
+        # Use context manager to open and load the file
+        with open(self._mlde_npy_path, 'rb') as f:
+            return np.load(f, allow_pickle=True).item()
 
     @property
     def npy_item_keys(self) -> list[str]:
@@ -285,7 +287,14 @@ def get_all_metric_df(mlde_results_dir: str = "results/mlde/saved") -> pd.DataFr
     mlde_npy_paths = sorted(glob(f"{mlde_results_dir}/**/*.npy", recursive=True))
     # one-hot needs redo
     mlde_parsers = [MLDEParser(mlde_npy_path) for mlde_npy_path in tqdm(mlde_npy_paths)]
-    return pd.concat([mlde_parser.metric_df for mlde_parser in mlde_parsers])
+
+    df_list = []
+
+    for mlde_parser in mlde_parsers:
+        df_list.append(mlde_parser.metric_df)
+        del mlde_parser
+
+    return pd.concat(df_list)
 
 
 class MLDESum:

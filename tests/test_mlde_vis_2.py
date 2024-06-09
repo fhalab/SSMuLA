@@ -39,12 +39,12 @@ if __name__ == "__main__":
     ) -> None:
     """
 
-    MLDESum(
-        mlde_results_dir = "results/mlde/saved",
-        mlde_vis_dir = "results/mlde/vis_5",
-        all_encoding = True,
-        # encoding_lists = ["one-hot"],
-    )
+    # MLDESum(
+    #     mlde_results_dir = "results/mlde/saved",
+    #     mlde_vis_dir = "results/mlde/vis_5",
+    #     all_encoding = True,
+    #     # encoding_lists = ["one-hot"],
+    # )
 
     MLDESum(
         mlde_results_dir = "results/mlde_hm2zs/saved",
@@ -52,12 +52,23 @@ if __name__ == "__main__":
         all_encoding = True,
         # encoding_lists = ["one-hot"],
     )
-
-    comb_mlde_dfs(
-        mlde_csv = "results/mlde/vis_5/all_df.csv",
-        mlde_csv2 = "results/mlde_hm2zs/vis/all_df.csv", 
-        save_path = "results/mlde/all_df_comb.csv",
-        onehotonly = True
+    MLDESum(
+        mlde_results_dir = "results/mlde_emb/saved",
+        mlde_vis_dir = "results/mlde_emb/vis",
+        all_encoding = True,
+        # encoding_lists = ["one-hot"],
     )
+    MLDESum(
+        mlde_results_dir = "results/mlde_ft/saved",
+        mlde_vis_dir = "results/mlde_ft/vis",
+        all_encoding = True,
+        # encoding_lists = ["one-hot"],
+    )
+    # comb_mlde_dfs(
+    #     mlde_csv = "results/mlde/vis_5/all_df.csv",
+    #     mlde_csv2 = "results/mlde_hm2zs/vis/all_df.csv", 
+    #     save_path = "results/mlde/all_df_comb.csv",
+    #     onehotonly = True
+    # )
 
     f.close()
