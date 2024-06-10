@@ -31,14 +31,13 @@ if __name__ == "__main__":
         n_samples=[96, 384],
         n_replicate=50,
         n_job=256,
-        ft_lib_fracs=[0.03125],
+        ft_lib_fracs=[0.015625],
         all_libs=True,
         ft_first=True,
         zs_folder=zs_folder,
         mlde_folder=mlde_folder,
     )
 
-
     run_all_mlde_parallelized(
         encodings=["one-hot"],
         n_mut_cutoffs=[2],
@@ -46,21 +45,7 @@ if __name__ == "__main__":
         n_samples=[96, 384],
         n_replicate=50,
         n_job=256,
-        ft_lib_fracs=[0.0625],
-        all_libs=True,
-        ft_first=False,
-        zs_folder=zs_folder,
-        mlde_folder=mlde_folder,
-    )
-
-    run_all_mlde_parallelized(
-        encodings=["one-hot"],
-        n_mut_cutoffs=[2],
-        zs_predictors=["none", "ev", "Triad", "esm", "esmif"],
-        n_samples=[96, 384],
-        n_replicate=50,
-        n_job=256,
-        ft_lib_fracs=[0.03125],
+        ft_lib_fracs=[0.015625],
         all_libs=True,
         ft_first=False,
         zs_folder=zs_folder,
