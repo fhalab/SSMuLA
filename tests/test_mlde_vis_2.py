@@ -46,21 +46,27 @@ if __name__ == "__main__":
     #     # encoding_lists = ["one-hot"],
     # )
 
+    # MLDESum(
+    #     mlde_results_dir = "results/mlde_hm2zs/saved",
+    #     mlde_vis_dir = "results/mlde_hm2zs/vis",
+    #     all_encoding = True,
+    #     # encoding_lists = ["one-hot"],
+    # )
+    # MLDESum(
+    #     mlde_results_dir = "results/mlde_emb/saved",
+    #     mlde_vis_dir = "results/mlde_emb/vis",
+    #     all_encoding = True,
+    #     # encoding_lists = ["one-hot"],
+    # )
+    # MLDESum(
+    #     mlde_results_dir = "results/mlde_ft/saved",
+    #     mlde_vis_dir = "results/mlde_ft/vis",
+    #     all_encoding = True,
+    #     # encoding_lists = ["one-hot"],
+    # )
     MLDESum(
-        mlde_results_dir = "results/mlde_hm2zs/saved",
-        mlde_vis_dir = "results/mlde_hm2zs/vis",
-        all_encoding = True,
-        # encoding_lists = ["one-hot"],
-    )
-    MLDESum(
-        mlde_results_dir = "results/mlde_emb/saved",
-        mlde_vis_dir = "results/mlde_emb/vis",
-        all_encoding = True,
-        # encoding_lists = ["one-hot"],
-    )
-    MLDESum(
-        mlde_results_dir = "results/mlde_ft/saved",
-        mlde_vis_dir = "results/mlde_ft/vis",
+        mlde_results_dir = "results/mlde_ft2/saved",
+        mlde_vis_dir = "results/mlde_ft2/vis",
         all_encoding = True,
         # encoding_lists = ["one-hot"],
     )
