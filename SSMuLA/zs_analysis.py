@@ -44,7 +44,7 @@ ZS_COMB_OPTS = [
 
 SIMPLE_ZS_OPT_LEGNED = {
     "none": "Random",
-    "ed_score": "Edited-distance",
+    "ed_score": "Edit distance",
     "Triad_score": "Triad",
     "ev_score": "EVmutation",
     "esm_score": "ESM",
@@ -53,7 +53,7 @@ SIMPLE_ZS_OPT_LEGNED = {
 
 ZS_OPTS_LEGEND = {
     "none": "Random",
-    "ed_score": "Edited distance",
+    "ed_score": "Edit distance",
     "Triad_score": "Triad",
     "ev_score": "EVmutation",
     "esm_score": "ESM",
