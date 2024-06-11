@@ -64,9 +64,17 @@ if __name__ == "__main__":
     #     all_encoding = True,
     #     # encoding_lists = ["one-hot"],
     # )
+
     MLDESum(
         mlde_results_dir = "results/mlde_ft2/saved",
         mlde_vis_dir = "results/mlde_ft2/vis",
+        all_encoding = True,
+        # encoding_lists = ["one-hot"],
+    )
+
+    MLDESum(
+        mlde_results_dir = "results/mlde_ft3/saved",
+        mlde_vis_dir = "results/mlde_ft3/vis",
         all_encoding = True,
         # encoding_lists = ["one-hot"],
     )

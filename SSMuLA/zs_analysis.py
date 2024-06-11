@@ -40,6 +40,7 @@ ZS_COMB_OPTS = [
     "msanoif-comb_score",
     "msa-comb_score",
     "structnmsa-comb_score",
+    "two-best_score"
 ]
 
 SIMPLE_ZS_OPT_LEGNED = {
@@ -62,6 +63,7 @@ ZS_OPTS_LEGEND = {
     "Triad-ev_score": "Triad + EVmutation",
     "Triad-esm_score": "Triad + ESM",
     "msanoif-comb_score": "EVmutation + ESM",
+    "two-best_score": "EVmutation + ESM-IF",
     "msa-comb_score": "EVmutation + ESM + ESM-IF",
     "structnmsa-comb_score": "Triad + EVmutation + ESM + ESM-IF",
 }
@@ -154,6 +156,8 @@ class ZS_Analysis(LibData):
             df["Triad_rank"] + df["ev_rank"] + df["esm_rank"] + df["esmif_rank"]
         )
 
+        df["two-best_score"] = -1 * (df["ev_rank"] + df["esmif_rank"])
+
         for comb_opt in [
             "Triad-ev",
             "Triad-esm",
@@ -161,6 +165,7 @@ class ZS_Analysis(LibData):
             "msa-comb",
             "msanoif-comb",
             "structnmsa-comb",
+            "two-best"
         ]:
             df[f"{comb_opt}_rank"] = df[f"{comb_opt}_score"].rank(ascending=False)
 

@@ -42,11 +42,11 @@ if __name__ == "__main__":
 
     run_zs_analysis(
         scale_types=["max"], 
-        filter_min_by="active", 
+        filter_min_by="none", 
         ev_esm_folder = "ev_esm2",
-        zs_comb_dir = "results/zs_comb_2",
-        zs_vis_dir = "results/zs_vis_2",
-        zs_sum_dir = "results/zs_sum_2",
+        zs_comb_dir = "results/zs_comb_3",
+        zs_vis_dir = "results/zs_vis_3",
+        zs_sum_dir = "results/zs_sum_3",
     )
     f.close()
 
