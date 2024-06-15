@@ -65,19 +65,30 @@ if __name__ == "__main__":
     #     # encoding_lists = ["one-hot"],
     # )
 
-    MLDESum(
-        mlde_results_dir = "results/mlde_ft2/saved",
-        mlde_vis_dir = "results/mlde_ft2/vis",
-        all_encoding = True,
-        # encoding_lists = ["one-hot"],
-    )
+    # MLDESum(
+    #     mlde_results_dir = "results/mlde_ft2/saved",
+    #     mlde_vis_dir = "results/mlde_ft2/vis",
+    #     all_encoding = True,
+    #     # encoding_lists = ["one-hot"],
+    # )
+
+    # MLDESum(
+    #     mlde_results_dir = "results/mlde_ft3/saved",
+    #     mlde_vis_dir = "results/mlde_ft3/vis",
+    #     all_encoding = True,
+    #     # encoding_lists = ["one-hot"],
+    # # )
+
+    # zs_folder = "results/zs_comb_3"
+    # mlde_folder = "results/mlde_twobest"
 
     MLDESum(
-        mlde_results_dir = "results/mlde_ft3/saved",
+        mlde_results_dir = "results/mlde_twobest/saved",
         mlde_vis_dir = "results/mlde_ft3/vis",
         all_encoding = True,
         # encoding_lists = ["one-hot"],
     )
+
     # comb_mlde_dfs(
     #     mlde_csv = "results/mlde/vis_5/all_df.csv",
     #     mlde_csv2 = "results/mlde_hm2zs/vis/all_df.csv", 
