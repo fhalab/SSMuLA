@@ -96,6 +96,10 @@ class MLDEParser:
         for attr, val in self.npy_item.items():
             setattr(self, attr, val)
 
+        if not hasattr(self, "y_preds"):
+            print(f"no y_preds found for {self._mlde_npy_path}")
+            pass
+        
         # TODO CLEAN UP WITH NEW MLDE
         if not hasattr(self, "maxes_all"):
             setattr(self, "maxes_all", np.max(self.y_preds, axis=-1))
@@ -198,9 +202,13 @@ class MLDEParser:
     @property
     def npy_item(self) -> dict:
         """Return the npy item"""
-        # Use context manager to open and load the file
-        with open(self._mlde_npy_path, 'rb') as f:
-            return np.load(f, allow_pickle=True).item()
+        try: 
+            # Use context manager to open and load the file
+            with open(self._mlde_npy_path, 'rb') as f:
+                return np.load(f, allow_pickle=True).item()
+        except Exception as e:
+            print(f"Error loading {self._mlde_npy_path}: {e}")
+            return {}
 
     @property
     def npy_item_keys(self) -> list[str]:
@@ -286,7 +294,14 @@ def get_all_metric_df(mlde_results_dir: str = "results/mlde/saved") -> pd.DataFr
     """Return the metric df for all mlde results"""
     mlde_npy_paths = sorted(glob(f"{mlde_results_dir}/**/*.npy", recursive=True))
     # one-hot needs redo
-    mlde_parsers = [MLDEParser(mlde_npy_path) for mlde_npy_path in tqdm(mlde_npy_paths)]
+    mlde_parsers = []
+    for mlde_npy_path in tqdm(mlde_npy_paths):
+        try:
+            mlde_parsers.append(MLDEParser(mlde_npy_path))
+        except Exception as e:
+            print(f"Error parsing {mlde_npy_path}: {e}")
+    
+    # mlde_parsers = [MLDEParser(mlde_npy_path) for mlde_npy_path in tqdm(mlde_npy_paths)]
 
     df_list = []
 
