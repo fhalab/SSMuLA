@@ -131,6 +131,7 @@ ZS_COLOR_MAP = {
     "msanoif-comb_score": PRESENTATION_PALETTE_SATURATE["light_green"],
     "msa-comb_score": PRESENTATION_PALETTE_SATURATE["light_yellow"],
     "structnmsa-comb_score": PRESENTATION_PALETTE_SATURATE["light_brown"],
+    "two-best-comb_score": PRESENTATION_PALETTE_SATURATE["light_gray"],
 }
 
 

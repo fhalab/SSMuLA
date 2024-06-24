@@ -52,12 +52,12 @@ if __name__ == "__main__":
     #     all_encoding = True,
     #     # encoding_lists = ["one-hot"],
     # )
-    MLDESum(
-        mlde_results_dir = "results/mlde_emb/saved",
-        mlde_vis_dir = "results/mlde_emb/vis",
-        all_encoding = True,
-        # encoding_lists = ["one-hot"],
-    )
+    # MLDESum(
+    #     mlde_results_dir = "results/mlde_emb/saved",
+    #     mlde_vis_dir = "results/mlde_emb/vis",
+    #     all_encoding = True,
+    #     # encoding_lists = ["one-hot"],
+    # )
     # MLDESum(
     #     mlde_results_dir = "results/mlde_ft/saved",
     #     mlde_vis_dir = "results/mlde_ft/vis",
@@ -82,12 +82,12 @@ if __name__ == "__main__":
     # zs_folder = "results/zs_comb_3"
     # mlde_folder = "results/mlde_twobest"
 
-    # MLDESum(
-    #     mlde_results_dir = "results/mlde_twobest/saved",
-    #     mlde_vis_dir = "results/mlde_ft3/vis",
-    #     all_encoding = True,
-    #     # encoding_lists = ["one-hot"],
-    # )
+    MLDESum(
+        mlde_results_dir = "results/mlde_twobest/saved",
+        mlde_vis_dir = "results/mlde_twobest/vis",
+        all_encoding = True,
+        # encoding_lists = ["one-hot"],
+    )
 
     # comb_mlde_dfs(
     #     mlde_csv = "results/mlde/vis_5/all_df.csv",
