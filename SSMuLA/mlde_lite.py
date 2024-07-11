@@ -297,7 +297,7 @@ def build_linear_model(model_kwargs):
         if key in model_kwargs:
             kwargs[key] = model_kwargs[key]
 
-    model = linear_model.Ridge(**model_kwargs)
+    model = linear_model.Ridge(**kwargs)
     return model
 
 
@@ -312,7 +312,7 @@ def build_boosting_model(model_kwargs):
         if key in model_kwargs:
             kwargs[key] = model_kwargs[key]
 
-    model = xgb.XGBRegressor(**model_kwargs)
+    model = xgb.XGBRegressor(**kwargs)
     return model
 
 
@@ -473,8 +473,12 @@ class MLDESim(MLDEDataset):
             "".join(["n"] * self.n_site),
         )
 
+
         self.ndcgs = np.zeros((self._n_solution, self._n_replicate))
         self.rhos = np.zeros(self.ndcgs.shape)
+
+        self.trainval_ndcgs = np.zeros(self.ndcgs.shape)
+        self.trainval_rhos = np.zeros(self.ndcgs.shape)
 
         # for all
         self.all_maxes = np.zeros(self.ndcgs.shape)
@@ -542,6 +546,9 @@ class MLDESim(MLDEDataset):
                         self.labelled[k, j] = len(mask)
                         combos_train = []
 
+                        trainval_ndcg = 0
+                        trainval_rho = 0
+
                         if self._save_model:
                             save_model_dir = checkNgen_folder(
                                 os.path.join(self._save_path, str(k), str(j))
@@ -565,6 +572,13 @@ class MLDESim(MLDEDataset):
                             y_preds, clf = self.train_single(
                                 X_train, y_train, X_validation, y_validation
                             )
+
+                            X_trainval = np.concatenate([X_train, X_validation])
+                            y_trainval = np.concatenate([y_train, y_validation])
+
+                            y_trainval_pred = clf.predict(X_trainval)
+                            trainval_ndcg += ndcg(y_trainval, y_trainval_pred)
+                            trainval_rho += spearmanr(y_trainval, y_trainval_pred)[0]
 
                             if self._save_model:
                                 filename = "split" + str(i) + ".model"
@@ -593,6 +607,9 @@ class MLDESim(MLDEDataset):
                         self.ndcgs[k, j] = ndcg(self.y_train_all, y_preds)
                         self.rhos[k, j] = spearmanr(self.y_train_all, y_preds)[0]
 
+                        self.trainval_ndcgs[k, j] = trainval_ndcg / self._n_split
+                        self.trainval_rhos[k, j] = trainval_rho / self._n_split
+
                         self.y_preds[k, j, :] = y_preds
                         self.y_trues[k, j, :] = self.y_train_all
 
@@ -606,6 +623,8 @@ class MLDESim(MLDEDataset):
             "all_means": self.all_means,
             "ndcgs": self.ndcgs,
             "rhos": self.rhos,
+            "trainval_ndcgs": self.trainval_ndcgs,
+            "trainval_rhos": self.trainval_rhos,
             "if_truemaxs": self.if_truemaxs,
             "truemax_inds": self.truemax_inds,
             "top_maxes": self.top_maxes,
@@ -774,6 +793,8 @@ def run_mlde_lite(
         )
     )
     all_rhos = np.zeros(all_ndcgs.shape)
+    all_trainval_ndcgs = np.zeros(all_ndcgs.shape)
+    all_trainval_rhos = np.zeros(all_ndcgs.shape)
     all_all_maxes = np.zeros(all_ndcgs.shape)
     all_all_means = np.zeros(all_ndcgs.shape)
     all_top_maxes = np.zeros(all_ndcgs.shape)
@@ -856,6 +877,13 @@ def run_mlde_lite(
                 all_rhos[i, j, k, :, :] = pad_to_shape(
                     mlde_sim_dict["rhos"], (len(ft_libs), n_replicate)
                 )
+
+                all_trainval_ndcgs[i, j, k, :, :] = pad_to_shape(
+                    mlde_sim_dict["trainval_ndcgs"], (len(ft_libs), n_replicate)
+                )
+                all_trainval_rhos[i, j, k, :, :] = pad_to_shape(
+                    mlde_sim_dict["trainval_rhos"], (len(ft_libs), n_replicate)
+                )
                 
                 all_if_truemaxs[i, j, k, :, :] = pad_to_shape(
                     mlde_sim_dict["if_truemaxs"], (len(ft_libs), n_replicate)
@@ -926,6 +954,8 @@ def run_mlde_lite(
         mlde_results["all_means"],
         mlde_results["ndcgs"],
         mlde_results["rhos"],
+        mlde_results["trainval_ndcgs"],
+        mlde_results["trainval_rhos"],
         mlde_results["if_truemaxs"],
         mlde_results["truemax_inds"],
         mlde_results["top_maxes"],
@@ -941,6 +971,8 @@ def run_mlde_lite(
         all_all_means,
         all_ndcgs,
         all_rhos,
+        all_trainval_ndcgs,
+        all_trainval_rhos,
         all_if_truemaxs,
         all_truemax_inds,
         all_top_maxes,
