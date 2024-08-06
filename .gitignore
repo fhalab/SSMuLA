@@ -3,6 +3,10 @@ data
 data/
 data/*
 
+coves_data
+coves_data/
+coves_data/*
+
 add_data
 add_data/
 add_data/*

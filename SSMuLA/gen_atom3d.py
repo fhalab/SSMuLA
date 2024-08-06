@@ -41,7 +41,7 @@ def gen_all_lmdb(pdb_pattern: str = "data/*/*.pdb", lmdb_dir: str = "lmdb"):
 
         protein_name = get_file_name(pdb_path)
 
-        lmdb_path = os.path.join(lmdb_dir, protein_name)
+        lmdb_path = os.path.join(lmdb_dir, protein_name, "lmdb")
         gen_lmdb_dataset(pdb_path, lmdb_path)
 
 

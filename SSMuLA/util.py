@@ -10,6 +10,8 @@ import pandas as pd
 
 from sklearn.metrics import ndcg_score
 
+from Bio import SeqIO
+
 
 def checkNgen_folder(folder_path: str) -> str:
 
@@ -153,3 +155,18 @@ def csv2fasta(csv: str) -> None:
     with open(fasta, "w") as f:
         for mut, seq in zip(df["muts"].values, df["seq"].values):
             f.write(f">{mut}\n{seq}\n")
+
+
+def read_fasta(fasta_filename):
+    """
+    Reads a FASTA file using Biopython and returns the sequence of the first record.
+
+    Args:
+    - fasta_filename (str): The path to the FASTA file.
+
+    Returns:
+    - str: The sequence from the first record in the FASTA file.
+    """
+    with open(fasta_filename, 'r') as file:
+        for record in SeqIO.parse(file, "fasta"):
+            return str(record.seq)
