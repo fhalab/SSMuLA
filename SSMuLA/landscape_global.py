@@ -17,6 +17,8 @@ ACTIVE_THRESH_DICT ={
     "DHFR": -0.5,
     "ParD": 0,
     "GB1" : 0.01,
+    "ParB-parS": 0.2,
+    "Noc-NBS": 0.2,
     "TrpB": None
 }
 
@@ -59,6 +61,22 @@ LIB_INFO_DICT = deepcopy({
         "codons": {1: "", 2: "", 3: "", 4: ""}, 
         "AAs": {1: "V", 2: "D", 3: "G", 4: "V"},
         "type": "Binding"
+        },
+    "ParB-parS":{
+        "positions": {1: 173, 2: 179, 3: 184, 4: 201},
+        "codons": {1: "", 2: "", 3: "", 4: ""},
+        "AAs": {1: "R", 2: "T", 3: "A", 4: "G"},
+        "type": "Binding"
+         # 173, 179, 184, and 201
+         # ParB (RTAG), Noc (QKKR)
+        },  
+    "Noc-NBS":{
+        "positions": {1: 173, 2: 179, 3: 184, 4: 201},
+        "codons": {1: "", 2: "", 3: "", 4: ""},
+        "AAs": {1: "Q", 2: "K", 3: "K", 4: "R"},
+        "type": "Binding"
+         # 173, 179, 184, and 201
+         # ParB (RTAG), Noc (QKKR)
         },    
     "TrpB3A": {
         "positions": {1: 104, 2: 105, 3: 106},
