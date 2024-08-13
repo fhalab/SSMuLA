@@ -762,6 +762,171 @@ class ProcessGB1(ProcessData):
         return self._s_d_vs_all_dist
 
 
+class ProcessT7(ProcessData):
+
+    """
+    Class to clean up the T7 data
+    """
+
+    def __init__(
+        self,
+        input_csv: str = "data/T7/fitness_landscape/T7.csv",
+        scale_fit: str = "max",
+    ) -> None:
+
+        """
+        Args:
+        - input_csv, str: path to the input csv file
+        - scale_fit, str: ways to scale the fitness
+        """
+
+        super().__init__(input_csv, scale_fit)
+
+        # append the active cutoffs
+        self._df_active_append, _ = append_active_cutoff(
+            self.df_aa, ["fitness"], self.active_thresh
+        )
+
+        # scale the fitness
+        self._append_mut(self._split_aa(self.df_scale_fit)).to_csv(self.output_csv, index=False)
+
+        # do plotting and safe
+        hv_dist = plot_fit_dist(
+            self.df_scale_fit["fitness"],
+            color=LIB_COLORS[self.lib_name],
+            label="T7",
+        )
+
+        # get y_range for spike height
+        y_range = (
+            hv.renderer("bokeh").instance(mode="server").get_plot(hv_dist).state.y_range
+        )
+
+        # set spike length to be 5% of the y_range
+        spike_length = (y_range.end - y_range.start) * 0.05
+
+        self._fit_dist = (
+            hv_dist
+            * hv.Spikes([self.active_thresh_scaled], label="Active").opts(
+                color="gray", line_width=1.6, spike_length=spike_length
+            )
+            * hv.Spikes([self.parent_aa_fitness_scaled], label="Parent AA").opts(
+                color="black", line_width=1.6, spike_length=spike_length
+            )
+        ).opts(
+            legend_position="top_right",
+            title=f"{self.lib_name} fitness distribution",
+            xlabel="Fitness",
+        )
+
+        # Save the plot with the legend
+        save_bokeh_hv(
+            plot_obj=self._fit_dist,
+            plot_name=f"{self.lib_name} fitness distribution",
+            plot_path=checkNgen_folder(os.path.join(self.dist_dir, "by_protein")),
+            bokehorhv="hv",
+        )
+
+    def _find_active_cutoff(self) -> float:
+
+        """
+        Find the active cutoff based on flighted_fitnesses BEFORE scaling
+
+        Returns:
+        - float: the active cutoff
+        """
+
+        # Step 1: Compute the first derivative
+        first_derivative = np.diff(sorted(self.df_aa["fitness"])[:int(len(self.df_aa) * 0.25)])
+
+        # Step 2: Compute the second derivative
+        second_derivative = np.diff(first_derivative)
+        # Set a threshold for what you consider a "significant change"
+        threshold = np.std(second_derivative) * 2  # Example threshold: two standard deviations above mean
+        significant_changes = np.where(np.abs(second_derivative) > threshold)[0] + 1  # +1 to correct index after diff
+
+        return significant_changes[0]
+
+
+    @property
+    def df_aa(self) -> pd.DataFrame:
+
+        """
+        Return the input dataframe renamed
+        
+        Original column names are:
+            Sequences, Number of Reads, Fitness Mean, Fitness Variance
+        """
+
+        return (
+            self.input_df.copy()
+            .rename(columns={"Sequences": "AAs", "Fitness Mean": "fitness"})[
+                ["AAs", "fitness"]
+            ]
+            .copy()
+        )
+
+    @property
+    def active_thresh(self) -> float:
+        """Return the active threshold"""
+        return self._find_active_cutoff()
+        
+    @property
+    def df_active_append(self) -> pd.DataFrame:
+        """Return the active appended dataframe"""
+        return self._df_active_append   
+
+    @property
+    def max_fit(self) -> float:
+        """Return the max fitness"""
+        return self.df_active_append["fitness"].max()
+
+    @property
+    def parent_aa_fitness(self) -> float:
+        """Return the parent aa fitness"""
+        return self.df_aa[self.df_aa["AAs"] == self.parent_aa]["fitness"].values[0]
+
+    @property
+    def df_scale_fit(self) -> pd.DataFrame:
+
+        """Scale fitness"""
+
+        df = self.df_active_append.copy()
+
+        if self._scale_fit == "max":
+            df["fitness"] = df["fitness"] / self.max_fit
+        elif self._scale_fit == "parent":
+            df["fitness"] = df["fitness"] / self.parent_aa_fitness
+        else:
+            raise ValueError("The scale_fit should be parent or max")
+
+        return df
+
+    @property
+    def scaled_fitness(self) -> pd.Series:
+        """Return the scaled fitness"""
+        return self.df_scale_fit["fitness"]
+
+    @property
+    def parent_aa_fitness_scaled(self) -> float:
+        """Return the parent aa fitness"""
+        return self.df_scale_fit[self.df_scale_fit["AAs"] == self.parent_aa][
+            "fitness"
+        ].values[0]
+
+    @property
+    def active_thresh_scaled(self) -> float:
+
+        """Return the active threshold"""
+        
+        if self._scale_fit == "max":
+            return self.active_thresh / self.max_fit
+        elif self._scale_fit == "parent":
+            return self.active_thresh / self.parent_aa_fitness
+        else:
+            return self.active_thresh
+
+
 class ProcessTrpB(ProcessData):
 
     """

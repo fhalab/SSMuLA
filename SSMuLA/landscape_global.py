@@ -17,9 +17,11 @@ ACTIVE_THRESH_DICT ={
     "DHFR": -0.5,
     "ParD": 0,
     "GB1" : 0.01,
-    "ParB-parS": 0.2,
-    "Noc-NBS": 0.2,
-    "TrpB": None
+    "T7": None, # will be based on distribution
+    "TEV": None, # will be based on distribution
+    # "ParB-parS": 0.2,
+    # "Noc-NBS": 0.2,
+    "TrpB": None # will be based on stop codon containing sequences
 }
 
 COMBO_COLS = ["AAs", "fitness", "active"]
@@ -31,8 +33,6 @@ ParD_names = ["ParD2", "ParD3"]
 TrpB_PDB_START_AA_IND = 2
 
 TrpB_names = deepcopy([*["TrpB3" + string for string in [chr(ord("A") + i) for i in range(9)]], "TrpB4"])
-
-LIB_NAMES = deepcopy(["DHFR", *ParD_names, "GB1", *TrpB_names])
 
 LIB_TYPES = ["Binding", "Enzymatic activity"]
 
@@ -61,23 +61,19 @@ LIB_INFO_DICT = deepcopy({
         "codons": {1: "", 2: "", 3: "", 4: ""}, 
         "AAs": {1: "V", 2: "D", 3: "G", 4: "V"},
         "type": "Binding"
-        },
-    "ParB-parS":{
-        "positions": {1: 173, 2: 179, 3: 184, 4: 201},
+    },
+    "T7": {
+        "positions": {1: 748, 2: 756, 3: 758},
+        "codons": {1: "", 2: "", 3: ""},
+        "AAs": {1: "N", 2: "R", 3: "Q"},
+        "type": "Enzymatic activity"
+    },
+    "TEV": {
+        "positions": {1: 146, 2: 148, 3: 167, 4: 170},
         "codons": {1: "", 2: "", 3: "", 4: ""},
-        "AAs": {1: "R", 2: "T", 3: "A", 4: "G"},
-        "type": "Binding"
-         # 173, 179, 184, and 201
-         # ParB (RTAG), Noc (QKKR)
-        },  
-    "Noc-NBS":{
-        "positions": {1: 173, 2: 179, 3: 184, 4: 201},
-        "codons": {1: "", 2: "", 3: "", 4: ""},
-        "AAs": {1: "Q", 2: "K", 3: "K", 4: "R"},
-        "type": "Binding"
-         # 173, 179, 184, and 201
-         # ParB (RTAG), Noc (QKKR)
-        },    
+        "AAs": {1: "T", 2: "D", 3: "H", 4: "S"},
+        "type": "Enzymatic activity"
+    },
     "TrpB3A": {
         "positions": {1: 104, 2: 105, 3: 106},
         "codons": {1: "GCT", 2: "GAA", 3: "ACG"}, 
@@ -140,6 +136,29 @@ LIB_INFO_DICT = deepcopy({
     }
 })
 
+LIB_NAMES = deepcopy(list(LIB_INFO_DICT.keys()))
+
+"""
+Lib currently not included
+
+    "ParB-parS":{
+        "positions": {1: 173, 2: 179, 3: 184, 4: 201},
+        "codons": {1: "", 2: "", 3: "", 4: ""},
+        "AAs": {1: "R", 2: "T", 3: "A", 4: "G"},
+        "type": "Binding"
+         # 173, 179, 184, and 201
+         # ParB (RTAG), Noc (QKKR)
+        },  
+    "Noc-NBS":{
+        "positions": {1: 173, 2: 179, 3: 184, 4: 201},
+        "codons": {1: "", 2: "", 3: "", 4: ""},
+        "AAs": {1: "Q", 2: "K", 3: "K", 4: "R"},
+        "type": "Binding"
+         # 173, 179, 184, and 201
+         # ParB (RTAG), Noc (QKKR)
+        }, 
+
+"""
 
 LIB_POS_0_IDX = deepcopy({
     lib: {
