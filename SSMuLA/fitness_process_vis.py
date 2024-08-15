@@ -32,6 +32,7 @@ from SSMuLA.landscape_global import (
     LibData,
     ParD_names,
     lib2prot,
+    find_active_cutoff,
     append_active_cutoff,
     n_mut_cutoff_dict,
 )
@@ -778,23 +779,24 @@ class ProcessT7(ProcessData):
         Args:
         - input_csv, str: path to the input csv file
         - scale_fit, str: ways to scale the fitness
+        - protein_name, str: the name of the protein
         """
 
         super().__init__(input_csv, scale_fit)
 
         # append the active cutoffs
         self._df_active_append, _ = append_active_cutoff(
-            self.df_aa, ["fitness"], self.active_thresh
+            self._split_aa(self.df_aa), ["fitness"], self.active_thresh
         )
 
         # scale the fitness
-        self._append_mut(self._split_aa(self.df_scale_fit)).to_csv(self.output_csv, index=False)
+        self._append_mut(self.df_scale_fit).to_csv(self.output_csv, index=False)
 
         # do plotting and safe
         hv_dist = plot_fit_dist(
             self.df_scale_fit["fitness"],
             color=LIB_COLORS[self.lib_name],
-            label="T7",
+            label=self.lib_name,
         )
 
         # get y_range for spike height
@@ -827,27 +829,6 @@ class ProcessT7(ProcessData):
             bokehorhv="hv",
         )
 
-    def _find_active_cutoff(self) -> float:
-
-        """
-        Find the active cutoff based on flighted_fitnesses BEFORE scaling
-
-        Returns:
-        - float: the active cutoff
-        """
-
-        # Step 1: Compute the first derivative
-        first_derivative = np.diff(sorted(self.df_aa["fitness"])[:int(len(self.df_aa) * 0.25)])
-
-        # Step 2: Compute the second derivative
-        second_derivative = np.diff(first_derivative)
-        # Set a threshold for what you consider a "significant change"
-        threshold = np.std(second_derivative) * 2  # Example threshold: two standard deviations above mean
-        significant_changes = np.where(np.abs(second_derivative) > threshold)[0] + 1  # +1 to correct index after diff
-
-        return significant_changes[0]
-
-
     @property
     def df_aa(self) -> pd.DataFrame:
 
@@ -869,7 +850,7 @@ class ProcessT7(ProcessData):
     @property
     def active_thresh(self) -> float:
         """Return the active threshold"""
-        return self._find_active_cutoff()
+        return find_active_cutoff(df=self.df_aa, search_range=[0, 0.25])
         
     @property
     def df_active_append(self) -> pd.DataFrame:
@@ -926,6 +907,36 @@ class ProcessT7(ProcessData):
         else:
             return self.active_thresh
 
+
+class ProcessTEV(ProcessT7):
+
+    """
+    Class to clean up the TEV data
+    """
+
+    def __init__(
+        self,
+        input_csv: str = "data/TEV/fitness_landscape/TEV.csv",
+        scale_fit: str = "max",
+        protein_name: str = "TEV",
+    ) -> None:
+
+        """
+        Args:
+        - input_csv, str: path to the input csv file
+        - scale_fit, str: ways to scale the fitness
+        """
+
+        super().__init__(input_csv, scale_fit)
+
+    @property
+    def active_thresh(self) -> float:
+        """
+        Return the active threshold
+
+        Author defined 0.05 
+        """
+        return ACTIVE_THRESH_DICT[self.protein_name]
 
 class ProcessTrpB(ProcessData):
 
@@ -1183,8 +1194,9 @@ def process_all(
     ProcessDHFR(scale_fit=scale_fit)
     PlotParD(scale_fit=scale_fit)
     ProcessGB1(scale_fit=scale_fit)
+    ProcessT7(scale_fit=scale_fit)
+    ProcessTEV(scale_fit=scale_fit)
     PlotTrpB(scale_fit=scale_fit)
-
 
 def sum_ks(
     input_folder: str = "data", 

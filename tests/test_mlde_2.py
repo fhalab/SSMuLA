@@ -21,8 +21,50 @@ if __name__ == "__main__":
     )
     sys.stdout = f
 
-    zs_folder = "results/zs_comb_2"
-    mlde_folder = "results/mlde_emb"
+    # zs_folder = "results/zs_comb_2"
+    # mlde_folder = "results/mlde_emb"
+    mlde_folder = "results/mlde"
+
+    run_all_mlde_parallelized(
+        encodings=["one-hot"],
+        n_mut_cutoffs=[0, 2],
+        zs_predictors=["none"],
+        n_samples=[96, 384, 24, 48, 192, 288, 480, 576, 960, 1920],
+        n_replicate=50,
+        n_job=256,
+        all_libs=False,
+        ft_first=False,
+        lib_list=["T7", "TEV"],
+    )
+
+    # run_all_mlde_parallelized(
+    #     encodings=["one-hot"],
+    #     n_mut_cutoffs=[2],
+    #     zs_predictors=["none", "ev", "Triad", "esm", "esmif"],
+    #     n_samples=[96, 384],
+    #     n_replicate=50,
+    #     n_job=256,
+    #     ft_lib_fracs=[0.015625],
+    #     all_libs=True,
+    #     ft_first=False,
+    #     zs_folder=zs_folder,
+    #     mlde_folder=mlde_folder,
+    # )
+
+    # run_all_mlde_parallelized(
+    #     encodings=["one-hot"],
+    #     n_mut_cutoffs=[0],
+    #     zs_predictors=["none", "ev", "Triad", "esm", "esmif"],
+    #     n_samples=[96, 384],
+    #     n_replicate=50,
+    #     n_job=256,
+    #     ft_lib_fracs=[0.015625],
+    #     all_libs=True,
+    #     ft_first=True,
+    #     zs_folder=zs_folder,
+    #     mlde_folder=mlde_folder,
+    # )
+
 
     # run_all_mlde_parallelized(
     #     encodings=["one-hot"],

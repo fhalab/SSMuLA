@@ -7,21 +7,22 @@ from __future__ import annotations
 from copy import deepcopy
 from itertools import combinations
 
+import numpy as np
 import pandas as pd
 
 from SSMuLA.util import get_file_name
 
 DEFALT_SPLITS = ["single", "double", "multi"]
 
-ACTIVE_THRESH_DICT ={
+ACTIVE_THRESH_DICT = {
     "DHFR": -0.5,
     "ParD": 0,
-    "GB1" : 0.01,
-    "T7": None, # will be based on distribution
-    "TEV": None, # will be based on distribution
+    "GB1": 0.01,
+    "T7": None,  # will be based on distribution
+    "TEV": 0.05,
     # "ParB-parS": 0.2,
     # "Noc-NBS": 0.2,
-    "TrpB": None # will be based on stop codon containing sequences
+    "TrpB": None,  # will be based on stop codon containing sequences
 }
 
 COMBO_COLS = ["AAs", "fitness", "active"]
@@ -32,109 +33,113 @@ ParD_names = ["ParD2", "ParD3"]
 # no M included while in seq M is added to be the first amino acid
 TrpB_PDB_START_AA_IND = 2
 
-TrpB_names = deepcopy([*["TrpB3" + string for string in [chr(ord("A") + i) for i in range(9)]], "TrpB4"])
+TrpB_names = deepcopy(
+    [*["TrpB3" + string for string in [chr(ord("A") + i) for i in range(9)]], "TrpB4"]
+)
 
 LIB_TYPES = ["Binding", "Enzymatic activity"]
 
 # Dictionary with positions for mutation, parent codons, and parent amino acids
-LIB_INFO_DICT = deepcopy({
-    "DHFR": {
-        "positions": {1: 26, 2: 27, 3: 28},
-        "codons": {1: "GCC", 2: "GAT", 3: "CTC"}, 
-        "AAs": {1: "A", 2: "D", 3: "L"},
-        "type": "Enzymatic activity"
+LIB_INFO_DICT = deepcopy(
+    {
+        "DHFR": {
+            "positions": {1: 26, 2: 27, 3: 28},
+            "codons": {1: "GCC", 2: "GAT", 3: "CTC"},
+            "AAs": {1: "A", 2: "D", 3: "L"},
+            "type": "Enzymatic activity",
         },
-    "ParD2": {
-        "positions": {1: 61, 2: 64, 3: 80},
-        "codons": {1: "", 2: "", 3: ""}, 
-        "AAs": {1: "I", 2: "L", 3: "K"},
-        "type": "Binding"
-    },
-    "ParD3": {
-        "positions": {1: 61, 2: 64, 3: 80},
-        "codons": {1: "", 2: "", 3: ""}, 
-        "AAs": {1: "D", 2: "K", 3: "E"},
-        "type": "Binding"
-    },
-    "GB1": {
-        "positions": {1: 39, 2: 40, 3: 41, 4: 54},
-        "codons": {1: "", 2: "", 3: "", 4: ""}, 
-        "AAs": {1: "V", 2: "D", 3: "G", 4: "V"},
-        "type": "Binding"
-    },
-    "T7": {
-        "positions": {1: 748, 2: 756, 3: 758},
-        "codons": {1: "", 2: "", 3: ""},
-        "AAs": {1: "N", 2: "R", 3: "Q"},
-        "type": "Enzymatic activity"
-    },
-    "TEV": {
-        "positions": {1: 146, 2: 148, 3: 167, 4: 170},
-        "codons": {1: "", 2: "", 3: "", 4: ""},
-        "AAs": {1: "T", 2: "D", 3: "H", 4: "S"},
-        "type": "Enzymatic activity"
-    },
-    "TrpB3A": {
-        "positions": {1: 104, 2: 105, 3: 106},
-        "codons": {1: "GCT", 2: "GAA", 3: "ACG"}, 
-        "AAs": {1: "A", 2: "E", 3: "T"},
-        "type": "Enzymatic activity"
+        "ParD2": {
+            "positions": {1: 61, 2: 64, 3: 80},
+            "codons": {1: "", 2: "", 3: ""},
+            "AAs": {1: "I", 2: "L", 3: "K"},
+            "type": "Binding",
         },
-    "TrpB3B": {
-        "positions": {1: 105, 2: 106, 3: 107},
-        "codons": {1: "GAA", 2: "ACG", 3: "GGT"}, 
-        "AAs": {1: "E", 2: "T", 3: "G"},
-        "type": "Enzymatic activity"
-    },
-    "TrpB3C": {
-        "positions": {1: 106, 2: 107, 3: 108},
-        "codons": {1: "ACG", 2: "GGT", 3: "GCT"}, 
-        "AAs": {1: "T", 2: "G", 3: "A"},
-        "type": "Enzymatic activity"
-    },
-    "TrpB3D": {
-        "positions": {1: 117, 2: 118, 3: 119},
-        "codons": {1: "ACC", 2: "GCA", 3: "GCA"}, 
-        "AAs": {1: "T", 2: "A", 3: "A"},
-        "type": "Enzymatic activity"
+        "ParD3": {
+            "positions": {1: 61, 2: 64, 3: 80},
+            "codons": {1: "", 2: "", 3: ""},
+            "AAs": {1: "D", 2: "K", 3: "E"},
+            "type": "Binding",
         },
-    "TrpB3E": {
-        "positions": {1: 184, 2: 185, 3: 186},
-        "codons": {1: "TTC", 2: "GGC", 3: "TCT"}, 
-        "AAs": {1: "F", 2: "G", 3: "S"},
-        "type": "Enzymatic activity"
-    },
-    "TrpB3F": {
-        "positions": {1: 162, 2: 166, 3: 301},
-        "codons": {1: "CTG", 2: "ATT", 3: "TAC"}, 
-        "AAs": {1: "L", 2: "I", 3: "Y"},
-        "type": "Enzymatic activity"
-    },
-    "TrpB3G": {
-        "positions": {1: 227, 2: 228, 3: 301},
-        "codons": {1: "GTG", 2: "AGC", 3: "TAC"}, 
-        "AAs": {1: "V", 2: "S", 3: "Y"},
-        "type": "Enzymatic activity"
-    },
-    "TrpB3H": {
-        "positions": {1: 228, 2: 230, 3: 231},
-        "codons": {1: "AGC", 2: "GGT", 3: "TCT"}, 
-        "AAs": {1: "S", 2: "G", 3: "S"},
-        "type": "Enzymatic activity"
-    },
-    "TrpB3I": {
-        "positions": {1: 182, 2: 183, 3: 184},
-        "codons": {1: "TAC", 2: "GTG", 3: "TTC"}, 
-        "AAs": {1: "Y", 2: "V", 3: "F"},
-        "type": "Enzymatic activity"
-    },
-    "TrpB4": {
-        "positions": {1: 183, 2: 184, 3: 227, 4: 228},
-        "codons": {1: "GTG", 2: "TTC", 3: "GTG", 4: "AGC"},
-        "AAs": {1: "V", 2: "F", 3: "V", 4: "S"},
-        "type": "Enzymatic activity"
+        "GB1": {
+            "positions": {1: 39, 2: 40, 3: 41, 4: 54},
+            "codons": {1: "", 2: "", 3: "", 4: ""},
+            "AAs": {1: "V", 2: "D", 3: "G", 4: "V"},
+            "type": "Binding",
+        },
+        "T7": {
+            "positions": {1: 748, 2: 756, 3: 758},
+            "codons": {1: "", 2: "", 3: ""},
+            "AAs": {1: "N", 2: "R", 3: "Q"},
+            "type": "Enzymatic activity",
+        },
+        "TEV": {
+            "positions": {1: 146, 2: 148, 3: 167, 4: 170},
+            "codons": {1: "", 2: "", 3: "", 4: ""},
+            "AAs": {1: "T", 2: "D", 3: "H", 4: "S"},
+            "type": "Enzymatic activity",
+        },
+        "TrpB3A": {
+            "positions": {1: 104, 2: 105, 3: 106},
+            "codons": {1: "GCT", 2: "GAA", 3: "ACG"},
+            "AAs": {1: "A", 2: "E", 3: "T"},
+            "type": "Enzymatic activity",
+        },
+        "TrpB3B": {
+            "positions": {1: 105, 2: 106, 3: 107},
+            "codons": {1: "GAA", 2: "ACG", 3: "GGT"},
+            "AAs": {1: "E", 2: "T", 3: "G"},
+            "type": "Enzymatic activity",
+        },
+        "TrpB3C": {
+            "positions": {1: 106, 2: 107, 3: 108},
+            "codons": {1: "ACG", 2: "GGT", 3: "GCT"},
+            "AAs": {1: "T", 2: "G", 3: "A"},
+            "type": "Enzymatic activity",
+        },
+        "TrpB3D": {
+            "positions": {1: 117, 2: 118, 3: 119},
+            "codons": {1: "ACC", 2: "GCA", 3: "GCA"},
+            "AAs": {1: "T", 2: "A", 3: "A"},
+            "type": "Enzymatic activity",
+        },
+        "TrpB3E": {
+            "positions": {1: 184, 2: 185, 3: 186},
+            "codons": {1: "TTC", 2: "GGC", 3: "TCT"},
+            "AAs": {1: "F", 2: "G", 3: "S"},
+            "type": "Enzymatic activity",
+        },
+        "TrpB3F": {
+            "positions": {1: 162, 2: 166, 3: 301},
+            "codons": {1: "CTG", 2: "ATT", 3: "TAC"},
+            "AAs": {1: "L", 2: "I", 3: "Y"},
+            "type": "Enzymatic activity",
+        },
+        "TrpB3G": {
+            "positions": {1: 227, 2: 228, 3: 301},
+            "codons": {1: "GTG", 2: "AGC", 3: "TAC"},
+            "AAs": {1: "V", 2: "S", 3: "Y"},
+            "type": "Enzymatic activity",
+        },
+        "TrpB3H": {
+            "positions": {1: 228, 2: 230, 3: 231},
+            "codons": {1: "AGC", 2: "GGT", 3: "TCT"},
+            "AAs": {1: "S", 2: "G", 3: "S"},
+            "type": "Enzymatic activity",
+        },
+        "TrpB3I": {
+            "positions": {1: 182, 2: 183, 3: 184},
+            "codons": {1: "TAC", 2: "GTG", 3: "TTC"},
+            "AAs": {1: "Y", 2: "V", 3: "F"},
+            "type": "Enzymatic activity",
+        },
+        "TrpB4": {
+            "positions": {1: 183, 2: 184, 3: 227, 4: 228},
+            "codons": {1: "GTG", 2: "TTC", 3: "GTG", 4: "AGC"},
+            "AAs": {1: "V", 2: "F", 3: "V", 4: "S"},
+            "type": "Enzymatic activity",
+        },
     }
-})
+)
 
 LIB_NAMES = deepcopy(list(LIB_INFO_DICT.keys()))
 
@@ -160,13 +165,15 @@ Lib currently not included
 
 """
 
-LIB_POS_0_IDX = deepcopy({
-    lib: {
-        str(int(pos_number) - 1): pos_loc
-        for pos_number, pos_loc in dets["positions"].items()
+LIB_POS_0_IDX = deepcopy(
+    {
+        lib: {
+            str(int(pos_number) - 1): pos_loc
+            for pos_number, pos_loc in dets["positions"].items()
+        }
+        for lib, dets in LIB_INFO_DICT.items()
     }
-    for lib, dets in LIB_INFO_DICT.items()
-})
+)
 
 
 def map_lib_pos() -> dict:
@@ -192,272 +199,123 @@ def map_lib_pos() -> dict:
 LIB_POS_MAP = deepcopy(map_lib_pos())
 
 
-PARENT_COMBO_DICT = deepcopy({lib: "".join(list(dets["AAs"].values())) for lib, dets in LIB_INFO_DICT.items()})
+PARENT_COMBO_DICT = deepcopy(
+    {lib: "".join(list(dets["AAs"].values())) for lib, dets in LIB_INFO_DICT.items()}
+)
 
 
 # Dictionary encoding the ODs over time for libraries DEFGHI
 OD_DICT = {
-    'TrpB3A': {
-        'rep_1': {
-            0: 0.1,
-            18: 0.72,
-            20: 0.78,
-            24: 0.94,
-            44: 2.55
-        },
-        'rep_2': {
-            0: 0.1,
-            18: 0.75,
-            20: 0.83,
-            24: 1.01,
-            44: 2.70
-        },
+    "TrpB3A": {
+        "rep_1": {0: 0.1, 18: 0.72, 20: 0.78, 24: 0.94, 44: 2.55},
+        "rep_2": {0: 0.1, 18: 0.75, 20: 0.83, 24: 1.01, 44: 2.70},
     },
-    'TrpB3B': {
-        'rep_1': {
-            0: 0.1,
-            18: 0.75,
-            20: 0.83,
-            24: 1.09,
-            44: 3.30
-        },
-        'rep_2': {
-            0: 0.1,
-            18: 0.84,
-            20: 0.98,
-            24: 1.50,
-            44: 3.85
-        },
+    "TrpB3B": {
+        "rep_1": {0: 0.1, 18: 0.75, 20: 0.83, 24: 1.09, 44: 3.30},
+        "rep_2": {0: 0.1, 18: 0.84, 20: 0.98, 24: 1.50, 44: 3.85},
     },
-    'TrpB3C': {
-        'rep_1': {
-            0: 0.1,
-            18: 0.74,
-            20: 0.78,
-            24: 0.86,
-            44: 1.95
-        },
-        'rep_2': {
-            0: 0.1,
-            18: 0.76,
-            20: 0.84,
-            24: 0.92,
-            44: 4.15
-        },
+    "TrpB3C": {
+        "rep_1": {0: 0.1, 18: 0.74, 20: 0.78, 24: 0.86, 44: 1.95},
+        "rep_2": {0: 0.1, 18: 0.76, 20: 0.84, 24: 0.92, 44: 4.15},
     },
-    'TrpB3D': {
-        'rep_1': {
-            0: 0.05,
-            12: 0.19,
-            16: 0.29,
-            20: 0.51,
-            24: 0.85,
-            36: 1.42
-        },
-        'rep_2': {
-            0: 0.05,
-            12: 0.18,
-            16: 0.28,
-            20: 0.49,
-            24: 0.97,
-            36: 1.81
-        }
+    "TrpB3D": {
+        "rep_1": {0: 0.05, 12: 0.19, 16: 0.29, 20: 0.51, 24: 0.85, 36: 1.42},
+        "rep_2": {0: 0.05, 12: 0.18, 16: 0.28, 20: 0.49, 24: 0.97, 36: 1.81},
     },
-    'TrpB3E': {
-        'rep_1': {
-            0: 0.05,
-            12: 0.2,
-            16: 0.27,
-            20: 0.47,
-            24: 0.91,
-            36: 1.41
-        },
-        'rep_2': {
-            0: 0.05,
-            12: 0.2,
-            16: 0.26,
-            20: 0.44,
-            24: 0.94,
-            36: 1.54
-        }
+    "TrpB3E": {
+        "rep_1": {0: 0.05, 12: 0.2, 16: 0.27, 20: 0.47, 24: 0.91, 36: 1.41},
+        "rep_2": {0: 0.05, 12: 0.2, 16: 0.26, 20: 0.44, 24: 0.94, 36: 1.54},
     },
-    'TrpB3F': {
-        'rep_1': {
-            0: 0.05,
-            12: 0.17,
-            16: 0.20,
-            20: 0.23,
-            24: 0.27,
-            36: 0.79
-        },
-        'rep_2': {
-            0: 0.05,
-            12: 0.17,
-            16: 0.20,
-            20: 0.24,
-            24: 0.27,
-            36: 0.79
-        }
+    "TrpB3F": {
+        "rep_1": {0: 0.05, 12: 0.17, 16: 0.20, 20: 0.23, 24: 0.27, 36: 0.79},
+        "rep_2": {0: 0.05, 12: 0.17, 16: 0.20, 20: 0.24, 24: 0.27, 36: 0.79},
     },
-    'TrpB3G': {
-        'rep_1': {
-            0: 0.05,
-            12: 0.14,
-            16: 0.18,
-            20: 0.23,
-            24: 0.44,
-            36: 1.95
-        },
-        'rep_2': {
-            0: 0.05,
-            12: 0.14,
-            16: 0.18,
-            20: 0.23,
-            24: 0.44,
-            36: 1.95
-        }
+    "TrpB3G": {
+        "rep_1": {0: 0.05, 12: 0.14, 16: 0.18, 20: 0.23, 24: 0.44, 36: 1.95},
+        "rep_2": {0: 0.05, 12: 0.14, 16: 0.18, 20: 0.23, 24: 0.44, 36: 1.95},
     },
-    'TrpB3H': {
-        'rep_1': {
-            0: 0.05,
-            12: 0.15,
-            16: 0.19,
-            20: 0.26,
-            24: 0.67,
-            36: 2.90
-        },
-        'rep_2': {
-            0: 0.05,
-            12: 0.14,
-            16: 0.18,
-            20: 0.26,
-            24: 0.58,
-            36: 1.85
-        }
+    "TrpB3H": {
+        "rep_1": {0: 0.05, 12: 0.15, 16: 0.19, 20: 0.26, 24: 0.67, 36: 2.90},
+        "rep_2": {0: 0.05, 12: 0.14, 16: 0.18, 20: 0.26, 24: 0.58, 36: 1.85},
     },
-    'TrpB3I': {
-        'rep_1': {
-            0: 0.05,
-            12: 0.36,
-            16: 0.83,
-            20: 1.24,
-            24: 0.7,
-            36: 1.95
-        },
-        'rep_2': {
-            0: 0.05,
-            12: 0.39,
-            16: 0.87,
-            20: 1.36,
-            24: 2.1,
-            36: 2.25
-        }
+    "TrpB3I": {
+        "rep_1": {0: 0.05, 12: 0.36, 16: 0.83, 20: 1.24, 24: 0.7, 36: 1.95},
+        "rep_2": {0: 0.05, 12: 0.39, 16: 0.87, 20: 1.36, 24: 2.1, 36: 2.25},
     },
-    'TrpB4': {
-        'rep_1': {
+    "TrpB4": {
+        "rep_1": {
             0: 0.025,
             12: 0.19,
             16: 0.51,
             20: 1.26,
             24: 1.50,
             28: 1.675,
-            36: 1.75
+            36: 1.75,
         },
-        'rep_2': {
+        "rep_2": {
             0: 0.025,
             12: 0.19,
             16: 0.52,
             20: 1.34,
             24: 1.625,
             28: 1.75,
-            36: 1.875
-
-        }
+            36: 1.875,
+        },
     },
 }
 
 TIMEPOINT_DICT = {
-    'TrpB3A': {
-        'T0': 0,
-        'T1': 18,
-        'T2': 20,
-        'T3': 24,
-        'T4': 44
-    },
-    'TrpB3B': {
-        'T0': 0,
-        'T1': 18,
-        'T2': 20,
-        'T3': 24,
-        'T4': 44
-    },
-    'TrpB3C': {
-        'T0': 0,
-        'T1': 18,
-        'T2': 20,
-        'T3': 24,
-        'T4': 44
-    },
-    'TrpB3D': {
-        'T0': 0,
-        'T1': 12,
-        'T2': 16,
-        'T3': 20,
-        'T4': 24,
-        'T5': 36
-    },
-    'TrpB3E': {
-        'T0': 0,
-        'T1': 12,
-        'T2': 16,
-        'T3': 20,
-        'T4': 24,
-        'T5': 36
-    },
-    'TrpB3F': {
-        'T0': 0,
-        'T1': 12,
-        'T2': 16,
-        'T3': 20,
-        'T4': 24,
-        'T5': 36
-    },
-    'TrpB3G': {
-        'T0': 0,
-        'T1': 12,
-        'T2': 16,
-        'T3': 20,
-        'T4': 24,
-        'T5': 36
-    },
-    'TrpB3H': {
-        'T0': 0,
-        'T1': 12,
-        'T2': 16,
-        'T3': 20,
-        'T4': 24,
-        'T5': 36
-    },
-    'TrpB3I': {
-        'T0': 0,
-        'T1': 12,
-        'T2': 16,
-        'T3': 20,
-        'T4': 24,
-        'T5': 36
-    },
-    'TrpB4': {
-        'T0': 0,
-        'T1': 12,
-        'T2': 16,
-        'T3': 20,
-        'T4': 24,
-        'T5': 28,
-        'T6': 36
-    }
+    "TrpB3A": {"T0": 0, "T1": 18, "T2": 20, "T3": 24, "T4": 44},
+    "TrpB3B": {"T0": 0, "T1": 18, "T2": 20, "T3": 24, "T4": 44},
+    "TrpB3C": {"T0": 0, "T1": 18, "T2": 20, "T3": 24, "T4": 44},
+    "TrpB3D": {"T0": 0, "T1": 12, "T2": 16, "T3": 20, "T4": 24, "T5": 36},
+    "TrpB3E": {"T0": 0, "T1": 12, "T2": 16, "T3": 20, "T4": 24, "T5": 36},
+    "TrpB3F": {"T0": 0, "T1": 12, "T2": 16, "T3": 20, "T4": 24, "T5": 36},
+    "TrpB3G": {"T0": 0, "T1": 12, "T2": 16, "T3": 20, "T4": 24, "T5": 36},
+    "TrpB3H": {"T0": 0, "T1": 12, "T2": 16, "T3": 20, "T4": 24, "T5": 36},
+    "TrpB3I": {"T0": 0, "T1": 12, "T2": 16, "T3": 20, "T4": 24, "T5": 36},
+    "TrpB4": {"T0": 0, "T1": 12, "T2": 16, "T3": 20, "T4": 24, "T5": 28, "T6": 36},
 }
 
 n_mut_cutoff_dict = {0: "all", 1: "single", 2: "double", 3: "triple", 4: "quadruple"}
+
+
+def find_active_cutoff(
+    df: pd.DataFrame, search_range: list[float], fit_col: str = "fitness"
+) -> float:
+
+    """
+    Find the active cutoff based on flighted_fitnesses BEFORE scaling
+
+    Args:
+    - df, pd.DataFrame: input dataframe
+    - search_range, list: search range for the active cutoff, ie. [0, 0.25]
+    - fit_col, str: fitness column
+
+    Returns:
+    - float: the active cutoff
+    """
+
+    start_index = int(len(df) * search_range[0])
+    end_index = int(len(df) * search_range[1])
+
+    sliced_vals = sorted(df[fit_col])[start_index:end_index]
+
+    # Step 1: Compute the first derivative
+    first_derivative = np.diff(sliced_vals)
+
+    # Step 2: Compute the second derivative
+    second_derivative = np.diff(first_derivative)
+    # Set a threshold for what you consider a "significant change"
+    threshold = (
+        np.std(second_derivative) * 2
+    )  # Example threshold: two standard deviations above mean
+    significant_changes = (
+        np.where(np.abs(second_derivative) > threshold)[0] + 1
+    )  # +1 to correct index after diff
+
+    return sliced_vals[significant_changes[0]]
+
 
 def append_active_cutoff(
     df: pd.DataFrame, fitness_cols: list = ["fitness"], def_cutoff: float | None = None
@@ -475,7 +333,7 @@ def append_active_cutoff(
     - pd.DataFrame: input dataframe with active column
     - list[float]: cutoff value for each fitness column
     """
-    
+
     if def_cutoff is None:
         fit_cutoffs = [None] * len(fitness_cols)
 
@@ -549,7 +407,7 @@ class LibData:
             ie. data/DHFR/fitness_landscape/DHFR.csv for preprocessed
                 data/DHFR/scale2max/DHFR.csv for scaled to max = 1
         """
-        
+
         self._input_csv = input_csv
         self._scale_fit = scale_fit
 
@@ -562,7 +420,7 @@ class LibData:
     def lib_info(self) -> dict:
         """Return the library information"""
         return LIB_INFO_DICT[self.lib_name]
-    
+
     @property
     def protein_name(self) -> str:
         """
@@ -584,7 +442,7 @@ class LibData:
     def parent_codon(self) -> float:
         """Return the parent codon"""
         return "".join(list(self.lib_info["codons"].values()))
-    
+
     @property
     def n_site(self) -> int:
         """Return the number of sites"""
@@ -597,12 +455,12 @@ class LibData:
             return f"scale2{self._scale_fit}"
         else:
             return "processed"
-    
+
     @property
     def input_df(self) -> pd.DataFrame:
         """Return the input dataframe"""
         return pd.read_csv(self._input_csv)
-    
+
     @property
     def df_length(self):
         return len(self.input_df)
@@ -611,7 +469,6 @@ class LibData:
     def split_aa_cols(self) -> list:
         """Return the columns for the split amino acids"""
         return [f"AA{str(i)}" for i in self.lib_info["positions"].keys()]
-
 
 
 def lib2prot(lib_name: str) -> str:
