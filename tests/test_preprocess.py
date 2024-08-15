@@ -18,7 +18,7 @@ if __name__ == "__main__":
     sys.stdout = f
 
     # process_all(scale_fit="max")
-    # ProcessT7(scale_fit="max")
+    ProcessT7(scale_fit="max")
     ProcessTEV(scale_fit="max")
 
     sum_ks(process_types = {

@@ -20,6 +20,8 @@ if __name__ == "__main__":
     run_all_lib_de_simulations(
         scale_types = ["scale2max"],
         de_opts = ["DE-active", "DE-0", "DE-all"],
+        all_lib = False,
+        lib_list = ["T7", "TEV"],
         rerun = False
     )
 

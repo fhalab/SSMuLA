@@ -551,7 +551,7 @@ def run_all_de_simulations(
 
     save_dir = checkNgen_folder(save_dir)
 
-    if rerun:
+    if rerun or not os.path.exists(os.path.join(save_dir, f"{lib_name}-single_step_DE.csv")):
 
         ######## Simulate a single step directed evolution walk ########
         print("Simulate a single step directed evolution walk")

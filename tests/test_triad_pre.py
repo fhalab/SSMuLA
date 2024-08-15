@@ -22,6 +22,6 @@ if __name__ == "__main__":
     )
     sys.stdout = f
 
-    run_traid_gen_mut_file(lib_list = ["ParD2", "ParD3"])
+    run_traid_gen_mut_file(lib_list = ["T7", "TEV"])
 
     f.close()

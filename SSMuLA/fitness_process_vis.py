@@ -849,9 +849,13 @@ class ProcessT7(ProcessData):
 
     @property
     def active_thresh(self) -> float:
-        """Return the active threshold"""
-        return find_active_cutoff(df=self.df_aa, search_range=[0, 0.25])
-        
+        """
+        Return the active threshold
+
+        Author defined 0.05 
+        """
+        return ACTIVE_THRESH_DICT[self.protein_name] 
+    
     @property
     def df_active_append(self) -> pd.DataFrame:
         """Return the active appended dataframe"""
@@ -929,14 +933,6 @@ class ProcessTEV(ProcessT7):
 
         super().__init__(input_csv, scale_fit)
 
-    @property
-    def active_thresh(self) -> float:
-        """
-        Return the active threshold
-
-        Author defined 0.05 
-        """
-        return ACTIVE_THRESH_DICT[self.protein_name]
 
 class ProcessTrpB(ProcessData):
 

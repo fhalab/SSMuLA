@@ -27,7 +27,7 @@ if __name__ == "__main__":
     calc_all_pairwise_epistasis(
         fitness_process_type=fitness_process_type,
         ifall=False,
-        lib_list=["ParD2", "ParD3"],
+        lib_list=["T7", "TEV"],
         output_folder="results/pairwise_epistasis",
         n_jobs=128,
     )

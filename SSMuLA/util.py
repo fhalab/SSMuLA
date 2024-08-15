@@ -157,16 +157,16 @@ def csv2fasta(csv: str) -> None:
             f.write(f">{mut}\n{seq}\n")
 
 
-def read_fasta(fasta_filename):
+def read_fasta(fasta_path: str) -> str:
     """
     Reads a FASTA file using Biopython and returns the sequence of the first record.
 
     Args:
-    - fasta_filename (str): The path to the FASTA file.
+    - fasta_path (str): The path to the FASTA file.
 
     Returns:
     - str: The sequence from the first record in the FASTA file.
     """
-    with open(fasta_filename, 'r') as file:
+    with open(fasta_path, 'r') as file:
         for record in SeqIO.parse(file, "fasta"):
             return str(record.seq)

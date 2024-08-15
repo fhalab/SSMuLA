@@ -18,7 +18,7 @@ ACTIVE_THRESH_DICT = {
     "DHFR": -0.5,
     "ParD": 0,
     "GB1": 0.01,
-    "T7": None,  # will be based on distribution
+    "T7": 0.15, # Variants below 0.15 didn't show distinguishable signal in fluorescence assay
     "TEV": 0.05,
     # "ParB-parS": 0.2,
     # "Noc-NBS": 0.2,
