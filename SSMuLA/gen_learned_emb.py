@@ -517,9 +517,9 @@ class GenLearnedEmb(LibData):
     @property
     def flatten_emb_str(self) -> str:
         """Return the flatten_emb as a string"""
-        if isinstance(self._flatten_emb, bool) and self._flatten_emb == False:
+        if isinstance(self._flatten_emb, bool) and self._flatten_emb is False:
             return "noflatten"
-        elif isinstance(self._flatten_emb, bool) and self._flatten_emb == True:
+        elif isinstance(self._flatten_emb, bool) and self._flatten_emb is True:
             return "flatten"
         else:
             return self._flatten_emb

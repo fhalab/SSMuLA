@@ -93,29 +93,50 @@ def mut_csv2fasta(lib: str, ev_esm_dir: str = "ev_esm2") -> None:
 
     fasta = csv_path.replace(".csv", ".fasta")
 
+    print(f"Writing to {fasta}...")
+
     # pdb has more than fasta should only be for dhfr
     if len(seq) < len(pdb_seq):
+        print("PDB seq is longer than fasta")
         part_before, part_after = find_missing_str(longer=pdb_seq, shorter=seq)
         with open(fasta, "w") as f:
             for mut, seq in zip(df["muts"].values, df["seq"].values):
                 f.write(f">{mut}\n{part_before+seq+part_after}\n")
     elif len(seq) == len(pdb_seq):
+        print("PDB seq length is equal to fasta")
         with open(fasta, "w") as f:
             for mut, seq in zip(df["muts"].values, df["seq"].values):
                 f.write(f">{mut}\n{seq}\n")
     else:
+        print("Fasta seq is longer than PDB")
         part_before, part_after = find_missing_str(longer=seq, shorter=pdb_seq)
         with open(fasta, "w") as f:
             for mut, seq in zip(df["muts"].values, df["seq"].values):
                 f.write(f">{mut}\n{seq[len(part_before):len(seq)-len(part_after)]}\n")
 
 
-def get_all_mutfasta(ev_esm_dir: str = "ev_esm2") -> None:
+def get_all_mutfasta(
+    ev_esm_dir: str = "ev_esm2", 
+    all_libs: bool = True,
+    lib_list: list[str] = []
+    ) -> None:
     """
     A function for converting all mutation csv to fasta
     subject to the pdb file sequence
+
+    Args:
+    - ev_esm_dir: str = "ev_esm2"
+    - all_libs: bool = True
+    - lib_list: list[str] = []
     """
-    for lib in LIB_INFO_DICT.keys():
+
+    if all_libs:
+        lib_list = LIB_INFO_DICT.keys()
+    else:
+        lib_list = deepcopy(lib_list)
+    
+    for lib in lib_list:
+        print(f"Processing {lib}...")
         mut_csv2fasta(lib, ev_esm_dir)
 
 class DataProcessor:
