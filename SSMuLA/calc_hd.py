@@ -71,11 +71,32 @@ def get_hd_avg_fit(
 
 
 def run_hd_avg_fit(
-    data_dir: str = "data", scalefit: str = "max", num_processes: None | int = None
+    data_dir: str = "data", 
+    scalefit: str = "max", 
+    num_processes: None | int = None,
+    all_lib: bool = True,
+    lib_list: list[str] = [],
 ):
-    for df_csv in sorted(
-        glob(f"{os.path.normpath(data_dir)}/*/scale2{scalefit}/*.csv")
-    ):
+
+    """
+    Run the calculation of the average fitness for all sequences within a Hamming distance of 2
+
+    Args:
+    - data_dir: str, the directory containing the data
+    - scalefit: str, the scale of the fitness values
+    - num_processes: None | int, the number of processes to use
+    - all_lib: bool, whether to use all libraries
+    - lib_list: list[str], the list of libraries to use
+    """
+
+    if all_lib or len(lib_list) == 0:
+        df_csvs = sorted(
+            glob(f"{os.path.normpath(data_dir)}/*/scale2{scalefit}/*.csv")
+        )
+    else:
+        df_csvs = [f"{os.path.normpath(data_dir)}/{lib}/scale2{scalefit}/{lib}.csv" for lib in lib_list]
+    
+    for df_csv in df_csvs:
         print(f"Processing {df_csv} ...")
         df = get_hd_avg_fit(df_csv)
 

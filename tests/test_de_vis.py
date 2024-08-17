@@ -20,7 +20,7 @@ if __name__ == "__main__":
         scale_types = ["scale2max"],
         de_opts = ["DE-active"], # "DE-0"
         all_lib = False,
-        lib_list = ["ParD2", "ParD3"],
+        lib_list = ["T7", "TEV"],
     )
 
     """

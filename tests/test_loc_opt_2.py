@@ -21,7 +21,7 @@ if __name__ == "__main__":
     #             fitness_process_type = "scale2max",
     #             output_folder = "results/local_optima", 
     #             n_jobs = 256)
-    for lib in ["data/GB1/scale2max/GB1.csv"]:
+    for lib in ["data/T7/scale2max/T7.csv", "data/TEV/scale2max/TEV.csv"]:
         LocOpt(
                 lib,
                 checkNgen_folder(os.path.join("results/local_optima", "scale2max")),

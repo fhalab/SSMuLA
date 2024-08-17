@@ -7,7 +7,7 @@ import warnings
 from copy import deepcopy
 import pandas as pd
 
-from Bio import SeqIO
+from Bio import SeqIO, pairwise2
 
 from SSMuLA.landscape_global import LIB_INFO_DICT
 
@@ -48,7 +48,7 @@ def find_missing_str(longer: str, shorter: str) -> [str, str]:
 
     # If the shorter is not found, return the longer string as the "missing" part
     if start_index == -1:
-        return longer, ""
+        return "", ""
 
     # Find the end index of the shorter
     end_index = start_index + len(shorter)
@@ -58,6 +58,36 @@ def find_missing_str(longer: str, shorter: str) -> [str, str]:
     part_after = longer[end_index:]
 
     return part_before, part_after
+
+
+def alignmutseq2pdbseq(mut_seq: str, pdb_seq: str) -> list[int]:
+    """
+    A function for aligning mutation sequence to pdb sequence and
+    return the indices of the aligned sequence so that the mutation
+    sequence can be trimmed to the lenght of the pdb sequence
+
+    Args:
+    - mut_seq: str, mutation sequence
+    - pdb_seq: str, pdb sequence
+    """
+
+    # Define a custom scoring function so that X is aligned with anything
+    def custom_match_function(x, y):
+        if x == "X" or y == "X":
+            return 2  # High score for aligning X with anything
+        elif x == y:
+            return 2  # Match score
+        else:
+            return -1  # Mismatch score
+
+    _, aligned_pdb_seq, _, _, _ = pairwise2.align.globalcs(
+        mut_seq, pdb_seq, custom_match_function, -0.5, -0.1
+    )[0]
+
+    return [
+        aligned_pdb_seq.find(aligned_pdb_seq.replace("-", "")[:1]),
+        aligned_pdb_seq.rfind(aligned_pdb_seq.replace("-", "")[-1]),
+    ]
 
 
 def mut_csv2fasta(lib: str, ev_esm_dir: str = "ev_esm2") -> None:
@@ -96,6 +126,7 @@ def mut_csv2fasta(lib: str, ev_esm_dir: str = "ev_esm2") -> None:
     print(f"Writing to {fasta}...")
 
     # pdb has more than fasta should only be for dhfr
+    # TODO: find_missing_str and alignmutseq2pdbseq should be combined and improved
     if len(seq) < len(pdb_seq):
         print("PDB seq is longer than fasta")
         part_before, part_after = find_missing_str(longer=pdb_seq, shorter=seq)
@@ -109,10 +140,10 @@ def mut_csv2fasta(lib: str, ev_esm_dir: str = "ev_esm2") -> None:
                 f.write(f">{mut}\n{seq}\n")
     else:
         print("Fasta seq is longer than PDB")
-        part_before, part_after = find_missing_str(longer=seq, shorter=pdb_seq)
+        start_index, end_index = alignmutseq2pdbseq(mut_seq = seq, pdb_seq = pdb_seq)
         with open(fasta, "w") as f:
             for mut, seq in zip(df["muts"].values, df["seq"].values):
-                f.write(f">{mut}\n{seq[len(part_before):len(seq)-len(part_after)]}\n")
+                f.write(f">{mut}\n{seq[start_index:end_index]}\n")
 
 
 def get_all_mutfasta(

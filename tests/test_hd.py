@@ -17,11 +17,24 @@ if __name__ == "__main__":
     f = open(os.path.join(log_folder, f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}.out"), 'w')
     sys.stdout = f
     
-    # run_hd_avg_fit(num_processes=256)
+    run_hd_avg_fit(
+        num_processes=256, 
+        all_lib=False, 
+        lib_list=["T7", "TEV"]
+    )
+
     plot_all_hd2(hd_dir = "results/hd")
 
     """
-    run_hd_avg_fit(data_dir: str = 'data', scalefit: str = "max", num_processes: None|int = None)
+    run_hd_avg_fit(
+        data_dir: str = "data", 
+        scalefit: str = "max", 
+        num_processes: None | int = None,
+        all_lib: bool = True,
+        lib_list: list[str] = [],
+    )
+
+    plot_all_hd2(hd_dir: str = "results/hd")
     """
     
     f.close()
