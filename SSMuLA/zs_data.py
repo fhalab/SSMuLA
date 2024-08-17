@@ -4,6 +4,7 @@ A script for processing zs data
 """
 
 import warnings
+import os
 from copy import deepcopy
 import pandas as pd
 
@@ -69,6 +70,10 @@ def alignmutseq2pdbseq(mut_seq: str, pdb_seq: str) -> list[int]:
     Args:
     - mut_seq: str, mutation sequence
     - pdb_seq: str, pdb sequence
+
+    Returns:
+    - list[int], start and end indices of the aligned sequence
+    - pdb_seq: str, aligned pdb sequence
     """
 
     # Define a custom scoring function so that X is aligned with anything
@@ -87,7 +92,7 @@ def alignmutseq2pdbseq(mut_seq: str, pdb_seq: str) -> list[int]:
     return [
         aligned_pdb_seq.find(aligned_pdb_seq.replace("-", "")[:1]),
         aligned_pdb_seq.rfind(aligned_pdb_seq.replace("-", "")[-1]),
-    ]
+    ], aligned_pdb_seq
 
 
 def mut_csv2fasta(lib: str, ev_esm_dir: str = "ev_esm2") -> None:
@@ -113,7 +118,14 @@ def mut_csv2fasta(lib: str, ev_esm_dir: str = "ev_esm2") -> None:
     else:
         seq = str(seq)
 
-    pdb_seq = pdb2seq(f"data/{protein}/{protein}.pdb", "A")
+    pdb_path = f"data/{protein}/{protein}.pdb"
+    processed_pdb_path = f"data/{protein}/{protein}_processed.pdb"
+
+    if os.path.exists(processed_pdb_path):
+        pdb_path = processed_pdb_path
+
+    pdb_seq = pdb2seq(pdb_path, "A")
+    
 
     df = pd.read_csv(csv_path)
 
@@ -140,10 +152,26 @@ def mut_csv2fasta(lib: str, ev_esm_dir: str = "ev_esm2") -> None:
                 f.write(f">{mut}\n{seq}\n")
     else:
         print("Fasta seq is longer than PDB")
-        start_index, end_index = alignmutseq2pdbseq(mut_seq = seq, pdb_seq = pdb_seq)
+        index_list, aligned_pdb_seq = alignmutseq2pdbseq(mut_seq = seq, pdb_seq = pdb_seq)
+
+        start_index, end_index = index_list
+
+        # there might be seq with X from pdb
+        # Step 1: Find all indices of 'X' in pdb_seq
+        x_indices = [i for i, letter in enumerate(aligned_pdb_seq) if letter == 'X']
+
         with open(fasta, "w") as f:
             for mut, seq in zip(df["muts"].values, df["seq"].values):
-                f.write(f">{mut}\n{seq[start_index:end_index]}\n")
+                # Step 2: Modify the original seq by replacing characters at the found indices with 'X'
+                if len(x_indices) > 0 and x_indices[-1] > start_index:
+                    start_index = x_indices[-1] + 1
+                    # seq_list = list(seq)  # Convert the sequence to a list to allow mutation
+                    # for idx in x_indices:
+                    #     seq_list[idx] = 'X'
+
+                    # # Convert the modified list back to a string
+                    # seq = ''.join(seq_list)
+                f.write(f">{mut}\n{seq[start_index:end_index+1]}\n")
 
 
 def get_all_mutfasta(

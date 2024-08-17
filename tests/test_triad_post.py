@@ -22,6 +22,6 @@ if __name__ == "__main__":
     )
     sys.stdout = f
 
-    run_parse_triad_results(all_lib = False, lib_list = ["ParD2", "ParD3"])
+    run_parse_triad_results(all_lib = False, lib_list = ["T7", "TEV"])
 
     f.close()
