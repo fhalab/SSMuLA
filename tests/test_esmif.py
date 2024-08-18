@@ -25,7 +25,7 @@ if __name__ == "__main__":
     get_all_mutfasta(
         ev_esm_dir="ev_esm2",
         all_libs=False,
-        lib_list=["T7"],
+        lib_list=["TEV"],
     )
 
     f.close()

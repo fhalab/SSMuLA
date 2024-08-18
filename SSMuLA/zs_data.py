@@ -1,4 +1,3 @@
-
 """
 A script for processing zs data
 """
@@ -8,11 +7,211 @@ import os
 from copy import deepcopy
 import pandas as pd
 
-from Bio import SeqIO, pairwise2
+from Bio import SeqIO, pairwise2, PDB
 
 from SSMuLA.landscape_global import LIB_INFO_DICT
 
 warnings.filterwarnings("ignore")
+
+
+EV_META = {
+    "DHFR": {
+        "recommended": {
+            "bitscore": 0.7,
+            "sequences": 16042,
+            "seqs_per_l": 103.5,
+            "quality": 10,
+        },
+        "other_1": {
+            "bitscore": 0.1,
+            "sequences": 59494,
+            "seqs_per_l": 491.7,
+            "quality": 10,
+        },
+        "other_2": {
+            "bitscore": 0.3,
+            "sequences": 17758,
+            "seqs_per_l": 114.6,
+            "quality": 10,
+        },
+        "other_3": {
+            "bitscore": 0.5,
+            "sequences": 17132,
+            "seqs_per_l": 111.2,
+            "quality": 10,
+        },
+    },
+    "ParD2": {
+        "recommended": {
+            "bitscore": 0.3,
+            "sequences": 13911,
+            "seqs_per_l": 252.9,
+            "quality": 10,
+        },
+        "other_1": {
+            "bitscore": 0.1,
+            "sequences": 102977,
+            "seqs_per_l": 2060,
+            "quality": 9,
+        },
+        "chosen": {
+            "bitscore": 0.5,
+            "sequences": 6789,
+            "seqs_per_l": 93.0,
+            "quality": 9,
+        },
+        "other_3": {
+            "bitscore": 0.7,
+            "sequences": 3638,
+            "seqs_per_l": 49.2,
+            "quality": 8,
+        },
+    },
+    "ParD3": {
+        "recommended": {
+            "bitscore": 0.3,
+            "sequences": 13189,
+            "seqs_per_l": 235.5,
+            "quality": 10,
+        },
+        "other_1": {
+            "bitscore": 0.1,
+            "sequences": 117463,
+            "seqs_per_l": 2303,
+            "quality": 9,
+        },
+        "chosen": {
+            "bitscore": 0.5,
+            "sequences": 6784,
+            "seqs_per_l": 91.7,
+            "quality": 9,
+        },
+        "other_3": {
+            "bitscore": 0.7,
+            "sequences": 3249,
+            "seqs_per_l": 43.3,
+            "quality": 8,
+        },
+    },
+    "GB1": {
+        "recommended": {
+            "bitscore": 0.3,
+            "sequences": 4358,
+            "seqs_per_l": 128.2,
+            "quality": 8,
+        },
+        "other_1": {
+            "bitscore": 0.1,
+            "sequences": 22512,
+            "seqs_per_l": 750.4,
+            "quality": 8,
+        },
+        "chosen": {
+            "bitscore": 0.5,
+            "sequences": 29,
+            "seqs_per_l": 0.5,
+            "quality": 3,
+        },
+        "other_3": {
+            "bitscore": 0.7,
+            "sequences": 27,
+            "seqs_per_l": 0.5,
+            "quality": 3,
+        },
+    },
+    "TrpB": {
+        "recommended": {
+            "bitscore": 0.1,
+            "sequences": 73656,
+            "seqs_per_l": 256.6,
+            "quality": 10,
+        },
+        "chosen": {
+            "bitscore": 0.3,
+            "sequences": 5816,
+            "seqs_per_l": 15.4,
+            "quality": 10,
+        },
+        "other_2": {
+            "bitscore": 0.5,
+            "sequences": 5566,
+            "seqs_per_l": 14.8,
+            "quality": 10,
+        },
+        "other_3": {
+            "bitscore": 0.7,
+            "sequences": 4476,
+            "seqs_per_l": 11.8,
+            "quality": 10,
+        },
+    },
+}
+
+
+def get_msa_dict():
+    msa_dict = {}
+
+    for l, v in EV_META.items():
+        if l != "TrpB":
+            if "chosen" in v.keys():
+                msa_dict[l] = v["chosen"]["sequences"]
+            else:
+                msa_dict[l] = v["recommended"]["sequences"]
+        else:
+            ls = [
+                l + "3" + app for app in [chr(i) for i in range(ord("A"), ord("I") + 1)]
+            ] + ["TrpB4"]
+            for t in ls:
+                if "chosen" in v.keys():
+                    msa_dict[t] = v["chosen"]["sequences"]
+                else:
+                    msa_dict[t] = v["recommended"]["sequences"]
+
+    return msa_dict
+
+
+MSA_DICT = deepcopy(get_msa_dict())
+
+def chop_pdb(
+    input_pdb: str, output_pdb: str, start_resid: int, end_resid: int, chain_id: str
+) -> None:
+    """
+    A function for chopping a pdb file to a specific chain and residue range
+
+    Args:
+    - input_pdb: str, path to the input pdb file
+    - output_pdb: str, path to the output pdb file
+    - start_resid: int, starting residue ID
+    - end_resid: int, ending residue ID
+    - chain_id: str, chain ID
+    """
+
+    # Initialize the parser and structure
+    parser = PDB.PDBParser(QUIET=True)
+    structure = parser.get_structure("structure", input_pdb)
+
+    # Initialize the writer
+    io = PDB.PDBIO()
+
+    # Define a select class to filter the residues in the specific chain
+    class ResidueSelect(PDB.Select):
+        def accept_residue(self, residue):
+            # Only accept residues in the specified chain with a residue ID greater than or equal to start_resid
+            if (
+                residue.parent.id == chain_id
+                and residue.id[1] >= start_resid
+                and residue.id[1] <= end_resid
+            ):
+                return True
+            return False
+
+    # Save the chopped structure to the output file
+    io.set_structure(structure)
+    io.save(output_pdb, ResidueSelect())
+
+    print(
+        f"Saved chopped structure starting from residue {start_resid} in chain {chain_id} to {output_pdb}"
+    )
 
 
 def pdb2seq(pdb_file_path: str, chain_id: str = "A") -> str:
@@ -125,7 +324,6 @@ def mut_csv2fasta(lib: str, ev_esm_dir: str = "ev_esm2") -> None:
         pdb_path = processed_pdb_path
 
     pdb_seq = pdb2seq(pdb_path, "A")
-    
 
     df = pd.read_csv(csv_path)
 
@@ -152,13 +350,13 @@ def mut_csv2fasta(lib: str, ev_esm_dir: str = "ev_esm2") -> None:
                 f.write(f">{mut}\n{seq}\n")
     else:
         print("Fasta seq is longer than PDB")
-        index_list, aligned_pdb_seq = alignmutseq2pdbseq(mut_seq = seq, pdb_seq = pdb_seq)
+        index_list, aligned_pdb_seq = alignmutseq2pdbseq(mut_seq=seq, pdb_seq=pdb_seq)
 
         start_index, end_index = index_list
 
         # there might be seq with X from pdb
         # Step 1: Find all indices of 'X' in pdb_seq
-        x_indices = [i for i, letter in enumerate(aligned_pdb_seq) if letter == 'X']
+        x_indices = [i for i, letter in enumerate(aligned_pdb_seq) if letter == "X"]
 
         with open(fasta, "w") as f:
             for mut, seq in zip(df["muts"].values, df["seq"].values):
@@ -175,10 +373,8 @@ def mut_csv2fasta(lib: str, ev_esm_dir: str = "ev_esm2") -> None:
 
 
 def get_all_mutfasta(
-    ev_esm_dir: str = "ev_esm2", 
-    all_libs: bool = True,
-    lib_list: list[str] = []
-    ) -> None:
+    ev_esm_dir: str = "ev_esm2", all_libs: bool = True, lib_list: list[str] = []
+) -> None:
     """
     A function for converting all mutation csv to fasta
     subject to the pdb file sequence
@@ -193,10 +389,24 @@ def get_all_mutfasta(
         lib_list = LIB_INFO_DICT.keys()
     else:
         lib_list = deepcopy(lib_list)
-    
+
     for lib in lib_list:
         print(f"Processing {lib}...")
+
+        # if pdb_resrange is a key in the lib_info_dict
+        if "pdb_resrange" in LIB_INFO_DICT[lib].keys():
+
+            pdb_resrange = LIB_INFO_DICT[lib]["pdb_resrange"]
+            chop_pdb(
+                input_pdb=f"data/{lib}/{lib}.pdb",
+                output_pdb=f"data/{lib}/{lib}_processed.pdb",
+                start_resid=pdb_resrange[0],
+                end_resid=pdb_resrange[1],
+                chain_id="A",
+            )
+
         mut_csv2fasta(lib, ev_esm_dir)
+
 
 class DataProcessor:
     def __init__(self):
@@ -209,10 +419,9 @@ class DataProcessor:
             data = pd.read_excel(df, sheet_name=1)
         elif df.endswith(".csv"):
             data = pd.read_csv(df)
-        
+
         # append mut
         return data
-    
 
     def get_Seq(self, path):
         return SeqIO.read(path, "fasta").seq
@@ -324,7 +533,7 @@ class DataProcessor:
     def get_combo(self, mut, list=False):
         """
         Create sequential AA combo of the mutated sequences
-        
+
         Input: Mut Variants [WT][Pos][NewAA]]
         Output: Sequential AA combo
         """
@@ -399,163 +608,3 @@ class DataProcessor:
         return data
 
 
-
-EV_META = {
-    "DHFR": {
-        "recommended": {
-            "bitscore": 0.7,
-            "sequences": 16042,
-            "seqs_per_l": 103.5,
-            "quality": 10,
-        },
-        "other_1": {
-            "bitscore": 0.1,
-            "sequences": 59494,
-            "seqs_per_l": 491.7,
-            "quality": 10,
-        },
-        "other_2": {
-            "bitscore": 0.3,
-            "sequences": 17758,
-            "seqs_per_l": 114.6,
-            "quality": 10,
-        },
-        "other_3": {
-            "bitscore": 0.5,
-            "sequences": 17132,
-            "seqs_per_l": 111.2,
-            "quality": 10,
-        },
-    },
-
-    "ParD2": {
-        "recommended": {
-            "bitscore": 0.3,
-            "sequences": 13911,
-            "seqs_per_l": 252.9,
-            "quality": 10,
-        },
-        "other_1": {
-            "bitscore": 0.1,
-            "sequences": 102977,
-            "seqs_per_l": 2060,
-            "quality": 9,
-        },
-        "chosen": {
-            "bitscore": 0.5,
-            "sequences": 6789,
-            "seqs_per_l": 93.0,
-            "quality": 9,
-        },
-        "other_3": {
-            "bitscore": 0.7,
-            "sequences": 3638,
-            "seqs_per_l": 49.2,
-            "quality": 8,
-        },
-    },
-
-    "ParD3": {
-        "recommended": {
-            "bitscore": 0.3,
-            "sequences": 13189,
-            "seqs_per_l": 235.5,
-            "quality": 10,
-        },
-        "other_1": {
-            "bitscore": 0.1,
-            "sequences": 117463,
-            "seqs_per_l": 2303,
-            "quality": 9,
-        },
-        "chosen": {
-            "bitscore": 0.5,
-            "sequences": 6784,
-            "seqs_per_l": 91.7,
-            "quality": 9,
-        },
-        "other_3": {
-            "bitscore": 0.7,
-            "sequences": 3249,
-            "seqs_per_l": 43.3,
-            "quality": 8,
-        },
-    },
-
-    "GB1": {
-        "recommended": {
-            "bitscore": 0.3,
-            "sequences": 4358,
-            "seqs_per_l": 128.2,
-            "quality": 8,
-        },
-        "other_1": {
-            "bitscore": 0.1,
-            "sequences": 22512,
-            "seqs_per_l": 750.4,
-            "quality": 8,
-        },
-        "chosen": {
-            "bitscore": 0.5,
-            "sequences": 29,
-            "seqs_per_l": 0.5,
-            "quality": 3,
-        },
-        "other_3": {
-            "bitscore": 0.7,
-            "sequences": 27,
-            "seqs_per_l": 0.5,
-            "quality": 3,
-        },
-    },
-
-    "TrpB": {
-        "recommended": {
-            "bitscore": 0.1,
-            "sequences": 73656,
-            "seqs_per_l": 256.6,
-            "quality": 10,
-        },
-        "chosen": {
-            "bitscore": 0.3,
-            "sequences": 5816,
-            "seqs_per_l": 15.4,
-            "quality": 10,
-        },
-        "other_2": {
-            "bitscore": 0.5,
-            "sequences": 5566,
-            "seqs_per_l": 14.8,
-            "quality": 10,
-        },
-        "other_3": {
-            "bitscore": 0.7,
-            "sequences": 4476,
-            "seqs_per_l": 11.8,
-            "quality": 10,
-        },
-    },
-
-}
-
-
-def get_msa_dict():
-    msa_dict = {}
-
-    for l, v in EV_META.items():
-        if l != "TrpB":
-            if "chosen" in v.keys():
-                msa_dict[l] = v["chosen"]["sequences"]
-            else:
-                msa_dict[l] = v["recommended"]["sequences"]
-        else:
-            ls = [l+ "3"+ app for app in [chr(i) for i in range(ord('A'), ord('I')+1)]]+ ["TrpB4"]
-            for t in ls:
-                if "chosen" in v.keys():
-                    msa_dict[t] = v["chosen"]["sequences"]
-                else:
-                    msa_dict[t] = v["recommended"]["sequences"]
-
-    return msa_dict
-
-MSA_DICT = deepcopy(get_msa_dict())

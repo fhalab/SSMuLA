@@ -3,26 +3,25 @@ A script to run the COVES algorithm on a given dataset.
 """
 
 import os
-import importlib
-
+from copy import deepcopy
 from glob import glob
 import tqdm
 
-import time
 import timeit
-
+import random
+import math
 import numpy as np
 import pandas as pd
 import scipy
-
-import torch, functools
+import functools
+import torch
 from torch import nn, scatter_add
 import torch.nn.functional as F
 import torch_geometric
 from torch_geometric.nn import MessagePassing
 import torch_cluster
 from torch.utils.data import IterableDataset
-import torch, random, scipy, math
+
 
 from atom3d.datasets import LMDBDataset
 import atom3d.datasets.datasets as da
@@ -1138,8 +1137,17 @@ def run_coves(
     return df_result
 
 
-def run_all_coves(patern="coves_data/*", n_ave=100):
-    for lmdb_path in glob(patern):
+def run_all_coves(patern = "coves_data/*", n_ave:int =100):
+    """
+    
+    """
+
+    if isinstance(patern, str):
+        lmdb_path_list = glob(patern)
+    else:
+        lmdb_path_list = deepcopy(patern)
+
+    for lmdb_path in lmdb_path_list:
         protein_name = get_file_name(lmdb_path)
         print(f"Running CoVES for {protein_name}...")
         run_coves(protein_name, n_ave=n_ave)
