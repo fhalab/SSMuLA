@@ -648,8 +648,10 @@ class MLDESim(MLDEDataset):
         Returns the predictions on the training set and the trained model.
         """
         if self._model_class == "boosting":
+            if y_train.min() < 0 or y_validation.min() < 0:
+                add_boosting_kwargs = {"objective": "reg:squarederror"}
             clf = get_model(
-                self._model_class, model_kwargs={"nthread": self._boosting_n_worker}
+                self._model_class, model_kwargs={"nthread": self._boosting_n_worker, **add_boosting_kwargs}
             )
             eval_set = [(X_validation, y_validation)]
             clf.fit(X_train, y_train, eval_set=eval_set, verbose=False)

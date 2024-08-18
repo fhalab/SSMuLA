@@ -24,6 +24,7 @@ from torch_geometric.nn import MessagePassing
 import torch_cluster
 from torch.utils.data import IterableDataset
 
+from Bio import SeqIO
 
 from atom3d.datasets import LMDBDataset
 import atom3d.datasets.datasets as da
@@ -33,7 +34,7 @@ import atom3d.util.formats as fo
 from atom3d.util import metrics
 
 from SSMuLA.landscape_global import LIB_INFO_DICT, lib2prot
-from SSMuLA.util import checkNgen_folder, get_file_name, read_fasta
+from SSMuLA.util import checkNgen_folder, get_file_name
 
 # to go from 3 letter amino acid code to one letter amino acid code
 AA3_TO_AA1 = {
@@ -1099,6 +1100,21 @@ def get_gvp_res_prefs(
         os.path.join(df_path, protein_name + "_" + chain_number + ".csv"), index=False
     )
     return df_result
+
+
+def read_fasta(fasta_path: str) -> str:
+    """
+    Reads a FASTA file using Biopython and returns the sequence of the first record.
+
+    Args:
+    - fasta_path (str): The path to the FASTA file.
+
+    Returns:
+    - str: The sequence from the first record in the FASTA file.
+    """
+    with open(fasta_path, 'r') as file:
+        for record in SeqIO.parse(file, "fasta"):
+            return str(record.seq)
 
 
 def run_coves(

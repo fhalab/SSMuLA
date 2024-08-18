@@ -212,6 +212,10 @@ class ZS_Analysis(LibData):
             y_true_fitness = df["fitness"].values
             y_score = df[zs].values
 
+            # skip if y_score only has nan
+            if np.isnan(y_score).all():
+                continue
+
             # calc rho and ndcg
             zs_coord_dict[zs]["rho"] = spearmanr(y_true_fitness, y_score)[0]
             zs_coord_dict[zs]["ndcg"] = ndcg_scale(y_true_fitness, y_score)
