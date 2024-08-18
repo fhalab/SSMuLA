@@ -2,6 +2,8 @@
 A script to run the COVES algorithm on a given dataset.
 """
 
+from __future__ import annotations
+
 import os
 from copy import deepcopy
 from glob import glob
@@ -30,6 +32,7 @@ import atom3d.util.file as fi
 import atom3d.util.formats as fo
 from atom3d.util import metrics
 
+from SSMuLA.landscape_global import LIB_INFO_DICT, lib2prot
 from SSMuLA.util import checkNgen_folder, get_file_name, read_fasta
 
 # to go from 3 letter amino acid code to one letter amino acid code
@@ -1030,8 +1033,9 @@ def get_gvp_res_prefs(
     print(pos_oi_all)
     # Load dataset from directory of PDB files
     # this is recursive, all pdb files in subdirectories will also be used
-    dataset = da.load_dataset(pdb_din, 'pdb',
-                              transform = myResTransform(balance=False, pos_oi =pos_oi_all))
+    dataset = da.load_dataset(
+        pdb_din, "pdb", transform=myResTransform(balance=False, pos_oi=pos_oi_all)
+    )
 
     # Create LMDB dataset from PDB dataset, and write to file
     da.make_lmdb_dataset(dataset, lmdb_dout)
@@ -1137,10 +1141,8 @@ def run_coves(
     return df_result
 
 
-def run_all_coves(patern = "coves_data/*", n_ave:int =100):
-    """
-    
-    """
+def run_all_coves(patern="coves_data/*", n_ave: int = 100):
+    """ """
 
     if isinstance(patern, str):
         lmdb_path_list = glob(patern)
@@ -1151,3 +1153,213 @@ def run_all_coves(patern = "coves_data/*", n_ave:int =100):
         protein_name = get_file_name(lmdb_path)
         print(f"Running CoVES for {protein_name}...")
         run_coves(protein_name, n_ave=n_ave)
+
+
+############ for recombining the mutations ############
+
+
+def read_res_pred(fin: str) -> pd.DataFrame:
+
+    """
+    Append the residue info
+
+    Args:
+    - fin, str: file path
+
+    Returns:
+    - pd.DataFrame: with mutant info
+    """
+
+    df_gvp_pred = pd.read_csv(fin)
+    df_gvp_pred["pos"] = df_gvp_pred.mut.str[1:-1].astype(int)  # m1_indexed
+    df_gvp_pred["mut_aa"] = df_gvp_pred.mut.str[-1].astype(str)
+    df_gvp_pred["wt_pos"] = df_gvp_pred.mut.str[0:-1].astype(str)
+
+    return df_gvp_pred
+
+
+def get_norm_probability_df(df: pd.DataFrame, mutant_score: float, pos: int, t=1):
+
+    """
+    Normalizes the probabilities of a given score in a dataframe
+    for a particular mutant score from RES model, get it's site-wise normalized probability
+    subtracting max log_p to not have underflow issues
+
+    Args:
+    - df, pd.DataFrame: dataframe with mutant scores
+    - mutant_score, float: mutant score
+    - pos, int: position
+    - t, float: temperature
+
+    Returns:
+    - np.array: normalized probabilities
+    """
+    df_pos = df.loc[df.pos == pos]
+
+    log_p_mut = -np.abs(mutant_score) / t  # scalar
+    log_p_all = -np.abs(df_pos.mean_x) / t  # array
+
+    max_log_p_all = max(log_p_all)
+    p_mut_norm_max = np.exp(log_p_mut - max_log_p_all)
+    p_all_norm_max = np.exp(log_p_all - max_log_p_all)
+
+    # normalize probabilities to sum to one
+    p_norm = p_mut_norm_max / np.sum(p_all_norm_max)
+    return p_norm
+
+
+def add_p_col_df_gvp_log(df_gvp_pred: pd.DataFrame, t: float = 0.1) -> pd.DataFrame:
+
+    """
+    Add normalized probabilities to the dataframe
+
+    Args:
+    - df_gvp_pred, pd.DataFrame: dataframe with mutant scores
+    - t, float: temperature
+
+    Returns:
+    - pd.DataFrame: with normalized probabilities
+    """
+
+    df_gvp_pred[f"p_t{t}"] = df_gvp_pred.apply(
+        lambda r: get_norm_probability_df(df_gvp_pred, r.mean_x, r.pos, t=t), axis=1
+    )
+    df_gvp_pred[f"log_p_t{t}"] = np.log(df_gvp_pred[f"p_t{t}"])
+
+    return df_gvp_pred
+
+
+def get_joint_log_prob_mutants(df: pd.DataFrame, muts: str, p_col: str = "log_p_t0.1"):
+
+    """
+    Assuming independence between positions, give a score based on RES predictions
+    expects muts as a concatenation of 'D5L:R6K'
+    beware of difference in number of elements, cannot compare
+
+    Args:
+    - df, pd.DataFrame: dataframe with mutant scores
+    - muts, str: concatenated mutants
+    - p_col, str: column name
+
+    Returns:
+    - float: joint log probability
+    """
+
+    log_prob = 0
+
+    try:
+        for m in muts.split(":"):
+            log_prob += df.loc[df.mut == m][p_col].values[0]
+    except IndexError:
+        print("index_error with mut:{}".format(muts))
+    return log_prob
+
+
+def format_coves_mutations(muts: str, positions: list) -> str:
+
+    """
+    Format the mutations for recombining CoVES predictions
+    to include all sites
+
+    ie. V39A -> V39A:D40D:G41G:V54V
+
+    Args:
+    - muts, str: concatenated mutants
+    - positions, list: positions
+
+    Returns:
+    - str: formatted mutations
+    """
+
+    # Parse the mutations into a dictionary: {'position': 'mutated residue'}
+    mut_dict = {mut[:-1]: mut[-1] for mut in muts.split(":")}
+
+    # Build the full sequence with the mutated residues or original residues
+    formatted_muts = ":".join(
+        [f"{pos}{mut_dict.get(pos, pos[0])}" for pos in positions]
+    )
+
+    return formatted_muts
+
+
+def append_coves_scores(
+    lib: str, ev_esm_dir: str = "ev_esm2", coves_dir: str = "coves/100", t: float = 0.1
+) -> pd.DataFrame:
+
+    """
+    Append the CoVES scores to the dataframe
+
+    Args:
+    - lib, str: library name
+    - ev_esm_dir, str: directory with ev_esm scores
+    - coves_dir, str: directory with CoVES scores
+    - t, float: temperature
+
+    Returns:
+    - pd.DataFrame: with CoVES scores
+    """
+
+    df = pd.read_csv(f"{ev_esm_dir}/{lib}/{lib}.csv")
+
+    # scoring with CoVES
+    coves_df = f"{coves_dir}/{lib2prot(lib)}_A.csv"
+    # get the residue effect scores that are inferred from the structural surrounding for each residue
+    df_gvp_pred = read_res_pred(coves_df)
+
+    # normalize scores for each position to be probabilities and log_probabilities at a given site
+    # the temperature controls the relative weighting of this normalization
+    df_gvp_pred = add_p_col_df_gvp_log(df_gvp_pred, t=t)
+    sliced_df_gvp = df_gvp_pred[
+        df_gvp_pred["pos"].isin(list(LIB_INFO_DICT[lib]["positions"].values()))
+    ].copy()
+
+    # Apply the function to the dataframe
+    df["verbose_muts"] = df["muts"].apply(
+        format_coves_mutations, positions=sliced_df_gvp["wt_pos"].unique()
+    )
+
+    # calculating the antitoxi 3 position library combinatorial variant effect score from the individual per site amino acid scores
+    df["coves_score"] = df["verbose_muts"].apply(
+        lambda m: get_joint_log_prob_mutants(df_gvp_pred, m, p_col=f"log_p_t{str(t)}")
+    )
+
+    processed_folder = f"{coves_dir}_processed/"
+    # make directory if it doesn't exist
+    checkNgen_folder(processed_folder)
+
+    # save the dataframe
+    df[["muts", "coves_score"]].to_csv(
+        f"{processed_folder}/{lib}.csv", index=False
+    )
+
+    return df
+
+
+def append_all_coves_scores(
+    libs: list | str = "ev_esm2/*",
+    ev_esm_dir: str = "ev_esm2",
+    coves_dir: str = "coves/100",
+    t: float = 0.1,
+) -> pd.DataFrame:
+
+    """
+    Append the CoVES scores to all libraries
+
+    Args:
+    - lib_list, list: list of libraries
+    - ev_esm_dir, str: directory with ev_esm scores
+    - coves_dir, str: directory with CoVES scores
+    - t, float: temperature
+
+    Returns:
+    - pd.DataFrame: with CoVES scores
+    """
+
+    if isinstance(libs, str):
+        lib_list = [os.path.basename(l) for l in sorted(glob(libs))]
+    else:
+        lib_list = deepcopy(libs)
+
+    for lib in lib_list:
+        print(f"Processing CoVES scores for {lib}...")
+        append_coves_scores(lib, ev_esm_dir=ev_esm_dir, coves_dir=coves_dir, t=t)

@@ -32,7 +32,7 @@ from SSMuLA.util import ndcg_scale, checkNgen_folder
 hv.extension("bokeh")
 hv.renderer("bokeh").theme = JSON_THEME
 
-ZS_OPTS = ["ed_score", "Triad_score", "ev_score", "esm_score", "esmif_score"]
+ZS_OPTS = ["ed_score", "Triad_score", "ev_score", "esm_score", "esmif_score", "coves_score"]
 ZS_COMB_OPTS = [
     "Triad-ev_score",
     "Triad-esm_score",
@@ -40,7 +40,7 @@ ZS_COMB_OPTS = [
     "msanoif-comb_score",
     "msa-comb_score",
     "structnmsa-comb_score",
-    "two-best_score"
+    "two-best_score",
 ]
 
 SIMPLE_ZS_OPT_LEGNED = {
@@ -50,6 +50,7 @@ SIMPLE_ZS_OPT_LEGNED = {
     "ev_score": "EVmutation",
     "esm_score": "ESM",
     "esmif_score": "ESM-IF",
+    "coves_score": "Coves",
 }
 
 ZS_OPTS_LEGEND = {
@@ -59,6 +60,7 @@ ZS_OPTS_LEGEND = {
     "ev_score": "EVmutation",
     "esm_score": "ESM",
     "esmif_score": "ESM-IF",
+    "coves_score": "Coves",
     "struc-comb_score": "Triad + ESM-IF",
     "Triad-ev_score": "Triad + EVmutation",
     "Triad-esm_score": "Triad + ESM",
@@ -83,6 +85,7 @@ class ZS_Analysis(LibData):
         ev_esm_folder: str = "ev_esm",
         triad_folder: str = "triad",
         esmif_folder: str = "esmif",
+        coves_folder: str = "coves/100_processed",
         filter_min_by: str = "none",
         zs_comb_dir: str = "results/zs_comb",
         zs_vis_dir: str = "results/zs_vis",
@@ -98,6 +101,7 @@ class ZS_Analysis(LibData):
         - ev_esm_folder, str: the folder for the ev and esm scores
         - triad_folder, str: the folder for the triad scores
         - esmif_folder, str: the folder for the esm inverse folding scores
+        - coves_folder, str: the folder for the coves scores
         - filter_min_by, str: the filter for the minimum fitness
         - zs_comb_dir, str: the folder for the ZS combed with fitness outputs
         - zs_vis_dir, str: the folder for the ZS vis outputs
@@ -109,6 +113,7 @@ class ZS_Analysis(LibData):
         self._ev_esm_folder = os.path.normpath(ev_esm_folder)
         self._triad_folder = os.path.normpath(triad_folder)
         self._esmif_folder = os.path.normpath(esmif_folder)
+        self._coves_folder = os.path.normpath(coves_folder)
         self._filter_min_by = filter_min_by
         self._zs_comb_dir = checkNgen_folder(zs_comb_dir)
         self._zs_vis_dir = checkNgen_folder(zs_vis_dir)
@@ -122,6 +127,7 @@ class ZS_Analysis(LibData):
         print(f"Get ev esm data from {self.ev_esm_path}...")
         print(f"Get triad data from {self.triad_path}...")
         print(f"Get inverse folding data from {self.esmif_path}...")
+        print(f"Get coves data from {self.coves_path}...")
 
         print(f"Save combed zs data to {self.zf_comb_path}...")
         self._zs_df = self._get_zs_df()
@@ -131,21 +137,25 @@ class ZS_Analysis(LibData):
         self._zs_fit_plot_dict = self._plot_zs_vs_fitness()
 
     def _get_zs_df(self) -> pd.DataFrame:
+
         """
         Get the ZS dataframe
         """
         df = pd.merge(
             pd.merge(
-                pd.merge(self.df_no_stop, self.ev_esm_df, on="muts"),
-                self.esmif_df,
-                on="muts",
+                pd.merge(
+                    pd.merge(self.df_no_stop, self.ev_esm_df, on="muts"),
+                    self.esmif_df,
+                    on="muts",
+                ),
+                self.triad_df,
+                on="AAs",
             ),
-            self.triad_df,
-            on="AAs",
+            self.coves_df,
+            on="muts",
         )
 
         # some easy zs comb
-
         df["Triad-ev_score"] = -1 * (df["Triad_rank"] + df["ev_rank"])
         df["Triad-esm_score"] = -1 * (df["Triad_rank"] + df["esm_rank"])
 
@@ -165,7 +175,7 @@ class ZS_Analysis(LibData):
             "msa-comb",
             "msanoif-comb",
             "structnmsa-comb",
-            "two-best"
+            "two-best",
         ]:
             df[f"{comb_opt}_rank"] = df[f"{comb_opt}_score"].rank(ascending=False)
 
@@ -390,16 +400,25 @@ class ZS_Analysis(LibData):
 
         for zs in ["esm", "ev"]:
 
-            parent_zs = df.loc[parent_row.index, f"{zs}_score"].values[0]
+            if f"{zs}_score" not in df.columns:
+                df[f"{zs}_score"] = np.nan
+            else:
+                parent_zs = df.loc[parent_row.index, f"{zs}_score"].values[0]
 
-            if np.isnan(parent_zs):
-                df.loc[parent_row.index, f"{zs}_score"] = 0
+                if np.isnan(parent_zs):
+                    df.loc[parent_row.index, f"{zs}_score"] = 0
 
             # Add rank column for each score
             df[f"{zs}_rank"] = df[f"{zs}_score"].rank(ascending=False)
 
+        # find if its fit or fitness
+        if "fit" in df.columns:
+            fit_col = "fit"
+        else:
+            fit_col = "fitness"
+
         # prevent duplicates
-        drop_cols = ["fit", "combo"]
+        drop_cols = [fit_col, "combo"]
 
         if "active" in df.columns:
             drop_cols.append("active")
@@ -466,6 +485,28 @@ class ZS_Analysis(LibData):
 
         # Add rank column for each score
         df["esmif_rank"] = df["esmif_score"].rank(ascending=False)
+
+        return df.copy()
+
+    @property
+    def coves_path(self) -> str:
+        """
+        Returns the path to the coves scores
+        """
+
+        return f"{self._coves_folder}/{self.lib_name}.csv"
+
+    @property
+    def coves_df(self) -> pd.DataFrame:
+
+        """
+        Returns the dataframe with the coves scores
+        """
+
+        df = pd.read_csv(self.coves_path)
+
+        # Add rank column for each score
+        df["coves_rank"] = df["coves_score"].rank(ascending=False)
 
         return df.copy()
 
