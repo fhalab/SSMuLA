@@ -5,7 +5,7 @@ import os
 
 from datetime import datetime
 
-from SSMuLA.vis_summary import ZSSSumVis, vis_sum_de_mlde
+from SSMuLA.vis_summary import DESumVis, ZSSSumVis, vis_sum_de_mlde
 from SSMuLA.util import checkNgen_folder
 
 if __name__ == "__main__":
@@ -30,8 +30,8 @@ if __name__ == "__main__":
     # )
 
     ZSSSumVis(
-        input_csv="results/zs_sum_2/active/zs_stat_scale2max.csv",
-        output_folder="results/summary/ZS_2"
+        input_csv="results/zs_sum_4/none/zs_stat_scale2max.csv",
+        output_folder="results/summary/ZS_4"
     )
 
     # vis_sum_de_mlde(simplezs=True)

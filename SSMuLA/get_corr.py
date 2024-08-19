@@ -198,6 +198,7 @@ class CorrPerfomanceCharacter:
         n_top: int = 96,
         filter_active: float = 1,
         models: list[str] = ["boosting", "ridge"],
+        ifplot: bool = True,
     ):
 
         self._lib_stat_path = lib_stat_path
@@ -247,7 +248,8 @@ class CorrPerfomanceCharacter:
         self._corr_df.to_csv(f"{self._corr_subdir}/corr.csv", index=False)
 
         # now plot
-        self._plot_corr()
+        if ifplot:
+            self._plot_corr()
 
     def _get_lib_stat(self) -> pd.DataFrame:
         """
@@ -582,9 +584,13 @@ class CorrPerfomanceCharacter:
 
             # delta_allft_mlde_list = [f"{dt}_{ft}_mlde" for dt in DELTA_OPTS for ft in zs_no_score_lis]
             for zs in zs_no_score_list + N_MUT_SUBS:
-                merge_df[f"{dt}_{zs}_mlde"] = (
-                    merge_df[f"{mlde_name}_{zs}"] - merge_df[mlde_name]
-                )
+                if f"{mlde_name}_{zs}" in merge_df.columns:
+                    merge_df[f"{dt}_{zs}_mlde"] = (
+                        merge_df[f"{mlde_name}_{zs}"] - merge_df[mlde_name]
+                    )
+                else:
+                    merge_df[f"{dt}_{zs}_mlde"] = np.nan
+                    merge_df[f"{mlde_name}_{zs}"] = np.nan
 
             best_ft = merge_df[
                 [
@@ -642,9 +648,12 @@ class CorrPerfomanceCharacter:
 
             for val in LANDSCAPE_ATTRIBUTES + zs_list + val_list:
 
-                corr_row[val] = spearmanr(self._actcutt_df[des], self._actcutt_df[val])[
-                    0
-                ]
+                if des in self._actcutt_df.columns and val in self._actcutt_df.columns:
+                    corr_row[val] = spearmanr(self._actcutt_df[des], self._actcutt_df[val])[
+                        0
+                    ]
+                else:
+                    corr_row[val] = np.nan
 
             corr_df = corr_df._append(
                 corr_row,
@@ -789,12 +798,14 @@ def perfom_corr(
     n_mut_cuttoff: int = 0,
     filter_active: float = 1,
     n_top_list: list[int] = [96, 384],
+    n_list: list[int] = N_SAMPLE_LIST,
     models_list: list[list[str]] = [["boosting", "ridge"], ["boosting"], ["ridge"]],
+    ifplot: bool = True,
 ):
 
     for models in models_list:
         for n_top in n_top_list:
-            for n in tqdm(N_SAMPLE_LIST):
+            for n in tqdm(n_list):
                 CorrPerfomanceCharacter(
                     lib_stat_path=lib_stat_path,
                     loc_opt_path=loc_opt_path,
@@ -808,4 +819,5 @@ def perfom_corr(
                     n_top=n_top,
                     filter_active=filter_active,
                     models=models,
+                    ifplot=ifplot,
                 )

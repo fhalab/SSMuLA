@@ -50,7 +50,7 @@ SIMPLE_ZS_OPT_LEGNED = {
     "ev_score": "EVmutation",
     "esm_score": "ESM",
     "esmif_score": "ESM-IF",
-    "coves_score": "Coves",
+    "coves_score": "CoVES",
 }
 
 ZS_OPTS_LEGEND = {
@@ -60,7 +60,7 @@ ZS_OPTS_LEGEND = {
     "ev_score": "EVmutation",
     "esm_score": "ESM",
     "esmif_score": "ESM-IF",
-    "coves_score": "Coves",
+    "coves_score": "CoVES",
     "struc-comb_score": "Triad + ESM-IF",
     "Triad-ev_score": "Triad + EVmutation",
     "Triad-esm_score": "Triad + ESM",
