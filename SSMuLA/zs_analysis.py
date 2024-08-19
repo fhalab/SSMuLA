@@ -194,12 +194,22 @@ class ZS_Analysis(LibData):
 
         df = self.zs_df.copy()
 
+        print(f"df has columns: {df.columns}")
+
         zs_coord_dict = {zs: {} for zs in ZS_OPTS + ZS_COMB_OPTS}
 
         roc_plots = []
 
         for zs in ZS_OPTS + ZS_COMB_OPTS:
 
+            if zs not in df.columns:
+                print(f"{zs} not in {df.columns} for {self.lib_name}")
+                zs_coord_dict[zs]["rho"] = np.nan
+                zs_coord_dict[zs]["ndcg"] = np.nan
+                zs_coord_dict[zs]["rocauc"] = np.nan
+                continue
+
+            print(f"number of values in {self.lib_name} {zs}: {np.sum(~np.isnan(df[zs]))}")
             print(f"number of nan in {self.lib_name} {zs}: {np.sum(np.isnan(df[zs]))}")
 
             if zs in ZS_OPTS:
@@ -207,44 +217,46 @@ class ZS_Analysis(LibData):
             else:
                 line_style = "dashed"
 
-            df = df.dropna(subset=[zs])
-            y_true_active = df["active"].values
-            y_true_fitness = df["fitness"].values
-            y_score = df[zs].values
+            slice_df = df.dropna(subset=[zs]).copy()
+            y_true_active = slice_df["active"].values
+            y_true_fitness = slice_df["fitness"].values
+            y_score = slice_df[zs].values
 
-            # skip if y_score only has nan
-            if np.isnan(y_score).all():
-                continue
+            if len(y_score) == 0:
+                print(f"{zs} has no data -> skip")
+                zs_coord_dict[zs]["rho"] = np.nan
+                zs_coord_dict[zs]["ndcg"] = np.nan
+                zs_coord_dict[zs]["rocauc"] = np.nan
+            else:
+                # calc rho and ndcg
+                zs_coord_dict[zs]["rho"] = spearmanr(y_true_fitness, y_score)[0]
+                zs_coord_dict[zs]["ndcg"] = ndcg_scale(y_true_fitness, y_score)
 
-            # calc rho and ndcg
-            zs_coord_dict[zs]["rho"] = spearmanr(y_true_fitness, y_score)[0]
-            zs_coord_dict[zs]["ndcg"] = ndcg_scale(y_true_fitness, y_score)
+                # roc curves
+                roc_name = f"{self.lib_name} active variant zero-shot predictor ROC curves"
 
-            # roc curves
-            roc_name = f"{self.lib_name} active variant zero-shot predictor ROC curves"
+                fpr, tpr, _ = roc_curve(y_true_active, y_score, pos_label=True)
+                temp = pd.DataFrame({"False Positive Rate": fpr, "True Positive Rate": tpr})
 
-            fpr, tpr, _ = roc_curve(y_true_active, y_score, pos_label=True)
-            temp = pd.DataFrame({"False Positive Rate": fpr, "True Positive Rate": tpr})
-
-            roc_plots.append(
-                hv.Curve(
-                    temp,
-                    kdims=["False Positive Rate"],
-                    vdims=["True Positive Rate"],
-                    label=ZS_OPTS_LEGEND[zs],
-                ).opts(
-                    height=400,
-                    width=700,
-                    xlim=(0, 1),
-                    ylim=(0, 1),
-                    hooks=[one_decimal_x, one_decimal_y, fixmargins],
-                    color=hv.Cycle("Category10"),
-                    line_dash=line_style,
+                roc_plots.append(
+                    hv.Curve(
+                        temp,
+                        kdims=["False Positive Rate"],
+                        vdims=["True Positive Rate"],
+                        label=ZS_OPTS_LEGEND[zs],
+                    ).opts(
+                        height=400,
+                        width=700,
+                        xlim=(0, 1),
+                        ylim=(0, 1),
+                        hooks=[one_decimal_x, one_decimal_y, fixmargins],
+                        color=hv.Cycle("Category10"),
+                        line_dash=line_style,
+                    )
                 )
-            )
 
-            roc_auc = auc(fpr, tpr)
-            zs_coord_dict[zs]["rocauc"] = roc_auc
+                roc_auc = auc(fpr, tpr)
+                zs_coord_dict[zs]["rocauc"] = roc_auc
 
         roc_plots.append(
             hv.Curve(

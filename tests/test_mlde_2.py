@@ -374,45 +374,45 @@ if __name__ == "__main__":
     #     mlde_folder=mlde_folder,
     # )
 
-    run_all_mlde_parallelized(
-        encodings=DEFAULT_LEARNED_EMB_COMBO,
-        n_mut_cutoffs=[0,],
-        zs_predictors=["esmif"],
-        n_samples=[192, 288],
-        n_replicate=50,
-        n_job=256,
-        ft_first=True,
-        zs_folder=zs_folder,
-        mlde_folder=mlde_folder,
-        all_libs=False,
-        lib_list=["GB1", "TrpB4"],
-    )
+    # run_all_mlde_parallelized(
+    #     encodings=DEFAULT_LEARNED_EMB_COMBO,
+    #     n_mut_cutoffs=[0,],
+    #     zs_predictors=["esmif"],
+    #     n_samples=[192, 288],
+    #     n_replicate=50,
+    #     n_job=256,
+    #     ft_first=True,
+    #     zs_folder=zs_folder,
+    #     mlde_folder=mlde_folder,
+    #     all_libs=False,
+    #     lib_list=["GB1", "TrpB4"],
+    # )
 
-    run_all_mlde_parallelized(
-        encodings=DEFAULT_LEARNED_EMB_COMBO,
-        n_mut_cutoffs=[0,],
-        zs_predictors=["esmif"],
-        n_samples=[480, 576],
-        n_replicate=50,
-        n_job=256,
-        ft_first=True,
-        zs_folder=zs_folder,
-        mlde_folder=mlde_folder,
-        all_libs=False,
-        lib_list=["GB1", "TrpB4"],
-    )
+    # run_all_mlde_parallelized(
+    #     encodings=DEFAULT_LEARNED_EMB_COMBO,
+    #     n_mut_cutoffs=[0,],
+    #     zs_predictors=["esmif"],
+    #     n_samples=[480, 576],
+    #     n_replicate=50,
+    #     n_job=256,
+    #     ft_first=True,
+    #     zs_folder=zs_folder,
+    #     mlde_folder=mlde_folder,
+    #     all_libs=False,
+    #     lib_list=["GB1", "TrpB4"],
+    # )
 
-    run_all_mlde_parallelized(
-        encodings=DEFAULT_LEARNED_EMB_COMBO,
-        n_mut_cutoffs=[0],
-        zs_predictors=["esmif"],
-        n_samples=[960, 1920],
-        n_replicate=50,
-        n_job=256,
-        ft_first=True,
-        zs_folder=zs_folder,
-        mlde_folder=mlde_folder,
-    )
+    # run_all_mlde_parallelized(
+    #     encodings=DEFAULT_LEARNED_EMB_COMBO,
+    #     n_mut_cutoffs=[0],
+    #     zs_predictors=["esmif"],
+    #     n_samples=[960, 1920],
+    #     n_replicate=50,
+    #     n_job=256,
+    #     ft_first=True,
+    #     zs_folder=zs_folder,
+    #     mlde_folder=mlde_folder,
+    # )
 
     # run_all_mlde_parallelized(
     #     encodings=DEFAULT_LEARNED_EMB_COMBO,
