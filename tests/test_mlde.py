@@ -23,9 +23,127 @@ if __name__ == "__main__":
 
 
     zs_folder = "results/zs_comb_4"
-    # mlde_folder = "results/mlde_twobest"
+    mlde_folder = "results/mlde_coves"
 
-       # run_all_mlde_parallelized(
+
+    run_all_mlde_parallelized(
+        encodings=["one-hot"],
+        n_mut_cutoffs=[0],
+        zs_predictors=["coves"],
+        n_samples=[96, 384],
+        n_replicate=50,
+        n_job=96,
+        all_libs=False,
+        ft_first=True,
+        lib_list=["DHFR", "GB1", "ParD2", "ParD3", "TrpB3A", "TrpB3B", "TrpB3C", "TrpB3D", "TrpB3E", "TrpB3F", "TrpB3G", "TrpB3H", "TrpB3I", "TrpB4"],
+        mlde_folder=mlde_folder,
+        zs_folder=zs_folder,
+    )
+
+
+    run_all_mlde_parallelized(
+        encodings=["one-hot"],
+        n_mut_cutoffs=[0],
+        zs_predictors=["coves"],
+        n_samples=[24, 48],
+        n_replicate=50,
+        n_job=96,
+        all_libs=False,
+        ft_first=True,
+        lib_list=["DHFR", "GB1", "ParD2", "ParD3", "TrpB3A", "TrpB3B", "TrpB3C", "TrpB3D", "TrpB3E", "TrpB3F", "TrpB3G", "TrpB3H", "TrpB3I", "TrpB4"],
+        mlde_folder=mlde_folder,
+        zs_folder=zs_folder,
+    )
+
+
+    run_all_mlde_parallelized(
+        encodings=["one-hot"],
+        n_mut_cutoffs=[0],
+        zs_predictors=["coves"],
+        n_samples=[192, 288, 480, 576],
+        n_replicate=50,
+        n_job=96,
+        all_libs=False,
+        ft_first=True,
+        lib_list=["DHFR", "GB1", "ParD2", "ParD3", "TrpB3A", "TrpB3B", "TrpB3C", "TrpB3D", "TrpB3E", "TrpB3F", "TrpB3G", "TrpB3H", "TrpB3I", "TrpB4"],
+        mlde_folder=mlde_folder,
+        zs_folder=zs_folder,
+    )
+
+    run_all_mlde_parallelized(
+        encodings=["one-hot"],
+        n_mut_cutoffs=[0],
+        zs_predictors=["coves"],
+        n_samples=[960, 1920],
+        n_replicate=50,
+        n_job=96,
+        all_libs=False,
+        ft_first=True,
+        lib_list=["DHFR", "GB1", "ParD2", "ParD3", "TrpB3A", "TrpB3B", "TrpB3C", "TrpB3D", "TrpB3E", "TrpB3F", "TrpB3G", "TrpB3H", "TrpB3I", "TrpB4"],
+        mlde_folder=mlde_folder,
+        zs_folder=zs_folder,
+    )
+    
+
+    run_all_mlde_parallelized(
+        encodings=["one-hot"],
+        n_mut_cutoffs=[2],
+        zs_predictors=["coves"],
+        n_samples=[96, 384],
+        n_replicate=50,
+        n_job=96,
+        all_libs=False,
+        ft_first=False,
+        lib_list=["DHFR", "GB1", "ParD2", "ParD3", "TrpB3A", "TrpB3B", "TrpB3C", "TrpB3D", "TrpB3E", "TrpB3F", "TrpB3G", "TrpB3H", "TrpB3I", "TrpB4"],
+        mlde_folder=mlde_folder,
+        zs_folder=zs_folder,
+    )
+
+
+    run_all_mlde_parallelized(
+        encodings=["one-hot"],
+        n_mut_cutoffs=[2],
+        zs_predictors=["coves"],
+        n_samples=[24, 48],
+        n_replicate=50,
+        n_job=96,
+        all_libs=False,
+        ft_first=False,
+        lib_list=["DHFR", "GB1", "ParD2", "ParD3", "TrpB3A", "TrpB3B", "TrpB3C", "TrpB3D", "TrpB3E", "TrpB3F", "TrpB3G", "TrpB3H", "TrpB3I", "TrpB4"],
+        mlde_folder=mlde_folder,
+        zs_folder=zs_folder,
+    )
+
+
+    run_all_mlde_parallelized(
+        encodings=["one-hot"],
+        n_mut_cutoffs=[2],
+        zs_predictors=["coves"],
+        n_samples=[192, 288, 480, 576],
+        n_replicate=50,
+        n_job=96,
+        all_libs=False,
+        ft_first=False,
+        lib_list=["DHFR", "GB1", "ParD2", "ParD3", "TrpB3A", "TrpB3B", "TrpB3C", "TrpB3D", "TrpB3E", "TrpB3F", "TrpB3G", "TrpB3H", "TrpB3I", "TrpB4"],
+        mlde_folder=mlde_folder,
+        zs_folder=zs_folder,
+    )
+
+    run_all_mlde_parallelized(
+        encodings=["one-hot"],
+        n_mut_cutoffs=[2],
+        zs_predictors=["coves"],
+        n_samples=[960, 1920],
+        n_replicate=50,
+        n_job=96,
+        all_libs=False,
+        ft_first=False,
+        lib_list=["DHFR", "GB1", "ParD2", "ParD3", "TrpB3A", "TrpB3B", "TrpB3C", "TrpB3D", "TrpB3E", "TrpB3F", "TrpB3G", "TrpB3H", "TrpB3I", "TrpB4"],
+        mlde_folder=mlde_folder,
+        zs_folder=zs_folder,
+    )
+    
+    # run_all_mlde_parallelized(
     #     encodings=["one-hot"],
     #     n_mut_cutoffs=[2],
     #     zs_predictors=["struc-comb", "msanoif-comb", "msa-comb", "structnmsa-comb"],

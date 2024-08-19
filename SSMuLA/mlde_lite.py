@@ -650,6 +650,9 @@ class MLDESim(MLDEDataset):
         if self._model_class == "boosting":
             if y_train.min() < 0 or y_validation.min() < 0:
                 add_boosting_kwargs = {"objective": "reg:squarederror"}
+            else:
+                add_boosting_kwargs = {}
+
             clf = get_model(
                 self._model_class, model_kwargs={"nthread": self._boosting_n_worker, **add_boosting_kwargs}
             )
