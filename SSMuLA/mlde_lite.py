@@ -289,8 +289,8 @@ class MLDEDataset(LibData):
 
 def build_linear_model(model_kwargs):
     default_kwargs = {
-        "ridge_alpha": 1.0,
-        "ridge_fit_intercept": True,
+        "alpha": 1.0,
+        "fit_intercept": True,
     }
     kwargs = deepcopy(default_kwargs)
     for key in default_kwargs.keys():

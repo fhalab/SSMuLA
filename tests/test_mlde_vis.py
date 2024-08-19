@@ -23,13 +23,25 @@ if __name__ == "__main__":
     sys.stdout = f
 
     MLDESum(
-        mlde_results_dir = "results/mlde/saved",
-        mlde_vis_dir = "results/mlde/vis"
+        mlde_results_dir = "results/mlde_2/saved",
+        mlde_vis_dir = "results/mlde_2/vis"
     )
 
-    # MLDEVis(
-    #     mlde_results_dir = "results/mlde_old/saved",
-    #     mlde_vis_dir = "results/mlde_old/vis"
-    # )
+    MLDESum(
+        mlde_results_dir = "results/mlde_hm2zs_2/saved",
+        mlde_vis_dir = "results/mlde_hm2zs_2/vis"
+    )
 
+    """
+    MLDESum:
+
+    def __init__(
+        self,
+        mlde_results_dir: str = "results/mlde/saved",
+        mlde_vis_dir: str = "results/mlde/vis",
+        all_encoding: bool = True,
+        encoding_lists: list[str] = [],
+        ifvis: bool = False,
+    ) -> None:
+    """
     f.close()

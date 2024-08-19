@@ -24,9 +24,9 @@ if __name__ == "__main__":
     sys.stdout = f
 
     gen_all_learned_emb(
-        input_folder = "results/zs_comb_2/none/scale2max/all",
+        input_folder = "results/zs_comb_4/none/scale2max/all",
         all_libs = False,
-        lib_list = ["ParD2", "ParD3"],
+        lib_list = ["T7", "TEV"],
     )
 
     f.close()

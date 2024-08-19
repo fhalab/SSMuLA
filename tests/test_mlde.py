@@ -22,7 +22,7 @@ if __name__ == "__main__":
     sys.stdout = f
 
 
-    zs_folder = "results/zs_comb_3"
+    zs_folder = "results/zs_comb_4"
     # mlde_folder = "results/mlde_twobest"
 
        # run_all_mlde_parallelized(
@@ -39,33 +39,33 @@ if __name__ == "__main__":
 
 
 
-    run_all_mlde_parallelized(
-        encodings=["one-hot"],
-        n_mut_cutoffs=[0],
-        zs_predictors=["two-best"],
-        n_samples=[96, 384],
-        n_replicate=50,
-        n_job=96,
-        # ft_lib_fracs=[0.125, 0.25, 0.5],
-        all_libs=True,
-        ft_first=True,
-        zs_folder=zs_folder,
-        mlde_folder="results/mlde_twobest",
-    )
+    # run_all_mlde_parallelized(
+    #     encodings=["one-hot"],
+    #     n_mut_cutoffs=[0],
+    #     zs_predictors=["two-best"],
+    #     n_samples=[96, 384],
+    #     n_replicate=50,
+    #     n_job=96,
+    #     # ft_lib_fracs=[0.125, 0.25, 0.5],
+    #     all_libs=True,
+    #     ft_first=True,
+    #     zs_folder=zs_folder,
+    #     mlde_folder="results/mlde_twobest",
+    # )
 
-    run_all_mlde_parallelized(
-        encodings=["one-hot"],
-        n_mut_cutoffs=[2],
-        zs_predictors=["two-best"],
-        n_samples=[96, 384],
-        n_replicate=50,
-        n_job=96,
-        # ft_lib_fracs=[0.03125, 0.0625, 0.125, 0.25, 0.5],
-        all_libs=True,
-        ft_first=False,
-        zs_folder=zs_folder,
-        mlde_folder="results/mlde_twobest",
-    )
+    # run_all_mlde_parallelized(
+    #     encodings=["one-hot"],
+    #     n_mut_cutoffs=[2],
+    #     zs_predictors=["two-best"],
+    #     n_samples=[96, 384],
+    #     n_replicate=50,
+    #     n_job=96,
+    #     # ft_lib_fracs=[0.03125, 0.0625, 0.125, 0.25, 0.5],
+    #     all_libs=True,
+    #     ft_first=False,
+    #     zs_folder=zs_folder,
+    #     mlde_folder="results/mlde_twobest",
+    # )
 
 
     # run_all_mlde_parallelized(
@@ -154,33 +154,33 @@ if __name__ == "__main__":
     #     mlde_folder=mlde_folder,
     # )
 
-    run_all_mlde_parallelized(
-        encodings=["one-hot"],
-        n_mut_cutoffs=[0],
-        zs_predictors=["two-best"],
-        n_samples=[96, 384],
-        n_replicate=50,
-        n_job=96,
-        ft_lib_fracs=[0.03125, 0.0625],
-        all_libs=True,
-        ft_first=True,
-        zs_folder=zs_folder,
-        mlde_folder="results/mlde_ft3",
-    )
+    # run_all_mlde_parallelized(
+    #     encodings=["one-hot"],
+    #     n_mut_cutoffs=[0],
+    #     zs_predictors=["two-best"],
+    #     n_samples=[96, 384],
+    #     n_replicate=50,
+    #     n_job=96,
+    #     ft_lib_fracs=[0.03125, 0.0625],
+    #     all_libs=True,
+    #     ft_first=True,
+    #     zs_folder=zs_folder,
+    #     mlde_folder="results/mlde_ft3",
+    # )
 
-    run_all_mlde_parallelized(
-        encodings=["one-hot"],
-        n_mut_cutoffs=[2],
-        zs_predictors=["two-best"],
-        n_samples=[96, 384],
-        n_replicate=50,
-        n_job=96,
-        ft_lib_fracs=[0.03125, 0.0625],
-        all_libs=True,
-        ft_first=False,
-        zs_folder=zs_folder,
-        mlde_folder="results/mlde_ft3",
-    )
+    # run_all_mlde_parallelized(
+    #     encodings=["one-hot"],
+    #     n_mut_cutoffs=[2],
+    #     zs_predictors=["two-best"],
+    #     n_samples=[96, 384],
+    #     n_replicate=50,
+    #     n_job=96,
+    #     ft_lib_fracs=[0.03125, 0.0625],
+    #     all_libs=True,
+    #     ft_first=False,
+    #     zs_folder=zs_folder,
+    #     mlde_folder="results/mlde_ft3",
+    # )
     # run_all_mlde_parallelized(
     #     encodings=["one-hot"],
     #     n_mut_cutoffs=[0],
