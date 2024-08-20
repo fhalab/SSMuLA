@@ -34,7 +34,7 @@ if __name__ == "__main__":
         n_job=256,
         all_libs=False,
         ft_first=True,
-        lib_list=["T7", "TEV"],
+        lib_list=["TEV"],
         mlde_folder=mlde_folder,
         zs_folder=zs_folder,
     )
@@ -48,7 +48,7 @@ if __name__ == "__main__":
         n_job=256,
         all_libs=False,
         ft_first=True,
-        lib_list=["T7", "TEV"],
+        lib_list=["TEV"],
         mlde_folder=mlde_folder,
         zs_folder=zs_folder,
     )
@@ -62,7 +62,7 @@ if __name__ == "__main__":
         n_job=256,
         all_libs=False,
         ft_first=True,
-        lib_list=["T7", "TEV"],
+        lib_list=["TEV"],
         mlde_folder=mlde_folder,
         zs_folder=zs_folder,
     )
@@ -76,7 +76,7 @@ if __name__ == "__main__":
         n_job=256,
         all_libs=False,
         ft_first=True,
-        lib_list=["T7", "TEV"],
+        lib_list=["TEV"],
         mlde_folder=mlde_folder,
         zs_folder=zs_folder,
     )
@@ -90,7 +90,7 @@ if __name__ == "__main__":
         n_job=256,
         all_libs=False,
         ft_first=True,
-        lib_list=["T7", "TEV"],
+        lib_list=["TEV"],
         mlde_folder=mlde_folder,
         zs_folder=zs_folder,
     )
@@ -104,7 +104,7 @@ if __name__ == "__main__":
         n_job=256,
         all_libs=False,
         ft_first=True,
-        lib_list=["T7", "TEV"],
+        lib_list=["TEV"],
         mlde_folder=mlde_folder,
         zs_folder=zs_folder,
     )    
@@ -118,7 +118,7 @@ if __name__ == "__main__":
         n_job=256,
         all_libs=False,
         ft_first=True,
-        lib_list=["T7", "TEV"],
+        lib_list=["TEV"],
         mlde_folder=mlde_folder,
         zs_folder=zs_folder,
     )
