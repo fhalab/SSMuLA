@@ -21,20 +21,20 @@ if __name__ == "__main__":
     )
     sys.stdout = f
 
-    zs_folder = "results/zs_comb_4"
+    zs_folder = "results/zs_comb_5"
     # mlde_folder = "results/mlde_emb"
-    mlde_folder = "results/mlde_2"
+    mlde_folder = "results/mlde_3"
 
     run_all_mlde_parallelized(
         encodings=["one-hot"],
         n_mut_cutoffs=[0],
         zs_predictors=["none"],
-        n_samples=[96, 384],
+        n_samples=[96, 384, 24, 48],
         n_replicate=50,
         n_job=256,
         all_libs=False,
         ft_first=True,
-        lib_list=["TEV"],
+        lib_list=["T7", "TEV"],
         mlde_folder=mlde_folder,
         zs_folder=zs_folder,
     )
@@ -43,12 +43,12 @@ if __name__ == "__main__":
         encodings=["one-hot"],
         n_mut_cutoffs=[0],
         zs_predictors=["none"],
-        n_samples=[24, 48, 192, 288, 480, 576],
+        n_samples=[192, 288, 480, 576],
         n_replicate=50,
         n_job=256,
         all_libs=False,
         ft_first=True,
-        lib_list=["TEV"],
+        lib_list=["T7", "TEV"],
         mlde_folder=mlde_folder,
         zs_folder=zs_folder,
     )
@@ -62,7 +62,7 @@ if __name__ == "__main__":
         n_job=256,
         all_libs=False,
         ft_first=True,
-        lib_list=["TEV"],
+        lib_list=["T7", "TEV"],
         mlde_folder=mlde_folder,
         zs_folder=zs_folder,
     )
@@ -76,7 +76,7 @@ if __name__ == "__main__":
         n_job=256,
         all_libs=False,
         ft_first=True,
-        lib_list=["TEV"],
+        lib_list=["T7", "TEV"],
         mlde_folder=mlde_folder,
         zs_folder=zs_folder,
     )
@@ -90,7 +90,7 @@ if __name__ == "__main__":
         n_job=256,
         all_libs=False,
         ft_first=True,
-        lib_list=["TEV"],
+        lib_list=["T7", "TEV"],
         mlde_folder=mlde_folder,
         zs_folder=zs_folder,
     )
@@ -104,7 +104,7 @@ if __name__ == "__main__":
         n_job=256,
         all_libs=False,
         ft_first=True,
-        lib_list=["TEV"],
+        lib_list=["T7", "TEV"],
         mlde_folder=mlde_folder,
         zs_folder=zs_folder,
     )    
@@ -118,7 +118,7 @@ if __name__ == "__main__":
         n_job=256,
         all_libs=False,
         ft_first=True,
-        lib_list=["TEV"],
+        lib_list=["T7", "TEV"],
         mlde_folder=mlde_folder,
         zs_folder=zs_folder,
     )

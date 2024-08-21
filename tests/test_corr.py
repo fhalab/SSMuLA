@@ -17,8 +17,8 @@ if __name__ == "__main__":
     f = open(os.path.join(log_folder, f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}.out"), 'w')
     sys.stdout = f
 
-    perfom_corr(n_mut_cuttoff=0, n_list=[384], zs_path="results/zs_sum_4/none/zs_stat_scale2max.csv", mlde_path="results/mlde/all_df_comb_onehot_2.csv", corr_dir="results/corr_4", ifplot=False)
-    perfom_corr(n_mut_cuttoff=2, n_list=[384], zs_path="results/zs_sum_4/none/zs_stat_scale2max.csv", mlde_path="results/mlde/all_df_comb_onehot_2.csv", corr_dir="results/corr_4", ifplot=False)
+    perfom_corr(n_mut_cuttoff=0, n_list=[384], zs_path="results/zs_sum_4/none/zs_stat_scale2max.csv", mlde_path="results/mlde/all_df_comb_onehot_2.csv", corr_dir="results/corr_3", ifplot=False)
+    perfom_corr(n_mut_cuttoff=2, n_list=[384], zs_path="results/zs_sum_4/none/zs_stat_scale2max.csv", mlde_path="results/mlde/all_df_comb_onehot_2.csv", corr_dir="results/corr_3", ifplot=False)
 
     """
     perfom_corr(
@@ -27,9 +27,10 @@ if __name__ == "__main__":
         pwe_path: str = "results/pairwise_epistasis_vis/none/scale2max.csv",
         zs_path: str = "results/zs_sum/none/zs_stat_scale2max.csv",
         de_path: str = "results/de/DE-active/scale2max/all_landscape_de_summary.csv",
-        mlde_path: str = "results/mlde/all_df_comb_onehot.csv",
+        mlde_path: str = "results/mlde/all_df_comb_onehot_2.csv",
         corr_dir: str = "results/corr",
         n_mut_cuttoff: int = 0,
+        filter_active: float = 1,
         n_samples: list[int] = [384],
         n_top_list: list[int] = [96, 384],
         n_list: list[int] = N_SAMPLE_LIST,

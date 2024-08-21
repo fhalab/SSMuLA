@@ -8,6 +8,7 @@ import warnings
 from functools import reduce
 
 import os
+from ast import literal_eval
 from glob import glob
 from tqdm import tqdm
 from copy import deepcopy
@@ -880,6 +881,9 @@ class ProcessT7(ProcessData):
 
         if self._scale_fit == "max":
             df["fitness"] = df["fitness"] / self.max_fit
+            # set all values below 0 to 0
+            df["fitness"] = df["fitness"].clip(lower=0)
+            
         elif self._scale_fit == "parent":
             df["fitness"] = df["fitness"] / self.parent_aa_fitness
         else:
@@ -1764,3 +1768,43 @@ def get_all_lib_stats(
     stat_df.to_csv(
         os.path.join(os.path.dirname(lib_class.stat_subfolder), "all_lib_stats.csv")
     )
+
+def parse_lib_stat(
+    lib_csv_path: str = "results/fitness_distribution/max/all_lib_stats.csv",
+    n_mut_cuttoff: int = 0,
+) -> pd.DataFrame:
+
+    """
+    A function for parsing the library statistics
+
+    Args:
+    - lib_csv_path, str: path to the library statistics csv file
+    - n_mut_cuttoff, int: the number of mutations to cutoff, 0 means all
+    """
+
+    lib_df = pd.read_csv(lib_csv_path, index_col=0)
+
+    lib_stat_slice = lib_df[lib_df["n_mut_cuttoff"] == n_mut_cuttoff].copy()
+
+    lib_stat = pd.concat(
+        [
+            lib_stat_slice["lib"],
+            lib_stat_slice["lib_basic_dict"].apply(literal_eval).apply(pd.Series),
+            lib_stat_slice["fit_basic_dict"].apply(literal_eval).apply(pd.Series),
+            lib_stat_slice["cauchy"].apply(literal_eval).apply(pd.Series),
+            lib_stat_slice["kde"].apply(literal_eval).apply(pd.Series),
+        ],
+        axis=1,
+    )
+    lib_stat["parent_rank_percent"] = (
+        lib_stat["parent_rank"] / lib_stat["numb_measured"]
+    )
+    # qs = pd.DataFrame(lib_df['quartiles'].tolist(), index=lib_df.index)
+    # qs.columns =   # Rename columns
+
+    df_expanded = lib_stat["quartiles"].apply(pd.Series)
+    df_expanded.columns = ["Q1", "Q2", "Q3"]  # Rename columns
+    df_expanded["numb_kde_peak"] = lib_stat["peak_kde"].apply(len)
+
+    return pd.concat([lib_stat, df_expanded], axis=1)
+

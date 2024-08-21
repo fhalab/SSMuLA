@@ -17,6 +17,7 @@ import holoviews as hv
 
 
 from SSMuLA.landscape_global import LIB_INFO_DICT, hamming
+from SSMuLA.fitness_process_vis import parse_lib_stat
 from SSMuLA.vis import save_bokeh_hv, JSON_THEME
 from SSMuLA.util import get_file_name, checkNgen_folder
 
@@ -488,10 +489,25 @@ def run_loc_opt(
     fitness_process_type: str = "scale2max",
     output_folder: str = "results/local_optima",
     n_jobs: int = 16,
+    rerun: bool = False,
 ) -> None:
+
     """
     Run the local optima
     """
+
+    lib_sum_path = "results/fitness_distribution/" + fitness_process_type.replace("scale2", "") + "/all_lib_stats.csv"
+
+    if os.path.exists(lib_sum_path):
+
+        print(f"Loading library summary from {lib_sum_path}...")
+
+        lib_df = parse_lib_stat(
+            lib_csv_path=lib_sum_path, n_mut_cuttoff=0
+        )
+        
+    else:
+        lib_df = None
 
     summary_df = pd.DataFrame()
 
@@ -501,33 +517,64 @@ def run_loc_opt(
 
         print(f"Processing {lib}...")
 
-        opt_class = LocOpt(
-            lib,
-            checkNgen_folder(os.path.join(output_folder, fitness_process_type)),
-            n_jobs,
-        )
+        opt_df_path = f"{output_folder}/{fitness_process_type}/{lib}_loc_opt_escape.csv"
 
-        summary_df = summary_df._append(
-            {
-                "lib": opt_class.lib_name,
-                "summary_type": fitness_process_type,
-                "frac_measured": opt_class.frac_measured,
-                "numb_active": opt_class.numb_active,
-                "frac_active": opt_class.frac_active,
-                "numb_loc_opt": opt_class.numb_loc_opt,
-                "frac_loc_opt_active": opt_class.frac_loc_opt_active,
-                "frac_loc_opt_total": opt_class.frac_loc_opt_total,
-                "frac_loc_opt_hd2_escape_numb": opt_class.frac_loc_opt_hd2_escape_numb,
-                "frac_loc_opt_hd2_cannot_escape_numb": opt_class.frac_loc_opt_hd2_cannot_escape_numb,
-            },
-            ignore_index=True,
-        )
+        if os.path.exists(opt_df_path):
+            opt_df = pd.read_csv(opt_df_path)
+        else:
+            opt_df = None
 
-        # Delete the variable
-        del opt_class
+        if rerun or (opt_df is None) or (lib_df is None):
 
-        # Manually run the garbage collector to free up the memory
-        gc.collect()
+            print("Rerunning the analysis...")
+
+            opt_class = LocOpt(
+                lib,
+                checkNgen_folder(os.path.join(output_folder, fitness_process_type)),
+                n_jobs,
+            )
+
+            summary_df = summary_df._append(
+                {
+                    "lib": opt_class.lib_name,
+                    "summary_type": fitness_process_type,
+                    # "frac_measured": opt_class.frac_measured,
+                    # "numb_active": opt_class.numb_active,
+                    # "frac_active": opt_class.frac_active,
+                    "numb_loc_opt": opt_class.numb_loc_opt,
+                    "frac_loc_opt_active": opt_class.frac_loc_opt_active,
+                    "frac_loc_opt_total": opt_class.frac_loc_opt_total,
+                    "frac_loc_opt_hd2_escape_numb": opt_class.frac_loc_opt_hd2_escape_numb,
+                    "frac_loc_opt_hd2_cannot_escape_numb": opt_class.frac_loc_opt_hd2_cannot_escape_numb,
+                },
+                ignore_index=True,
+            )
+
+            # Delete the variable
+            del opt_class
+
+            # Manually run the garbage collector to free up the memory
+            gc.collect()
+
+        else:
+            print("Loading the previous analysis...")
+
+            numb_loc_opt = len(opt_df)
+            hd2_can_escape_numb = len(opt_df[opt_df["n_hd2_greater"] != 0])
+            hd2_cannot_escape_numb = len(opt_df[opt_df["n_hd2_greater"] == 0])
+
+            summary_df = summary_df._append(
+                {
+                    "lib": lib,
+                    "summary_type": fitness_process_type,
+                    "numb_loc_opt": numb_loc_opt,
+                    "frac_loc_opt_active": numb_loc_opt / lib_df[lib_df["lib"] == lib]["numb_active"].values[0],
+                    "frac_loc_opt_total": numb_loc_opt / lib_df[lib_df["lib"] == lib]["numb_measured"].values[0],
+                    "frac_loc_opt_hd2_escape_numb": hd2_can_escape_numb / numb_loc_opt,
+                    "frac_loc_opt_hd2_cannot_escape_numb": hd2_cannot_escape_numb / numb_loc_opt,
+                },
+                ignore_index=True,
+            )
 
     summary_df_path = os.path.join(output_folder, f"{fitness_process_type}.csv")
 

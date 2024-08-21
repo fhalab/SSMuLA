@@ -19,7 +19,7 @@ if __name__ == "__main__":
 
     # process_all(scale_fit="max")
     ProcessT7(scale_fit="max")
-    ProcessTEV(scale_fit="max")
+    # ProcessTEV(scale_fit="max")
 
     sum_ks(process_types = {
         # "fitness_landscape": "preprocessed",
