@@ -25,52 +25,53 @@ if __name__ == "__main__":
     # mlde_folder = "results/mlde_emb"
     mlde_folder = "results/mlde_3"
 
-    run_all_mlde_parallelized(
-        encodings=["one-hot"],
-        n_mut_cutoffs=[0],
-        zs_predictors=["none"],
-        n_samples=[96, 384, 24, 48],
-        n_replicate=50,
-        n_job=256,
-        all_libs=False,
-        ft_first=True,
-        lib_list=["T7", "TEV"],
-        mlde_folder=mlde_folder,
-        zs_folder=zs_folder,
-    )
+    # run_all_mlde_parallelized(
+    #     encodings=["one-hot"],
+    #     n_mut_cutoffs=[0],
+    #     zs_predictors=["none"],
+    #     n_samples=[96, 384, 24, 48],
+    #     n_replicate=50,
+    #     n_job=256,
+    #     all_libs=False,
+    #     ft_first=True,
+    #     lib_list=["T7", "TEV"],
+    #     mlde_folder=mlde_folder,
+    #     zs_folder=zs_folder,
+    # )
+
+    # run_all_mlde_parallelized(
+    #     encodings=["one-hot"],
+    #     n_mut_cutoffs=[0],
+    #     zs_predictors=["none"],
+    #     n_samples=[192, 288, 480, 576],
+    #     n_replicate=50,
+    #     n_job=256,
+    #     all_libs=False,
+    #     ft_first=True,
+    #     lib_list=["T7", "TEV"],
+    #     mlde_folder=mlde_folder,
+    #     zs_folder=zs_folder,
+    # )
+
+    # run_all_mlde_parallelized(
+    #     encodings=["one-hot"],
+    #     n_mut_cutoffs=[0],
+    #     zs_predictors=["none"],
+    #     n_samples=[960, 1920],
+    #     n_replicate=50,
+    #     n_job=256,
+    #     all_libs=False,
+    #     ft_first=True,
+    #     lib_list=["T7", "TEV"],
+    #     mlde_folder=mlde_folder,
+    #     zs_folder=zs_folder,
+    # )
+
 
     run_all_mlde_parallelized(
         encodings=["one-hot"],
         n_mut_cutoffs=[0],
-        zs_predictors=["none"],
-        n_samples=[192, 288, 480, 576],
-        n_replicate=50,
-        n_job=256,
-        all_libs=False,
-        ft_first=True,
-        lib_list=["T7", "TEV"],
-        mlde_folder=mlde_folder,
-        zs_folder=zs_folder,
-    )
-
-    run_all_mlde_parallelized(
-        encodings=["one-hot"],
-        n_mut_cutoffs=[0],
-        zs_predictors=["none"],
-        n_samples=[960, 1920],
-        n_replicate=50,
-        n_job=256,
-        all_libs=False,
-        ft_first=True,
-        lib_list=["T7", "TEV"],
-        mlde_folder=mlde_folder,
-        zs_folder=zs_folder,
-    )
-
-    run_all_mlde_parallelized(
-        encodings=["one-hot"],
-        n_mut_cutoffs=[0],
-        zs_predictors=["esm", "esmif", "Triad", "coves"],
+        zs_predictors=["ev"],
         n_samples=[96, 384],
         n_replicate=50,
         n_job=256,
@@ -84,7 +85,7 @@ if __name__ == "__main__":
     run_all_mlde_parallelized(
         encodings=["one-hot"],
         n_mut_cutoffs=[0],
-        zs_predictors=["esm", "esmif", "Triad", "coves"],
+        zs_predictors=["ev"],
         n_samples=[24, 48],
         n_replicate=50,
         n_job=256,
@@ -98,7 +99,7 @@ if __name__ == "__main__":
     run_all_mlde_parallelized(
         encodings=["one-hot"],
         n_mut_cutoffs=[0],
-        zs_predictors=["esm", "esmif", "Triad", "coves"],
+        zs_predictors=["ev"],
         n_samples=[192, 288, 480, 576],
         n_replicate=50,
         n_job=256,
@@ -112,7 +113,7 @@ if __name__ == "__main__":
     run_all_mlde_parallelized(
         encodings=["one-hot"],
         n_mut_cutoffs=[0],
-        zs_predictors=["esm", "esmif", "Triad", "coves"],
+        zs_predictors=["ev"],
         n_samples=[960, 1920],
         n_replicate=50,
         n_job=256,
@@ -122,6 +123,118 @@ if __name__ == "__main__":
         mlde_folder=mlde_folder,
         zs_folder=zs_folder,
     )
+
+    run_all_mlde_parallelized(
+        encodings=["one-hot"],
+        n_mut_cutoffs=[0],
+        zs_predictors=["esm"],
+        n_samples=[96, 384],
+        n_replicate=50,
+        n_job=256,
+        all_libs=False,
+        ft_first=True,
+        lib_list=["TEV"],
+        mlde_folder=mlde_folder,
+        zs_folder=zs_folder,
+    )
+
+    run_all_mlde_parallelized(
+        encodings=["one-hot"],
+        n_mut_cutoffs=[0],
+        zs_predictors=["esm"],
+        n_samples=[24, 48],
+        n_replicate=50,
+        n_job=256,
+        all_libs=False,
+        ft_first=True,
+        lib_list=["TEV"],
+        mlde_folder=mlde_folder,
+        zs_folder=zs_folder,
+    )
+
+    run_all_mlde_parallelized(
+        encodings=["one-hot"],
+        n_mut_cutoffs=[0],
+        zs_predictors=["esm"],
+        n_samples=[192, 288, 480, 576],
+        n_replicate=50,
+        n_job=256,
+        all_libs=False,
+        ft_first=True,
+        lib_list=["TEV"],
+        mlde_folder=mlde_folder,
+        zs_folder=zs_folder,
+    )    
+    
+    run_all_mlde_parallelized(
+        encodings=["one-hot"],
+        n_mut_cutoffs=[0],
+        zs_predictors=["esm"],
+        n_samples=[960, 1920],
+        n_replicate=50,
+        n_job=256,
+        all_libs=False,
+        ft_first=True,
+        lib_list=["TEV"],
+        mlde_folder=mlde_folder,
+        zs_folder=zs_folder,
+    )
+
+    # run_all_mlde_parallelized(
+    #     encodings=["one-hot"],
+    #     n_mut_cutoffs=[0],
+    #     zs_predictors=["esm", "esmif", "Triad", "coves"],
+    #     n_samples=[96, 384],
+    #     n_replicate=50,
+    #     n_job=256,
+    #     all_libs=False,
+    #     ft_first=True,
+    #     lib_list=["T7", "TEV"],
+    #     mlde_folder=mlde_folder,
+    #     zs_folder=zs_folder,
+    # )
+
+    # run_all_mlde_parallelized(
+    #     encodings=["one-hot"],
+    #     n_mut_cutoffs=[0],
+    #     zs_predictors=["esm", "esmif", "Triad", "coves"],
+    #     n_samples=[24, 48],
+    #     n_replicate=50,
+    #     n_job=256,
+    #     all_libs=False,
+    #     ft_first=True,
+    #     lib_list=["T7", "TEV"],
+    #     mlde_folder=mlde_folder,
+    #     zs_folder=zs_folder,
+    # )
+
+    # run_all_mlde_parallelized(
+    #     encodings=["one-hot"],
+    #     n_mut_cutoffs=[0],
+    #     zs_predictors=["esm", "esmif", "Triad", "coves"],
+    #     n_samples=[192, 288, 480, 576],
+    #     n_replicate=50,
+    #     n_job=256,
+    #     all_libs=False,
+    #     ft_first=True,
+    #     lib_list=["T7", "TEV"],
+    #     mlde_folder=mlde_folder,
+    #     zs_folder=zs_folder,
+    # )    
+    
+    # run_all_mlde_parallelized(
+    #     encodings=["one-hot"],
+    #     n_mut_cutoffs=[0],
+    #     zs_predictors=["esm", "esmif", "Triad", "coves"],
+    #     n_samples=[960, 1920],
+    #     n_replicate=50,
+    #     n_job=256,
+    #     all_libs=False,
+    #     ft_first=True,
+    #     lib_list=["T7", "TEV"],
+    #     mlde_folder=mlde_folder,
+    #     zs_folder=zs_folder,
+    # )
 
     # run_all_mlde_parallelized(
     #     encodings=["one-hot"],
