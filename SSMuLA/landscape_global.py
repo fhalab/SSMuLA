@@ -78,7 +78,7 @@ LIB_INFO_DICT = deepcopy(
             "codons": {1: "", 2: "", 3: "", 4: ""},
             "AAs": {1: "T", 2: "D", 3: "H", 4: "S"},
             "type": "Enzymatic activity",
-            "pdb_resrange": [5, 218],
+            "pdb_resrange": [1, 218],
         },
         "TrpB3A": {
             "positions": {1: 104, 2: 105, 3: 106},
