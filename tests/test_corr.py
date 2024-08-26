@@ -14,11 +14,39 @@ if __name__ == "__main__":
     log_folder = checkNgen_folder("logs/corr")
 
     # log outputs
-    f = open(os.path.join(log_folder, f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}.out"), 'w')
+    f = open(
+        os.path.join(log_folder, f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}.out"),
+        "w",
+    )
     sys.stdout = f
 
-    perfom_corr(n_mut_cuttoff=0, n_list=[384], zs_path="results/zs_sum_4/none/zs_stat_scale2max.csv", mlde_path="results/mlde/all_df_comb_onehot_2.csv", corr_dir="results/corr_3", ifplot=False)
-    perfom_corr(n_mut_cuttoff=2, n_list=[384], zs_path="results/zs_sum_4/none/zs_stat_scale2max.csv", mlde_path="results/mlde/all_df_comb_onehot_2.csv", corr_dir="results/corr_3", ifplot=False)
+    perfom_corr(
+        n_mut_cuttoff=0,
+        n_list=[384],
+        zs_path="results/zs_sum_5/none/zs_stat_scale2max.csv",
+        mlde_path="results/mlde/all_df_comb_onehot_2.csv",
+        corr_dir="results/corr_3",
+        ifplot=False,
+    )
+
+    perfom_corr(
+        n_mut_cuttoff=0,
+        n_list=[384],
+        filter_active=0,
+        zs_path="results/zs_sum_5/none/zs_stat_scale2max.csv",
+        mlde_path="results/mlde/all_df_comb_onehot_2.csv",
+        corr_dir="results/corr_3",
+        ifplot=False,
+    )
+
+    # perfom_corr(
+    #     n_mut_cuttoff=2,
+    #     n_list=[384],
+    #     zs_path="results/zs_sum_5/none/zs_stat_scale2max.csv",
+    #     mlde_path="results/mlde/all_df_comb_onehot_2.csv",
+    #     corr_dir="results/corr_3",
+    #     ifplot=False,
+    # )
 
     """
     perfom_corr(
@@ -31,11 +59,12 @@ if __name__ == "__main__":
         corr_dir: str = "results/corr",
         n_mut_cuttoff: int = 0,
         filter_active: float = 1,
-        n_samples: list[int] = [384],
+        ft_frac: float = 0.125,
         n_top_list: list[int] = [96, 384],
         n_list: list[int] = N_SAMPLE_LIST,
-        models_list: list[list[str]] = [["boosting"], ["ridge"], ["boosting", "ridge"]]),
+        models_list: list[list[str]] = [["boosting", "ridge"], ["boosting"], ["ridge"]],
         ifplot: bool = True,
+    )
     """
-    
+
     f.close()

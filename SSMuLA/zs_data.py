@@ -119,6 +119,16 @@ EV_META = {
             "quality": 3,
         },
     },
+    "T7": {
+        "chosen": {
+            "sequences": 2734,
+        },
+    },
+    "TEV": {
+        "chosen": {
+            "sequences": 217,
+        },
+    },
     "TrpB": {
         "recommended": {
             "bitscore": 0.1,

@@ -5,7 +5,7 @@ import os
 
 from datetime import datetime
 
-from SSMuLA.vis_summary import DESumVis, ZSSSumVis, vis_sum_de_mlde
+from SSMuLA.vis_summary import DESumVis, ZSSSumVis, vis_sum_de_mlde, plot_de_v_mlde, plot_n_ftmlde
 from SSMuLA.util import checkNgen_folder
 
 if __name__ == "__main__":
@@ -29,9 +29,21 @@ if __name__ == "__main__":
     #     output_folder="results/summary/ZS_2"
     # )
 
-    ZSSSumVis(
-        input_csv="results/zs_sum_4/none/zs_stat_scale2max.csv",
-        output_folder="results/summary/ZS_4"
+    # ZSSSumVis(
+    #     input_csv="results/zs_sum_5/none/zs_stat_scale2max.csv",
+    #     output_folder="results/summary/ZS_5"
+    # )
+
+    plot_de_v_mlde(
+        plot_folder = "results/de_vs_mlde/onehot/collage/n_samples", 
+        mlde_csv = "results/mlde/all_df_comb_onehot_2.csv",
+        de_folder = "results/de/DE-active/scale2max",
+    )
+
+    plot_n_ftmlde(
+        plot_folder = "results/de_vs_mlde/onehot/collage/ftMLDE",
+        mlde_csv = "results/mlde/all_df_comb_onehot_2.csv",
+        de_folder = "results/de/DE-active/scale2max",
     )
 
     # vis_sum_de_mlde(simplezs=True)

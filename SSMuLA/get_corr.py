@@ -140,7 +140,7 @@ FT_OPTS = ["ft", "ft-comb"]
 ft_de_delta_list = [
     f"{ft}_{de}_{dt}"
     for dt in DELTA_OPTS
-    for ft in (["mlde", "double"] + zs_no_score_list) # instead of N_MUT_SUBS
+    for ft in (["mlde", "double"] + zs_no_score_list)  # instead of N_MUT_SUBS
     for de in DE_TYPES
 ]
 # "mlde_single_step_DE_delta",
@@ -151,7 +151,9 @@ ft_de_delta_list = [
 # "Triad_top96_SSM_delta",
 
 delta_allft_mlde_list = [
-    f"{dt}_{ft}_mlde" for dt in DELTA_OPTS for ft in zs_no_score_list + ["double"] # N_MUT_SUBS
+    f"{dt}_{ft}_mlde"
+    for dt in DELTA_OPTS
+    for ft in zs_no_score_list + ["double"]  # N_MUT_SUBS
 ]
 delta_bestft_mlde_list = [
     f"{dt}_{ft_des}_mlde" for dt in DELTA_OPTS for ft_des in FT_OPTS
@@ -174,6 +176,8 @@ DT_METRIC = {
     "delta": {"de": "mean_all", "mlde": "top_maxes"},
     "deltafrac": {"de": "fraction_max", "mlde": "if_truemaxs"},
 }
+
+FTLIB_FRAC_LIST = [0.125, 0.25, 0.5, 1]
 
 
 class CorrPerfomanceCharacter:
@@ -198,6 +202,7 @@ class CorrPerfomanceCharacter:
         n_sample: int = 384,
         n_top: int = 96,
         filter_active: float = 1,
+        ft_frac=0.125,
         models: list[str] = ["boosting", "ridge"],
         ifplot: bool = True,
     ):
@@ -215,6 +220,7 @@ class CorrPerfomanceCharacter:
         self._n_sample = n_sample
         self._n_top = n_top
         self._filter_active = filter_active
+        self._ft_frac = ft_frac
         self._models = models
 
         join_model = "|".join(models)
@@ -229,7 +235,11 @@ class CorrPerfomanceCharacter:
 
         print(f"Correlation directory: {self._corr_subdir}")
 
-        self._lib_stat_df = parse_lib_stat(self._lib_stat_path, self._n_mut_cuttoff).reset_index(drop=True).copy()
+        self._lib_stat_df = (
+            parse_lib_stat(self._lib_stat_path, self._n_mut_cuttoff)
+            .reset_index(drop=True)
+            .copy()
+        )
         print(f"Loaded lib stat from: {self._lib_stat_path} for libs:")
         print(self._lib_stat_df["lib"].unique())
 
@@ -256,25 +266,32 @@ class CorrPerfomanceCharacter:
         # now merge all
         self._merge_all_df = self._get_merge_all()
 
-        # remove super dead libs and T7
+        # remove super dead libs 
         self._active_lib_list = self._lib_stat_df[
-            (self._lib_stat_df["percent_active"] >= self._filter_active) # & (self._lib_stat_df["percent_measured"] >= 90)
+            (
+                self._lib_stat_df["percent_active"] >= self._filter_active
+            )  # & (self._lib_stat_df["percent_measured"] >= 90)
         ]["lib"].tolist()
 
-        print(f"For {self._filter_active} percent_active cutoff, active lib list: {self._active_lib_list}")
+        print(
+            f"For {self._filter_active} percent_active cutoff, active lib list: {self._active_lib_list}"
+        )
 
         self._actcutt_df = self._merge_all_df[
             self._merge_all_df["lib"].isin(self._active_lib_list)
         ]
-        self._actcutt_df.to_csv(f"{self._corr_subdir}/merge_all.csv", index=False)
+        self._actcutt_df.to_csv(
+            f"{self._corr_subdir}/merge_all_{str(self._ft_frac)}.csv", index=False
+        )
 
         self._corr_df = self._get_corr_df()
-        self._corr_df.to_csv(f"{self._corr_subdir}/corr.csv", index=False)
+        self._corr_df.to_csv(
+            f"{self._corr_subdir}/corr_{str(self._ft_frac)}.csv", index=False
+        )
 
         # now plot
         if ifplot:
             self._plot_corr()
-
 
     def _get_loc_opt(self) -> pd.DataFrame:
         """
@@ -311,7 +328,7 @@ class CorrPerfomanceCharacter:
         zs_df_expend = pd.concat(zs_df_list, axis=1)
 
         zs_mut_df_list = [zs_df_expend[zs_df_expend["n_mut"] == self._n_mut]["lib"]]
-        
+
         for n_mut in ZS_N_MUTS:
             slice_df = (
                 zs_df_expend[zs_df_expend["n_mut"] == n_mut]
@@ -395,7 +412,7 @@ class CorrPerfomanceCharacter:
 
         # append the singles and doubles
         # if self._n_mut == "all":
-        zs_list += ["double"] # N_MUT_SUBS
+        zs_list += ["double"]  # N_MUT_SUBS
 
         for zs in zs_list:
             rename_cols = {
@@ -408,17 +425,33 @@ class CorrPerfomanceCharacter:
 
             if zs not in N_MUT_SUBS:
 
+                slice_mlde = mlde_df[
+                    (mlde_df["zs"] == f"{zs}_score")
+                    & (mlde_df["encoding"] == "one-hot")
+                    & (mlde_df["model"].isin(self._models))
+                    & (mlde_df["n_mut_cutoff"] == self._n_mut)
+                    & (mlde_df["n_sample"] == self._n_sample)
+                    & (mlde_df["n_top"] == self._n_top)
+                ]
+
+                lib_dfs = []
+                for lib in self.all_libs:
+                    lib_df = slice_mlde[slice_mlde["lib"] == lib].copy()
+                    lib_df["ft_lib_size"] = lib_df["ft_lib"].map(
+                        {
+                            numb: frac
+                            for numb, frac in zip(
+                                sorted(lib_df["ft_lib"].unique()), FTLIB_FRAC_LIST
+                            )
+                        }
+                    )
+                    lib_dfs.append(lib_df[lib_df["ft_lib_size"] == self._ft_frac])
+                slice_ftmlde = pd.concat(lib_dfs)
+
                 mlde_avg = pd.merge(
                     mlde_avg,
                     (
-                        mlde_df[
-                            (mlde_df["zs"] == f"{zs}_score")
-                            & (mlde_df["encoding"] == "one-hot")
-                            & (mlde_df["model"].isin(self._models))
-                            & (mlde_df["n_mut_cutoff"] == self._n_mut)
-                            & (mlde_df["n_sample"] == self._n_sample)
-                            & (mlde_df["n_top"] == self._n_top)
-                        ][
+                        slice_ftmlde[
                             [
                                 "lib",
                                 "top_maxes",
@@ -432,7 +465,8 @@ class CorrPerfomanceCharacter:
                         .mean()
                         .rename(columns=rename_cols)
                     ),
-                    on="lib", how="outer"
+                    on="lib",
+                    how="outer",
                 )
 
             else:
@@ -461,7 +495,8 @@ class CorrPerfomanceCharacter:
                         .mean()
                         .rename(columns=rename_cols)
                     ),
-                    on="lib", how="outer"
+                    on="lib",
+                    how="outer",
                 )
 
         return mlde_avg.reset_index().copy(), zs_list
@@ -498,7 +533,23 @@ class CorrPerfomanceCharacter:
         Merge all the dataframes
         """
 
-        merge_df = pd.merge(pd.merge(pd.merge(pd.merge(pd.merge(self._lib_stat_df, self._loc_opt_df, on="lib"), self._pwe_df, on="lib"), self._zs_stat_df, on="lib"), self._de_stat_df, on="lib"), self._mlde_stat_df, on="lib")
+        merge_df = pd.merge(
+            pd.merge(
+                pd.merge(
+                    pd.merge(
+                        pd.merge(self._lib_stat_df, self._loc_opt_df, on="lib"),
+                        self._pwe_df,
+                        on="lib",
+                    ),
+                    self._zs_stat_df,
+                    on="lib",
+                ),
+                self._de_stat_df,
+                on="lib",
+            ),
+            self._mlde_stat_df,
+            on="lib",
+        )
 
         # append delta
         for ft_col in [""] + self._zs_list:
@@ -579,7 +630,7 @@ class CorrPerfomanceCharacter:
             # merge_df["deltafrac_hd1_mlde"] = merge_df["if_truemaxs_single"] - merge_df["if_truemaxs"]
 
             # delta_allft_mlde_list = [f"{dt}_{ft}_mlde" for dt in DELTA_OPTS for ft in zs_no_score_lis]
-            for zs in zs_no_score_list + ["double"]:# N_MUT_SUBS:
+            for zs in zs_no_score_list + ["double"]:  # N_MUT_SUBS:
                 if f"{mlde_name}_{zs}" in merge_df.columns:
                     merge_df[f"{dt}_{zs}_mlde"] = (
                         merge_df[f"{mlde_name}_{zs}"] - merge_df[mlde_name]
@@ -645,9 +696,9 @@ class CorrPerfomanceCharacter:
             for val in LANDSCAPE_ATTRIBUTES + zs_list + val_list:
 
                 if des in self._actcutt_df.columns and val in self._actcutt_df.columns:
-                    corr_row[val] = spearmanr(self._actcutt_df[des], self._actcutt_df[val])[
-                        0
-                    ]
+                    corr_row[val] = spearmanr(
+                        self._actcutt_df[des], self._actcutt_df[val]
+                    )[0]
                 else:
                     corr_row[val] = np.nan
 
@@ -743,6 +794,11 @@ class CorrPerfomanceCharacter:
         return self._lib_stat_df
 
     @property
+    def all_libs(self) -> list:
+        """Return the list of all libraries"""
+        return sorted(self._lib_stat_df["lib"].unique())
+
+    @property
     def loc_opt_df(self) -> pd.DataFrame:
         """Return the local optima dataframe"""
         return self._loc_opt_df
@@ -793,6 +849,7 @@ def perfom_corr(
     corr_dir: str = "results/corr",
     n_mut_cuttoff: int = 0,
     filter_active: float = 1,
+    ft_frac: float = 0.125,
     n_top_list: list[int] = [96, 384],
     n_list: list[int] = N_SAMPLE_LIST,
     models_list: list[list[str]] = [["boosting", "ridge"], ["boosting"], ["ridge"]],
@@ -814,6 +871,7 @@ def perfom_corr(
                     n_sample=n,
                     n_top=n_top,
                     filter_active=filter_active,
+                    ft_frac=ft_frac,
                     models=models,
                     ifplot=ifplot,
                 )

@@ -20,7 +20,7 @@ if __name__ == "__main__":
     run_hd_avg_fit(
         num_processes=256, 
         all_lib=False, 
-        lib_list=["T7", "TEV"]
+        lib_list=["T7"]
     )
 
     plot_all_hd2(hd_dir = "results/hd")
