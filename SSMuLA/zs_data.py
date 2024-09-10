@@ -121,12 +121,25 @@ EV_META = {
     },
     "T7": {
         "chosen": {
-            "sequences": 2734,
+            "bitscore": 0.95,
+            "sequences": 309,
+            "seqs_per_l": 0.7,
+            "quality": 6,
+            "position filter": 0.45
         },
     },
     "TEV": {
+        # "chosen": {
+        #     "bitscore": 0.1,
+        #     "sequences": 163169,
+        #     "seqs_per_l": 1073,
+        #     "quality": 10,
+        # },
         "chosen": {
-            "sequences": 217,
+            "bitscore": 0.7,
+            "sequences": 164,
+            "seqs_per_l": 0.7,
+            "quality": 6,
         },
     },
     "TrpB": {

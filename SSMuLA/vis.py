@@ -80,6 +80,7 @@ PRESENTATION_PALETTE_SATURATE = {
     "light_green": "#9DAE88",
     "light_yellow": "#F1D384",
     "light_brown": "#C7B784",
+    "black": "#000000",
 }
 
 LIGHT_COLORS = {"yellow": "#F1D384"}
