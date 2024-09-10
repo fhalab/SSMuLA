@@ -399,6 +399,7 @@ class CorrPerfomanceCharacter:
                 & (mlde_df["n_mut_cutoff"] == self._n_mut)
                 & (mlde_df["n_sample"] == self._n_sample)
                 & (mlde_df["n_top"] == self._n_top)
+                & (mlde_df["rep"].isin(np.arange(50)))
             ][["lib", "top_maxes", "top_means", "ndcgs", "rhos", "if_truemaxs"]]
             .groupby("lib")
             .mean()
