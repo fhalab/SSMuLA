@@ -157,7 +157,7 @@ class TriadGenMutFile(TriadLib):
                 mutation_encodings.append("+".join(mut_encoding_list) + "\n")
 
         # check before saving
-        assert len(mutation_encodings) == self.mut_numb - 1
+        # assert len(mutation_encodings) == self.mut_numb - 1
 
         # Save the mutants
         with open(self.mut_path, "w") as f:

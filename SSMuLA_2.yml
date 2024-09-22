@@ -7,20 +7,21 @@ channels:
   - pytorch
   - pyg
   - pytorch3d
+  - nvidia
   - conda-forge
   - salilab
   - pyviz
   - defaults
   - anaconda
 dependencies:
-  - python=3.10
+  - python=3.11
   - biopandas
   - biopython
   - bokeh
   - brokenaxes
   - cairosvg
   - colorcet
-  - cudatoolkit=11.8
+  # - cudatoolkit=11.8
   - dask                    # for faster large df handling
   - datashader
   - dssp                    # optional for graphein, required for computing secondary structural features
@@ -57,7 +58,8 @@ dependencies:
   - pyg>=2.0.3
   - pytables
   - python-wget             # required by graphein
-  - pytorch=2.2.0           # for h100
+  - pytorch=2.1.1           # for h100
+  - pytorch-cuda=12.1       # change this as needed
   - pyviz_comms
   - pyyaml
   - requests

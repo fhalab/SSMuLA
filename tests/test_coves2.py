@@ -5,6 +5,9 @@ Use coves environment
 
 import sys
 import os
+import re
+
+from glob import glob
 
 from datetime import datetime
 
@@ -19,6 +22,9 @@ if __name__ == "__main__":
     f = open(os.path.join(log_folder, f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}.out"), 'w')
     sys.stdout = f
 
-    run_all_coves(patern=["coves_data/TEV2/TEV2.pdb"], n_ave=100)
+    pattern = re.compile(r'^\d')
+    print([s for s in glob("coves_data/*") if pattern.match(os.path.basename(s))])
+
+    run_all_coves(patern=[s for s in glob("coves_data/*") if pattern.match(os.path.basename(s))], n_ave=100)
 
     f.close()

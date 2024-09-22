@@ -430,6 +430,289 @@ class MergeLandscapeAttributes:
         return self._merge_all_attribute_df
 
 
+class MergeMLDEAttributes(MergeLandscapeAttributes):
+    """
+    A class for merging the MLDE attributes
+    """
+
+    def __init__(
+        self,
+        lib_stat_path: str = "results/fitness_distribution/max/all_lib_stats.csv",
+        loc_opt_path: str = "results/local_optima/scale2max.csv",
+        pwe_path: str = "results/pairwise_epistasis_vis/none/scale2max.csv",
+        zs_path: str = "results/zs_sum_5/none/zs_stat_scale2max.csv",
+        de_path: str = "results/de/DE-active/scale2max/all_landscape_de_summary.csv",
+        mlde_path: str = "results/mlde/all_df_comb_onehot_2.csv",
+        merge_dir: str = "results/merged",
+        n_mut_cutoff: int = 0,
+        n_sample: int = 384,
+        n_top: int = 96,
+        filter_active: float = 1,
+        ft_frac=0.125,
+        models: list[str] = ["boosting", "ridge"],
+        ifplot: bool = True,
+    ):
+
+        super().__init__(lib_stat_path, loc_opt_path, pwe_path, zs_path, de_path, merge_dir, n_mut_cutoff)
+
+        self._mlde_path = mlde_path
+
+        self._n_sample = n_sample
+        self._n_top = n_top
+        self._filter_active = filter_active
+        self._ft_frac = ft_frac
+        self._models = models
+
+        join_model = "|".join(models)
+        dets = "_".join([
+            self._n_mut,
+            str(n_sample),
+            f"{join_model}-top{str(n_top)}",
+            f"ft-{str(self._ft_frac)}"
+        ])
+
+        self._mlde_stat_df, self._zs_list = self._get_mlde_stat()
+        print(f"Loaded mlde from: {self._mlde_path} for libs:")
+        print(self._mlde_stat_df["lib"].unique())
+
+        # now merge all
+        self._merge_all_df = self._get_merge_all()
+
+        # now save
+        self._merge_all_df.to_csv(
+            f"{self._merge_dir}/MLDE_{dets}.csv", index=False
+        )
+
+
+    def _get_mlde_stat(self) -> pd.DataFrame:
+
+        """
+        Get the MLDE statistics
+
+        Args:
+        - n_top: int, the number of top samples
+        - models: list[str], the list of models to consider
+        """
+
+        mlde_df = pd.read_csv(self._mlde_path)
+
+        mlde_avg = (
+            mlde_df[
+                (mlde_df["zs"] == "none")
+                & (mlde_df["encoding"] == "one-hot")
+                & (mlde_df["model"].isin(self._models))
+                & (mlde_df["n_mut_cutoff"] == self._n_mut)
+                & (mlde_df["n_sample"] == self._n_sample)
+                & (mlde_df["n_top"] == self._n_top)
+                & (mlde_df["rep"].isin(np.arange(50)))
+            ][["lib", "top_maxes", "top_means", "ndcgs", "rhos", "if_truemaxs"]]
+            .groupby("lib")
+            .mean()
+        )
+
+        print(mlde_avg.index.unique())
+
+        zs_list = [
+            zs.split("_score")[0] for zs in mlde_df["zs"].unique() if "score" in zs
+        ]
+
+        # append the singles and doubles
+        # if self._n_mut == "all":
+        zs_list += ["double"]  # N_MUT_SUBS
+
+        for zs in zs_list:
+            rename_cols = {
+                "top_maxes": f"top_maxes_{zs}",
+                "top_means": f"top_means_{zs}",
+                "ndcgs": f"ndcgs_{zs}",
+                "rhos": f"rhos_{zs}",
+                "if_truemaxs": f"if_truemaxs_{zs}",
+            }
+
+            if zs not in N_MUT_SUBS:
+
+                slice_mlde = mlde_df[
+                    (mlde_df["zs"] == f"{zs}_score")
+                    & (mlde_df["encoding"] == "one-hot")
+                    & (mlde_df["model"].isin(self._models))
+                    & (mlde_df["n_mut_cutoff"] == self._n_mut)
+                    & (mlde_df["n_sample"] == self._n_sample)
+                    & (mlde_df["n_top"] == self._n_top)
+                ]
+
+                lib_dfs = []
+                for lib in self.all_libs:
+                    lib_df = slice_mlde[slice_mlde["lib"] == lib].copy()
+                    lib_df["ft_lib_size"] = lib_df["ft_lib"].map(
+                        {
+                            numb: frac
+                            for numb, frac in zip(
+                                sorted(lib_df["ft_lib"].unique()), FTLIB_FRAC_LIST
+                            )
+                        }
+                    )
+                    lib_dfs.append(lib_df[lib_df["ft_lib_size"] == self._ft_frac])
+                slice_ftmlde = pd.concat(lib_dfs)
+
+                mlde_avg = pd.merge(
+                    mlde_avg,
+                    (
+                        slice_ftmlde[
+                            [
+                                "lib",
+                                "top_maxes",
+                                "top_means",
+                                "ndcgs",
+                                "rhos",
+                                "if_truemaxs",
+                            ]
+                        ]
+                        .groupby("lib")
+                        .mean()
+                        .rename(columns=rename_cols)
+                    ),
+                    on="lib",
+                    how="outer",
+                )
+
+            else:
+
+                mlde_avg = pd.merge(
+                    mlde_avg,
+                    (
+                        mlde_df[
+                            (mlde_df["zs"] == "none")
+                            & (mlde_df["encoding"] == "one-hot")
+                            & (mlde_df["model"].isin(self._models))
+                            & (mlde_df["n_mut_cutoff"] == zs)
+                            & (mlde_df["n_sample"] == self._n_sample)
+                            & (mlde_df["n_top"] == self._n_top)
+                        ][
+                            [
+                                "lib",
+                                "top_maxes",
+                                "top_means",
+                                "ndcgs",
+                                "rhos",
+                                "if_truemaxs",
+                            ]
+                        ]
+                        .groupby("lib")
+                        .mean()
+                        .rename(columns=rename_cols)
+                    ),
+                    on="lib",
+                    how="outer",
+                )
+
+        return mlde_avg.reset_index().copy(), zs_list
+
+
+    def _get_merge_all(self) -> pd.DataFrame:
+        """
+        Merge all the dataframes
+        """
+
+        merge_df = pd.merge(
+            self.merge_all_attribute_df,
+            self._mlde_stat_df,
+            on="lib",
+        )
+
+        # append delta
+        for ft_col in [""] + self._zs_list:
+
+            for de in self._de_types:
+                for dt in DELTA_OPTS:
+
+                    de_col_name = f"{de}_{DT_METRIC[dt]['de']}"
+
+                    if ft_col == "":
+                        merge_df[f"mlde_{de}_{dt}"] = (
+                            merge_df[DT_METRIC[dt]["mlde"]] - merge_df[de_col_name]
+                        )
+
+                    else:
+                        mlde_name = DT_METRIC[dt]["mlde"]
+                        merge_df[f"{ft_col}_{de}_{dt}"] = (
+                            merge_df[f"{mlde_name}_{ft_col}"] - merge_df[de_col_name]
+                        )
+
+        merge_df["numb_loc_opt_norm_cannot_escape"] = (
+            merge_df["numb_loc_opt"] * merge_df["frac_loc_opt_hd2_cannot_escape_numb"]
+        )
+        merge_df["frac_loc_opt_norm_cannot_escape"] = (
+            merge_df["frac_loc_opt_total"]
+            * merge_df["frac_loc_opt_hd2_cannot_escape_numb"]
+        )
+
+        merge_df["norm_non-magnitude"] = (
+            merge_df["fraction_non-magnitude"] * merge_df["percent_active"]
+        )
+        merge_df["norm_reciprocal-sign"] = (
+            merge_df["fraction_reciprocal-sign"] * merge_df["percent_active"]
+        )
+
+        for dt in DELTA_OPTS:
+
+            mlde_name = DT_METRIC[dt]["mlde"]
+            de_name = DT_METRIC[dt]["de"]
+
+            # add double
+            merge_df[f"{dt}_hd2_mlde"] = (
+                merge_df[f"{mlde_name}_double"] - merge_df[mlde_name]
+            )
+
+            for zs in zs_no_score_list + ["double"]:  # N_MUT_SUBS:
+                if f"{mlde_name}_{zs}" in merge_df.columns:
+                    merge_df[f"{dt}_{zs}_mlde"] = (
+                        merge_df[f"{mlde_name}_{zs}"] - merge_df[mlde_name]
+                    )
+                else:
+                    merge_df[f"{dt}_{zs}_mlde"] = np.nan
+                    merge_df[f"{mlde_name}_{zs}"] = np.nan
+
+            best_ft = merge_df[
+                [
+                    "".join([f"{mlde_name}_", zs.replace("_score", "")])
+                    for zs in ZS_OPTS
+                    if zs != "ed_score"
+                ]
+                + [f"{mlde_name}_double"]
+            ].max(axis=1)
+
+            best_ftcomb = merge_df[
+                [
+                    "".join([f"{mlde_name}_", zs])
+                    for zs in zs_no_score_list
+                    if zs != "ed"
+                ]
+                + [f"{mlde_name}_double"]
+            ].max(axis=1)
+
+            for ft_des, ft_df in zip(FT_OPTS, [best_ft, best_ftcomb]):
+
+                # add vs mlde
+                merge_df[f"{dt}_{ft_des}_mlde"] = ft_df - merge_df[mlde_name]
+                # add vs de
+                for de in DE_TYPES:
+                    merge_df[f"{dt}_{ft_des}_{de}"] = (
+                        ft_df - merge_df[f"{de}_{de_name}"]
+                    )
+
+        return merge_df.copy()
+
+    @property
+    def mlde_stat_df(self) -> pd.DataFrame:
+        """Return the MLDE statistics dataframe"""
+        return self._mlde_stat_df
+
+    @property
+    def merge_all_df(self) -> pd.DataFrame:
+        """Return the merged dataframe"""
+        return self._merge_all_df
+
+
 class CorrPerfomanceCharacter(MergeLandscapeAttributes):
     """
     A class for getting the correlation between the performance and the characteristics of the library
@@ -444,7 +727,7 @@ class CorrPerfomanceCharacter(MergeLandscapeAttributes):
         lib_stat_path: str = "results/fitness_distribution/max/all_lib_stats.csv",
         loc_opt_path: str = "results/local_optima/scale2max.csv",
         pwe_path: str = "results/pairwise_epistasis_vis/none/scale2max.csv",
-        zs_path: str = "results/zs_sum/none/zs_stat_scale2max.csv",
+        zs_path: str = "results/zs_sum_5/none/zs_stat_scale2max.csv",
         de_path: str = "results/de/DE-active/scale2max/all_landscape_de_summary.csv",
         mlde_path: str = "results/mlde/all_df_comb_onehot_2.csv",
         merge_dir: str = "results/merged",
