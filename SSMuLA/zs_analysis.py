@@ -32,7 +32,7 @@ from SSMuLA.util import ndcg_scale, checkNgen_folder
 hv.extension("bokeh")
 hv.renderer("bokeh").theme = JSON_THEME
 
-ZS_OPTS = ["ed_score", "Triad_score", "ev_score", "esm_score", "esmif_score", "coves_score"]
+ZS_OPTS = ["ed_score", "ev_score", "esm_score", "esmif_score", "coves_score", "Triad_score"]
 ZS_COMB_OPTS = [
     "Triad-ev_score",
     "Triad-esm_score",
