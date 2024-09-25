@@ -106,9 +106,6 @@ def avg_alde_df(
 def aggregate_alde_df(
     eq_ns: list[int] = [1, 2, 3, 4],
     zs_opts: list[str] = ["esmif", "ev", "coves", "ed", "esm", "Triad", ""],
-    alde_model: str = "Boosting Ensemble",
-    alde_encoding: str = "onehot",
-    alde_acq: str = "GREEDY",
     alde_dir: str = "/disk2/fli/alde4ssmula",
     alde_df_path: str = "results/alde/alde_all.csv",
 ) -> pd.DataFrame:
@@ -119,10 +116,8 @@ def aggregate_alde_df(
     Args:
     - eq_ns (list): List of equal n values.
     - zs_opts (list): List of zero-shot options.
-    - alde_model (str): ALDE model to consider.
-    - alde_encoding (str): ALDE encoding to consider.
-    - alde_acq (str): ALDE acquisition to consider.
     - alde_dir (str): Directory containing ALDE results.
+    - alde_df_path (str): Path to save the aggregated ALDE results.
 
     Returns:
     - df (pd.DataFrame): Aggregated ALDE results.
@@ -131,6 +126,7 @@ def aggregate_alde_df(
     # initialize the dataframe
     alde_all = pd.DataFrame(
         columns=[
+            "n_mut_cutoff",
             "zs",
             "rounds",
             "n_samples",
@@ -149,6 +145,11 @@ def aggregate_alde_df(
 
         for zs in zs_opts + ["ds-" + z for z in zs_opts if z != ""]:
 
+            if "ds-" in zs:
+                n_mut = "double"
+            else:
+                n_mut = "all"
+
             for n in N_SAMPLE_LIST:
 
                 if zs != "":
@@ -165,14 +166,13 @@ def aggregate_alde_df(
                     csv_path = f"{alde_dir}/results/{zs_append}{str(eq_n)}eq_{str(int((n+96)/eq_n))}/all_results{res_append}.csv"
 
                 if os.path.exists(csv_path):
+                    print(f"Reading {csv_path}...")
                     a_df = pd.read_csv(csv_path)
 
                     max_timesteps = a_df.groupby("Protein")["Timestep"].transform("max")
-
-                    # DNN Ensemble
-                    # Boosting Ensemble
                     slice_df = a_df[a_df["Timestep"] == max_timesteps].copy()
 
+                    slice_df["n_mut_cutoff"] = n_mut
                     slice_df["zs"] = zs
                     slice_df["rounds"] = eq_n
                     slice_df["n_samples"] = n + 96
@@ -187,6 +187,7 @@ def aggregate_alde_df(
 
                     alde_all = alde_all._append(
                         {
+                            "n_mut_cutoff": n_mut,
                             "zs": zs,
                             "rounds": eq_n,
                             "n_samples": n + 96,

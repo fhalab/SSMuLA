@@ -22,8 +22,8 @@ if __name__ == "__main__":
     sys.stdout = f
 
 
-    zs_folder = "results/zs_comb_4"
-    mlde_folder = "results/mlde_coves"
+    zs_folder = "results/zs_comb_5"
+    mlde_folder = "results/mlde_coves_2"
 
 
     run_all_mlde_parallelized(
