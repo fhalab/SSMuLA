@@ -20,7 +20,7 @@ if __name__ == "__main__":
     )
     sys.stdout = f
 
-    MergeMLDEAttributes()
+    MergeMLDEAttributes(mlde_path = "results/mlde/all_df_comb_onehot_3.csv", models=["boosting"])
 
     # MergeLandscapeAttributes(
     #     lib_stat_path="results/fitness_distribution/max/all_lib_stats.csv",
