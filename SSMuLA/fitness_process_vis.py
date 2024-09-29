@@ -1788,7 +1788,7 @@ def parse_lib_stat(
 
     lib_stat = pd.concat(
         [
-            lib_stat_slice["lib"],
+            lib_stat_slice[["lib", "n_mut_cuttoff"]],
             lib_stat_slice["lib_basic_dict"].apply(literal_eval).apply(pd.Series),
             lib_stat_slice["fit_basic_dict"].apply(literal_eval).apply(pd.Series),
             lib_stat_slice["cauchy"].apply(literal_eval).apply(pd.Series),
