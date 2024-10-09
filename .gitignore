@@ -71,6 +71,10 @@ sandbox/esmif
 sandbox/esmif/
 sandbox/esmif/*
 
+sandbox/fig_svg
+sandbox/fig_svg/
+sandbox/fig_svg/*
+
 zs
 zs/
 zs/*
