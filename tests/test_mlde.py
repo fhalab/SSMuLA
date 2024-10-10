@@ -23,125 +23,168 @@ if __name__ == "__main__":
 
 
     zs_folder = "results/zs_comb_5"
-    mlde_folder = "results/mlde_coves_2"
+    # mlde_folder = "results/mlde_coves_2"
 
 
     run_all_mlde_parallelized(
-        encodings=["one-hot"],
+        encodings=DEFAULT_LEARNED_EMB_COMBO,
         n_mut_cutoffs=[0],
-        zs_predictors=["coves"],
-        n_samples=[96, 384],
+        zs_predictors=["none"],
+        n_samples=[96, 384, 24, 48],
         n_replicate=50,
         n_job=96,
         all_libs=False,
         ft_first=True,
-        lib_list=["DHFR", "GB1", "ParD2", "ParD3", "TrpB3A", "TrpB3B", "TrpB3C", "TrpB3D", "TrpB3E", "TrpB3F", "TrpB3G", "TrpB3H", "TrpB3I", "TrpB4"],
-        mlde_folder=mlde_folder,
+        lib_list=["T7", "TEV"],
+        mlde_folder="results/mlde_emb",
         zs_folder=zs_folder,
     )
 
-
     run_all_mlde_parallelized(
-        encodings=["one-hot"],
+        encodings=DEFAULT_LEARNED_EMB_COMBO,
         n_mut_cutoffs=[0],
-        zs_predictors=["coves"],
-        n_samples=[24, 48],
-        n_replicate=50,
-        n_job=96,
-        all_libs=False,
-        ft_first=True,
-        lib_list=["DHFR", "GB1", "ParD2", "ParD3", "TrpB3A", "TrpB3B", "TrpB3C", "TrpB3D", "TrpB3E", "TrpB3F", "TrpB3G", "TrpB3H", "TrpB3I", "TrpB4"],
-        mlde_folder=mlde_folder,
-        zs_folder=zs_folder,
-    )
-
-
-    run_all_mlde_parallelized(
-        encodings=["one-hot"],
-        n_mut_cutoffs=[0],
-        zs_predictors=["coves"],
+        zs_predictors=["none"],
         n_samples=[192, 288, 480, 576],
         n_replicate=50,
         n_job=96,
         all_libs=False,
         ft_first=True,
-        lib_list=["DHFR", "GB1", "ParD2", "ParD3", "TrpB3A", "TrpB3B", "TrpB3C", "TrpB3D", "TrpB3E", "TrpB3F", "TrpB3G", "TrpB3H", "TrpB3I", "TrpB4"],
-        mlde_folder=mlde_folder,
+        lib_list=["T7", "TEV"],
+        mlde_folder="results/mlde_emb",
         zs_folder=zs_folder,
     )
 
     run_all_mlde_parallelized(
-        encodings=["one-hot"],
+        encodings=DEFAULT_LEARNED_EMB_COMBO,
         n_mut_cutoffs=[0],
-        zs_predictors=["coves"],
+        zs_predictors=["none"],
         n_samples=[960, 1920],
         n_replicate=50,
         n_job=96,
         all_libs=False,
         ft_first=True,
-        lib_list=["DHFR", "GB1", "ParD2", "ParD3", "TrpB3A", "TrpB3B", "TrpB3C", "TrpB3D", "TrpB3E", "TrpB3F", "TrpB3G", "TrpB3H", "TrpB3I", "TrpB4"],
-        mlde_folder=mlde_folder,
+        lib_list=["T7", "TEV"],
+        mlde_folder="results/mlde_emb",
         zs_folder=zs_folder,
     )
+
+
+    # run_all_mlde_parallelized(
+    #     encodings=["one-hot"],
+    #     n_mut_cutoffs=[0],
+    #     zs_predictors=["coves"],
+    #     n_samples=[96, 384],
+    #     n_replicate=50,
+    #     n_job=96,
+    #     all_libs=False,
+    #     ft_first=True,
+    #     lib_list=["DHFR", "GB1", "ParD2", "ParD3", "TrpB3A", "TrpB3B", "TrpB3C", "TrpB3D", "TrpB3E", "TrpB3F", "TrpB3G", "TrpB3H", "TrpB3I", "TrpB4"],
+    #     mlde_folder=mlde_folder,
+    #     zs_folder=zs_folder,
+    # )
+
+
+    # run_all_mlde_parallelized(
+    #     encodings=["one-hot"],
+    #     n_mut_cutoffs=[0],
+    #     zs_predictors=["coves"],
+    #     n_samples=[24, 48],
+    #     n_replicate=50,
+    #     n_job=96,
+    #     all_libs=False,
+    #     ft_first=True,
+    #     lib_list=["DHFR", "GB1", "ParD2", "ParD3", "TrpB3A", "TrpB3B", "TrpB3C", "TrpB3D", "TrpB3E", "TrpB3F", "TrpB3G", "TrpB3H", "TrpB3I", "TrpB4"],
+    #     mlde_folder=mlde_folder,
+    #     zs_folder=zs_folder,
+    # )
+
+
+    # run_all_mlde_parallelized(
+    #     encodings=["one-hot"],
+    #     n_mut_cutoffs=[0],
+    #     zs_predictors=["coves"],
+    #     n_samples=[192, 288, 480, 576],
+    #     n_replicate=50,
+    #     n_job=96,
+    #     all_libs=False,
+    #     ft_first=True,
+    #     lib_list=["DHFR", "GB1", "ParD2", "ParD3", "TrpB3A", "TrpB3B", "TrpB3C", "TrpB3D", "TrpB3E", "TrpB3F", "TrpB3G", "TrpB3H", "TrpB3I", "TrpB4"],
+    #     mlde_folder=mlde_folder,
+    #     zs_folder=zs_folder,
+    # )
+
+    # run_all_mlde_parallelized(
+    #     encodings=["one-hot"],
+    #     n_mut_cutoffs=[0],
+    #     zs_predictors=["coves"],
+    #     n_samples=[960, 1920],
+    #     n_replicate=50,
+    #     n_job=96,
+    #     all_libs=False,
+    #     ft_first=True,
+    #     lib_list=["DHFR", "GB1", "ParD2", "ParD3", "TrpB3A", "TrpB3B", "TrpB3C", "TrpB3D", "TrpB3E", "TrpB3F", "TrpB3G", "TrpB3H", "TrpB3I", "TrpB4"],
+    #     mlde_folder=mlde_folder,
+    #     zs_folder=zs_folder,
+    # )
     
 
-    run_all_mlde_parallelized(
-        encodings=["one-hot"],
-        n_mut_cutoffs=[2],
-        zs_predictors=["coves"],
-        n_samples=[96, 384],
-        n_replicate=50,
-        n_job=96,
-        all_libs=False,
-        ft_first=False,
-        lib_list=["DHFR", "GB1", "ParD2", "ParD3", "TrpB3A", "TrpB3B", "TrpB3C", "TrpB3D", "TrpB3E", "TrpB3F", "TrpB3G", "TrpB3H", "TrpB3I", "TrpB4"],
-        mlde_folder=mlde_folder,
-        zs_folder=zs_folder,
-    )
+    # run_all_mlde_parallelized(
+    #     encodings=["one-hot"],
+    #     n_mut_cutoffs=[2],
+    #     zs_predictors=["coves"],
+    #     n_samples=[96, 384],
+    #     n_replicate=50,
+    #     n_job=96,
+    #     all_libs=False,
+    #     ft_first=False,
+    #     lib_list=["DHFR", "GB1", "ParD2", "ParD3", "TrpB3A", "TrpB3B", "TrpB3C", "TrpB3D", "TrpB3E", "TrpB3F", "TrpB3G", "TrpB3H", "TrpB3I", "TrpB4"],
+    #     mlde_folder=mlde_folder,
+    #     zs_folder=zs_folder,
+    # )
 
 
-    run_all_mlde_parallelized(
-        encodings=["one-hot"],
-        n_mut_cutoffs=[2],
-        zs_predictors=["coves"],
-        n_samples=[24, 48],
-        n_replicate=50,
-        n_job=96,
-        all_libs=False,
-        ft_first=False,
-        lib_list=["DHFR", "GB1", "ParD2", "ParD3", "TrpB3A", "TrpB3B", "TrpB3C", "TrpB3D", "TrpB3E", "TrpB3F", "TrpB3G", "TrpB3H", "TrpB3I", "TrpB4"],
-        mlde_folder=mlde_folder,
-        zs_folder=zs_folder,
-    )
+    # run_all_mlde_parallelized(
+    #     encodings=["one-hot"],
+    #     n_mut_cutoffs=[2],
+    #     zs_predictors=["coves"],
+    #     n_samples=[24, 48],
+    #     n_replicate=50,
+    #     n_job=96,
+    #     all_libs=False,
+    #     ft_first=False,
+    #     lib_list=["DHFR", "GB1", "ParD2", "ParD3", "TrpB3A", "TrpB3B", "TrpB3C", "TrpB3D", "TrpB3E", "TrpB3F", "TrpB3G", "TrpB3H", "TrpB3I", "TrpB4"],
+    #     mlde_folder=mlde_folder,
+    #     zs_folder=zs_folder,
+    # )
 
 
-    run_all_mlde_parallelized(
-        encodings=["one-hot"],
-        n_mut_cutoffs=[2],
-        zs_predictors=["coves"],
-        n_samples=[192, 288, 480, 576],
-        n_replicate=50,
-        n_job=96,
-        all_libs=False,
-        ft_first=False,
-        lib_list=["DHFR", "GB1", "ParD2", "ParD3", "TrpB3A", "TrpB3B", "TrpB3C", "TrpB3D", "TrpB3E", "TrpB3F", "TrpB3G", "TrpB3H", "TrpB3I", "TrpB4"],
-        mlde_folder=mlde_folder,
-        zs_folder=zs_folder,
-    )
+    # run_all_mlde_parallelized(
+    #     encodings=["one-hot"],
+    #     n_mut_cutoffs=[2],
+    #     zs_predictors=["coves"],
+    #     n_samples=[192, 288, 480, 576],
+    #     n_replicate=50,
+    #     n_job=96,
+    #     all_libs=False,
+    #     ft_first=False,
+    #     lib_list=["DHFR", "GB1", "ParD2", "ParD3", "TrpB3A", "TrpB3B", "TrpB3C", "TrpB3D", "TrpB3E", "TrpB3F", "TrpB3G", "TrpB3H", "TrpB3I", "TrpB4"],
+    #     mlde_folder=mlde_folder,
+    #     zs_folder=zs_folder,
+    # )
 
-    run_all_mlde_parallelized(
-        encodings=["one-hot"],
-        n_mut_cutoffs=[2],
-        zs_predictors=["coves"],
-        n_samples=[960, 1920],
-        n_replicate=50,
-        n_job=96,
-        all_libs=False,
-        ft_first=False,
-        lib_list=["DHFR", "GB1", "ParD2", "ParD3", "TrpB3A", "TrpB3B", "TrpB3C", "TrpB3D", "TrpB3E", "TrpB3F", "TrpB3G", "TrpB3H", "TrpB3I", "TrpB4"],
-        mlde_folder=mlde_folder,
-        zs_folder=zs_folder,
-    )
+    # run_all_mlde_parallelized(
+    #     encodings=["one-hot"],
+    #     n_mut_cutoffs=[2],
+    #     zs_predictors=["coves"],
+    #     n_samples=[960, 1920],
+    #     n_replicate=50,
+    #     n_job=96,
+    #     all_libs=False,
+    #     ft_first=False,
+    #     lib_list=["DHFR", "GB1", "ParD2", "ParD3", "TrpB3A", "TrpB3B", "TrpB3C", "TrpB3D", "TrpB3E", "TrpB3F", "TrpB3G", "TrpB3H", "TrpB3I", "TrpB4"],
+    #     mlde_folder=mlde_folder,
+    #     zs_folder=zs_folder,
+    # )
     
     # run_all_mlde_parallelized(
     #     encodings=["one-hot"],
@@ -156,7 +199,6 @@ if __name__ == "__main__":
     # )
 
 
-
     # run_all_mlde_parallelized(
     #     encodings=["one-hot"],
     #     n_mut_cutoffs=[0],
@@ -165,10 +207,11 @@ if __name__ == "__main__":
     #     n_replicate=50,
     #     n_job=96,
     #     # ft_lib_fracs=[0.125, 0.25, 0.5],
-    #     all_libs=True,
+    #     all_libs=False,
+    #     lib_list=["DHFR", "GB1", "ParD2", "ParD3", "TrpB3A", "TrpB3B", "TrpB3C", "TrpB3D", "TrpB3E", "TrpB3F", "TrpB3G", "TrpB3H", "TrpB3I", "TrpB4"],
     #     ft_first=True,
-    #     zs_folder=zs_folder,
-    #     mlde_folder="results/mlde_twobest",
+    #     zs_folder="results/zs_comb_5",
+    #     mlde_folder="results/mlde_twobest_2",
     # )
 
     # run_all_mlde_parallelized(

@@ -3,6 +3,10 @@ data
 data/
 data/*
 
+data4upload
+data4upload/
+data4upload/*
+
 coves_data
 coves_data/
 coves_data/*

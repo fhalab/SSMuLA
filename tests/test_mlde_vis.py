@@ -33,8 +33,8 @@ if __name__ == "__main__":
     # )
 
     MLDESum(
-        mlde_results_dir = "results/mlde_coves_2/saved",
-        mlde_vis_dir = "results/mlde_coves_2/vis"
+        mlde_results_dir = "results/mlde_twobest_2/saved",
+        mlde_vis_dir = "results/mlde_twobest_2/vis"
     )
 
     """

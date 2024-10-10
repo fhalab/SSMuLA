@@ -209,3 +209,41 @@ def aggregate_alde_df(
     alde_all.to_csv(alde_df_path, index=False)
 
     return alde_all
+
+def clean_alde_df(
+    agg_alde_df_path: str = "results/alde/alde_all.csv",
+    clean_alde_df_path: str = "results/alde/alde_results.csv",
+):
+    """
+    A function to clean up the aggregated ALDE results.
+    """
+
+    alde_df = pd.read_csv(agg_alde_df_path)
+    alde_df[
+        (alde_df["rounds"].isin([2, 3, 4]))
+        & (alde_df["Model"].isin(["Boosting Ensemble", "DNN Ensemble"]))
+        & (alde_df["Acquisition"] == "GREEDY")
+    ].rename(
+        columns={
+            "Protein": "lib",
+            "Mean": "top_maxes_mean",
+            "Std": "top_maxes_std",
+            "Frac": "if_truemaxs_mean",
+            "Encoding": "encoding",
+            "Model": "model",
+            "n_samples": "n_sample",
+        }
+    )[
+        [
+            "encoding",
+            "model",
+            "n_sample",
+            "top_maxes_mean",
+            "top_maxes_std",
+            "if_truemaxs_mean",
+            "n_mut_cutoff",
+            "lib",
+            "zs",
+            "rounds",
+        ]
+    ].reset_index(drop=True).to_csv(clean_alde_df_path, index=False)

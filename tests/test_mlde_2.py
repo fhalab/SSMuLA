@@ -27,19 +27,19 @@ if __name__ == "__main__":
 
     # two-best_score,Triad-ev_rank,Triad-esm_rank
 
-    run_all_mlde_parallelized(
-        encodings=["one-hot"],
-        n_mut_cutoffs=[0],
-        zs_predictors=["Triad-ev", "Triad-esm", "two-best"],
-        n_samples=[96, 384, 24, 48],
-        n_replicate=50,
-        n_job=256,
-        all_libs=False,
-        ft_first=True,
-        lib_list=["T7", "TEV"],
-        mlde_folder=mlde_folder,
-        zs_folder=zs_folder,
-    )
+    # run_all_mlde_parallelized(
+    #     encodings=["one-hot"],
+    #     n_mut_cutoffs=[0],
+    #     zs_predictors=["Triad-ev", "Triad-esm", "two-best"],
+    #     n_samples=[96, 384, 24, 48],
+    #     n_replicate=50,
+    #     n_job=256,
+    #     all_libs=False,
+    #     ft_first=True,
+    #     lib_list=["T7", "TEV"],
+    #     mlde_folder=mlde_folder,
+    #     zs_folder=zs_folder,
+    # )
 
     run_all_mlde_parallelized(
         encodings=["one-hot"],
@@ -50,7 +50,7 @@ if __name__ == "__main__":
         n_job=256,
         all_libs=False,
         ft_first=True,
-        lib_list=["T7", "TEV"],
+        lib_list=["TEV"],
         mlde_folder=mlde_folder,
         zs_folder=zs_folder,
     )
@@ -69,7 +69,6 @@ if __name__ == "__main__":
         mlde_folder=mlde_folder,
         zs_folder=zs_folder,
     )
-
 
     # run_all_mlde_parallelized(
     #     encodings=["one-hot"],
