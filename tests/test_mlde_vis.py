@@ -28,6 +28,11 @@ if __name__ == "__main__":
     )
 
     # MLDESum(
+    #     mlde_results_dir = "results/mlde_ft3/saved",
+    #     mlde_vis_dir = "results/mlde_ft3/vis"
+    # )
+
+    # MLDESum(
     #     mlde_results_dir = "results/mlde_3/saved",
     #     mlde_vis_dir = "results/mlde_3/vis"
     # )

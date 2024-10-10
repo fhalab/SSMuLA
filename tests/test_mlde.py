@@ -30,43 +30,58 @@ if __name__ == "__main__":
         encodings=DEFAULT_LEARNED_EMB_COMBO,
         n_mut_cutoffs=[0],
         zs_predictors=["none"],
-        n_samples=[96, 384, 24, 48],
+        n_samples=[384],
         n_replicate=50,
         n_job=96,
         all_libs=False,
         ft_first=True,
-        lib_list=["T7", "TEV"],
+        lib_list=["ParD2", "ParD3"],
         mlde_folder="results/mlde_emb",
         zs_folder=zs_folder,
     )
 
-    run_all_mlde_parallelized(
-        encodings=DEFAULT_LEARNED_EMB_COMBO,
-        n_mut_cutoffs=[0],
-        zs_predictors=["none"],
-        n_samples=[192, 288, 480, 576],
-        n_replicate=50,
-        n_job=96,
-        all_libs=False,
-        ft_first=True,
-        lib_list=["T7", "TEV"],
-        mlde_folder="results/mlde_emb",
-        zs_folder=zs_folder,
-    )
 
-    run_all_mlde_parallelized(
-        encodings=DEFAULT_LEARNED_EMB_COMBO,
-        n_mut_cutoffs=[0],
-        zs_predictors=["none"],
-        n_samples=[960, 1920],
-        n_replicate=50,
-        n_job=96,
-        all_libs=False,
-        ft_first=True,
-        lib_list=["T7", "TEV"],
-        mlde_folder="results/mlde_emb",
-        zs_folder=zs_folder,
-    )
+    # run_all_mlde_parallelized(
+    #     encodings=DEFAULT_LEARNED_EMB_COMBO,
+    #     n_mut_cutoffs=[0],
+    #     zs_predictors=["none"],
+    #     n_samples=[96, 384, 24, 48],
+    #     n_replicate=50,
+    #     n_job=96,
+    #     all_libs=False,
+    #     ft_first=True,
+    #     lib_list=["T7", "TEV"],
+    #     mlde_folder="results/mlde_emb",
+    #     zs_folder=zs_folder,
+    # )
+
+    # run_all_mlde_parallelized(
+    #     encodings=DEFAULT_LEARNED_EMB_COMBO,
+    #     n_mut_cutoffs=[0],
+    #     zs_predictors=["none"],
+    #     n_samples=[192, 288, 480, 576],
+    #     n_replicate=50,
+    #     n_job=96,
+    #     all_libs=False,
+    #     ft_first=True,
+    #     lib_list=["T7", "TEV"],
+    #     mlde_folder="results/mlde_emb",
+    #     zs_folder=zs_folder,
+    # )
+
+    # run_all_mlde_parallelized(
+    #     encodings=DEFAULT_LEARNED_EMB_COMBO,
+    #     n_mut_cutoffs=[0],
+    #     zs_predictors=["none"],
+    #     n_samples=[960, 1920],
+    #     n_replicate=50,
+    #     n_job=96,
+    #     all_libs=False,
+    #     ft_first=True,
+    #     lib_list=["T7", "TEV"],
+    #     mlde_folder="results/mlde_emb",
+    #     zs_folder=zs_folder,
+    # )
 
 
     # run_all_mlde_parallelized(
