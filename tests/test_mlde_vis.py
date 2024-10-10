@@ -23,9 +23,14 @@ if __name__ == "__main__":
     sys.stdout = f
 
     MLDESum(
-        mlde_results_dir = "results/mlde_3/saved",
-        mlde_vis_dir = "results/mlde_3/vis"
+        mlde_results_dir = "results/mlde_emb/saved",
+        mlde_vis_dir = "results/mlde_emb/vis"
     )
+
+    # MLDESum(
+    #     mlde_results_dir = "results/mlde_3/saved",
+    #     mlde_vis_dir = "results/mlde_3/vis"
+    # )
 
     # MLDESum(
     #     mlde_results_dir = "results/mlde_hm2zs_3/saved",

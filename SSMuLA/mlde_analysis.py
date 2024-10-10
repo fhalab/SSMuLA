@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import math
 from glob import glob
 from tqdm import tqdm
 from copy import deepcopy
@@ -16,7 +17,7 @@ import pandas as pd
 import holoviews as hv
 
 from SSMuLA.aa_global import DEFAULT_LEARNED_EMB_COMBO
-from SSMuLA.landscape_global import n_mut_cutoff_dict, LIB_NAMES
+from SSMuLA.landscape_global import n_mut_cutoff_dict, LIB_NAMES, LIB_INFO_DICT
 from SSMuLA.zs_analysis import ZS_OPTS_LEGEND
 from SSMuLA.vis import save_bokeh_hv, one_decimal_x, one_decimal_y, fixmargins
 from SSMuLA.util import checkNgen_folder, get_file_name
@@ -36,6 +37,117 @@ DEFAULT_MLDE_METRICS = [
     "if_truemaxs",
     "truemax_inds",
 ]
+
+
+def get_mlde_avg_df(
+    mlde_all: pd.DateFrame,
+    n_top: int,
+    n_mut_cutoff: str,
+    zs: str,
+    active_lib_list: list,
+    model_list: list = ["boosting"],
+    encoding_list: list = ["one-hot"],
+) -> pd.DataFrame:
+    """
+    Get average mlde df for a given n_top, n_mut_cutoff, zs, and active_lib_list
+
+    Args:
+    - mlde_all: pd.DataFrame, mlde df to parse
+    - n_top: int, n_top
+    - n_mut_cutoff: str, n_mut_cutoff
+    - zs: str, zs
+    - active_lib_list: list, active_lib_list
+    - model_list: list, model_list
+    - encoding_list: list, encoding_list
+    """
+
+    avg_mlde = (
+        mlde_all[
+            (mlde_all["lib"].isin(active_lib_list))
+            & (mlde_all["zs"] == zs)
+            & (mlde_all["n_top"] == n_top)
+            & (mlde_all["n_mut_cutoff"] == n_mut_cutoff)
+            & (
+                mlde_all["rep"].isin(np.arange(50))
+            )  # take only first 50 reps if there are more
+            & (mlde_all["model"].isin(model_list)
+            & (mlde_all["encoding"].isin(encoding_list)))
+        ][["n_sample", "top_maxes", "if_truemaxs"]]
+        .groupby("n_sample")
+        .agg(["mean", "std"])
+        .reset_index()
+    )
+    avg_mlde.columns = ["{}_{}".format(i, j) for i, j in avg_mlde.columns]
+    avg_mlde = avg_mlde.rename(columns={"n_sample_": "n_sample"})
+    return avg_mlde
+
+
+def get_mlde_avg_sdf(
+    mlde_all: pd.DataFrame,
+    n_top: int,
+    n_mut_cutoff: str,
+    zs: str,
+    active_lib_list: list,
+    model_list: list = ["boosting"],
+    encoding_list: list = ["one-hot"],
+    ft_frac: float = 0.125,
+):
+    """
+    Get the average MLDE for a given set of libraries, zs values, and ft_frac
+
+    Args:
+    - mlde_all, pd.DataFrame: DataFrame containing all MLDE data
+    - n_top, int: Number of top mutations to consider
+    - n_mut_cutoff, str: Mutation cutoff to consider
+    - zs, str: ZS value to consider
+    - active_lib_list, list: List of active libraries to consider
+    - model_list, list: List of models to consider
+    - ft_frac, float: fraction of the focused training set
+    """
+
+    slice_mlde = mlde_all[
+        (mlde_all["lib"].isin(active_lib_list))
+        & (mlde_all["zs"] == zs)
+        & (mlde_all["n_top"] == n_top)
+        & (mlde_all["n_mut_cutoff"] == n_mut_cutoff)
+        & (mlde_all["rep"].isin(np.arange(50)))
+        & (mlde_all["model"].isin(model_list)
+        & (mlde_all["encoding"].isin(encoding_list)))
+    ]
+
+    if zs != "none":
+        lib_dfs = []
+        for lib in active_lib_list:
+            lib_df = slice_mlde[slice_mlde["lib"] == lib].copy()
+
+            n_site = len(LIB_INFO_DICT[lib]["positions"])
+
+            if n_mut_cutoff == "all":
+                sample_space = 20 ** n_site
+            elif n_mut_cutoff == "double":
+                sample_space = math.comb(n_site, 2) * 20 ** 2
+            elif n_mut_cutoff == "single":
+                sample_space = n_site * 20
+
+            ft_lib_unique = np.array(sorted(lib_df["ft_lib"].unique()))
+            ft_lib_frac = ft_lib_unique / sample_space
+
+            lib_df["ft_lib_size"] = lib_df["ft_lib"].map(
+                {numb: frac for numb, frac in zip(ft_lib_unique, ft_lib_frac)}
+            )
+
+            lib_dfs.append(lib_df[lib_df["ft_lib_size"] == ft_frac])
+        slice_mlde = pd.concat(lib_dfs)
+
+    avg_mlde = (
+        slice_mlde[["n_sample", "top_maxes", "if_truemaxs"]]
+        .groupby("n_sample")
+        .agg(["mean", "std"])
+        .reset_index()
+    )
+    avg_mlde.columns = ["{}_{}".format(i, j) for i, j in avg_mlde.columns]
+    avg_mlde = avg_mlde.rename(columns={"n_sample_": "n_sample"}).set_index("n_sample")
+    return avg_mlde
 
 
 class MLDEParser:

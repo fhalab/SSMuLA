@@ -23,52 +23,52 @@ if __name__ == "__main__":
 
     zs_folder = "results/zs_comb_5"
     # mlde_folder = "results/mlde_emb"
-    mlde_folder = "results/mlde_3"
+   # mlde_folder = "results/mlde_ft3"
 
     # two-best_score,Triad-ev_rank,Triad-esm_rank
 
-    run_all_mlde_parallelized(
-        encodings=["one-hot"],
-        n_mut_cutoffs=[0],
-        zs_predictors=["struc-comb"], # ["Triad-ev", "Triad-esm", "two-best"],
-        n_samples=[96, 384, 24, 48],
-        n_replicate=50,
-        n_job=256,
-        all_libs=False,
-        ft_first=True,
-        lib_list=["T7", "TEV"],
-        mlde_folder=mlde_folder,
-        zs_folder=zs_folder,
-    )
+    # run_all_mlde_parallelized(
+    #     encodings=["one-hot"],
+    #     n_mut_cutoffs=[0],
+    #     zs_predictors=["struc-comb"], # ["Triad-ev", "Triad-esm", "two-best"],
+    #     n_samples=[96, 384, 24, 48],
+    #     n_replicate=50,
+    #     n_job=256,
+    #     all_libs=False,
+    #     ft_first=True,
+    #     lib_list=["T7", "TEV"],
+    #     mlde_folder=mlde_folder,
+    #     zs_folder=zs_folder,
+    # )
 
-    run_all_mlde_parallelized(
-        encodings=["one-hot"],
-        n_mut_cutoffs=[0],
-        zs_predictors=["struc-comb"], # ["Triad-ev", "Triad-esm", "two-best"],
-        n_samples=[192, 288, 480, 576],
-        n_replicate=50,
-        n_job=256,
-        all_libs=False,
-        ft_first=True,
-        lib_list=["T7","TEV"],
-        mlde_folder=mlde_folder,
-        zs_folder=zs_folder,
-    )
+    # run_all_mlde_parallelized(
+    #     encodings=["one-hot"],
+    #     n_mut_cutoffs=[0],
+    #     zs_predictors=["struc-comb"], # ["Triad-ev", "Triad-esm", "two-best"],
+    #     n_samples=[192, 288, 480, 576],
+    #     n_replicate=50,
+    #     n_job=256,
+    #     all_libs=False,
+    #     ft_first=True,
+    #     lib_list=["T7","TEV"],
+    #     mlde_folder=mlde_folder,
+    #     zs_folder=zs_folder,
+    # )
 
 
-    run_all_mlde_parallelized(
-        encodings=["one-hot"],
-        n_mut_cutoffs=[0],
-        zs_predictors=["struc-comb"],# ["Triad-ev", "Triad-esm", "two-best"],
-        n_samples=[960, 1920],
-        n_replicate=50,
-        n_job=256,
-        all_libs=False,
-        ft_first=True,
-        lib_list=["T7", "TEV"],
-        mlde_folder=mlde_folder,
-        zs_folder=zs_folder,
-    )
+    # run_all_mlde_parallelized(
+    #     encodings=["one-hot"],
+    #     n_mut_cutoffs=[0],
+    #     zs_predictors=["struc-comb"],# ["Triad-ev", "Triad-esm", "two-best"],
+    #     n_samples=[960, 1920],
+    #     n_replicate=50,
+    #     n_job=256,
+    #     all_libs=False,
+    #     ft_first=True,
+    #     lib_list=["T7", "TEV"],
+    #     mlde_folder=mlde_folder,
+    #     zs_folder=zs_folder,
+    # )
 
     # run_all_mlde_parallelized(
     #     encodings=["one-hot"],
@@ -295,20 +295,34 @@ if __name__ == "__main__":
     #     mlde_folder=mlde_folder,
     # )
 
-    # run_all_mlde_parallelized(
-    #     encodings=["one-hot"],
-    #     n_mut_cutoffs=[0],
-    #     zs_predictors=["none", "ev", "Triad", "esm", "esmif"],
-    #     n_samples=[96, 384],
-    #     n_replicate=50,
-    #     n_job=256,
-    #     ft_lib_fracs=[0.015625],
-    #     all_libs=True,
-    #     ft_first=True,
-    #     zs_folder=zs_folder,
-    #     mlde_folder=mlde_folder,
-    # )
+    run_all_mlde_parallelized(
+        encodings=["one-hot"],
+        n_mut_cutoffs=[0],
+        zs_predictors=["ev", "Triad", "esm", "esmif"],
+        n_samples=[384],
+        n_replicate=50,
+        n_job=256,
+        ft_lib_fracs=[0.015625, 0.03125, 0.0625],
+        all_libs=False,
+        lib_list=["T7", "TEV"],
+        ft_first=True,
+        zs_folder=zs_folder,
+        mlde_folder="results/mlde_ft3",
+    )
 
+    run_all_mlde_parallelized(
+        encodings=["one-hot"],
+        n_mut_cutoffs=[0],
+        zs_predictors=["coves"],
+        n_samples=[384],
+        n_replicate=50,
+        n_job=256,
+        ft_lib_fracs=[0.015625, 0.03125, 0.0625],
+        all_libs=True,
+        ft_first=True,
+        zs_folder=zs_folder,
+        mlde_folder="results/mlde_ft3",
+    )
 
     # run_all_mlde_parallelized(
     #     encodings=["one-hot"],
