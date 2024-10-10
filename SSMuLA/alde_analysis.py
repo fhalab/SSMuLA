@@ -85,7 +85,8 @@ def avg_alde_df(
                 },
                 ignore_index=True,
             )
-
+        elif"ds-ed" in csv_path:
+            continue
         else:
             print(f"File not found: {csv_path}")
 
