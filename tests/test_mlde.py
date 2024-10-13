@@ -51,53 +51,13 @@ if __name__ == "__main__":
         n_job=96,
         all_libs=False,
         ft_first=True,
-        lib_list=["T7", "TEV"],
+        lib_list=["TEV"],
         mlde_folder="results/mlde_emb",
         zs_folder=zs_folder,
+        ft_lib_fracs=[0.125],
+        model_classes = ["boosting"]
     )
 
-    run_all_mlde_parallelized(
-        encodings=DEFAULT_LEARNED_EMB_COMBO,
-        n_mut_cutoffs=[0],
-        zs_predictors=["ev"],
-        n_samples=[192, 288, 480, 576],
-        n_replicate=50,
-        n_job=96,
-        all_libs=False,
-        ft_first=True,
-        lib_list=["T7", "TEV"],
-        mlde_folder="results/mlde_emb",
-        zs_folder=zs_folder,
-    )
-
-    run_all_mlde_parallelized(
-        encodings=DEFAULT_LEARNED_EMB_COMBO,
-        n_mut_cutoffs=[0],
-        zs_predictors=["ev"],
-        n_samples=[960, 1920],
-        n_replicate=50,
-        n_job=96,
-        all_libs=False,
-        ft_first=True,
-        lib_list=["T7", "TEV"],
-        mlde_folder="results/mlde_emb",
-        zs_folder=zs_folder,
-    )
-
-
-    run_all_mlde_parallelized(
-        encodings=["one-hot"],
-        n_mut_cutoffs=[0],
-        zs_predictors=["ev"],
-        n_samples=[384],
-        n_replicate=50,
-        n_job=96,
-        all_libs=False,
-        ft_first=True,
-        lib_list=["DHFR", "GB1", "ParD2", "ParD3", "TrpB3A", "TrpB3B", "TrpB3C", "TrpB3D", "TrpB3E", "TrpB3F", "TrpB3G", "TrpB3H", "TrpB3I", "TrpB4"],
-        mlde_folder="results/mlde_emb",
-        zs_folder=zs_folder,
-    )
 
 
 

@@ -27,6 +27,23 @@ if __name__ == "__main__":
 
     # two-best_score,Triad-ev_rank,Triad-esm_rank
 
+
+    run_all_mlde_parallelized(
+        encodings=DEFAULT_LEARNED_EMB_COMBO,
+        n_mut_cutoffs=[0],
+        zs_predictors=["ev"],
+        n_samples=[192, 288, 480, 576],
+        n_replicate=50,
+        n_job=192,
+        all_libs=False,
+        ft_first=True,
+        lib_list=["T7", "TEV"],
+        mlde_folder="results/mlde_emb",
+        zs_folder=zs_folder,
+        ft_lib_fracs=[0.125],
+        model_classes = ["boosting"]
+    )
+
     # run_all_mlde_parallelized(
     #     encodings=["one-hot"],
     #     n_mut_cutoffs=[0],
@@ -295,34 +312,34 @@ if __name__ == "__main__":
     #     mlde_folder=mlde_folder,
     # )
 
-    run_all_mlde_parallelized(
-        encodings=["one-hot"],
-        n_mut_cutoffs=[0],
-        zs_predictors=["ev", "Triad", "esm", "esmif"],
-        n_samples=[384],
-        n_replicate=50,
-        n_job=256,
-        ft_lib_fracs=[0.015625, 0.03125, 0.0625],
-        all_libs=False,
-        lib_list=["T7", "TEV"],
-        ft_first=True,
-        zs_folder=zs_folder,
-        mlde_folder="results/mlde_ft3",
-    )
+    # run_all_mlde_parallelized(
+    #     encodings=["one-hot"],
+    #     n_mut_cutoffs=[0],
+    #     zs_predictors=["ev", "Triad", "esm", "esmif"],
+    #     n_samples=[384],
+    #     n_replicate=50,
+    #     n_job=256,
+    #     ft_lib_fracs=[0.015625, 0.03125, 0.0625],
+    #     all_libs=False,
+    #     lib_list=["T7", "TEV"],
+    #     ft_first=True,
+    #     zs_folder=zs_folder,
+    #     mlde_folder="results/mlde_ft3",
+    # )
 
-    run_all_mlde_parallelized(
-        encodings=["one-hot"],
-        n_mut_cutoffs=[0],
-        zs_predictors=["coves"],
-        n_samples=[384],
-        n_replicate=50,
-        n_job=256,
-        ft_lib_fracs=[0.015625, 0.03125, 0.0625],
-        all_libs=True,
-        ft_first=True,
-        zs_folder=zs_folder,
-        mlde_folder="results/mlde_ft3",
-    )
+    # run_all_mlde_parallelized(
+    #     encodings=["one-hot"],
+    #     n_mut_cutoffs=[0],
+    #     zs_predictors=["coves"],
+    #     n_samples=[384],
+    #     n_replicate=50,
+    #     n_job=256,
+    #     ft_lib_fracs=[0.015625, 0.03125, 0.0625],
+    #     all_libs=True,
+    #     ft_first=True,
+    #     zs_folder=zs_folder,
+    #     mlde_folder="results/mlde_ft3",
+    # )
 
     # run_all_mlde_parallelized(
     #     encodings=["one-hot"],
