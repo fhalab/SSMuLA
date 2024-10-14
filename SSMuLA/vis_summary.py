@@ -21,11 +21,13 @@ from SSMuLA.zs_analysis import (
     ZS_OPTS,
     ZS_COMB_OPTS,
     ZS_OPTS_LEGEND,
+    ZS_METRICS, 
+    ZS_N_MUTS
 )
 from SSMuLA.landscape_global import LIB_INFO_DICT, LIB_NAMES
 from SSMuLA.vis import (
     LIB_COLORS,
-    PRESENTATION_PALETTE_SATURATE,
+    FZL_PALETTE,
     MLDE_COLORS,
     ZS_COLOR_MAP,
     save_plt,
@@ -60,12 +62,10 @@ N_MUT_LEGEND = {
 }
 
 N_MUT_COLOR = {
-    "double": PRESENTATION_PALETTE_SATURATE["orange"],
-    "single": PRESENTATION_PALETTE_SATURATE["yellow"],
+    "double": FZL_PALETTE["orange"],
+    "single": FZL_PALETTE["yellow"],
 }
 
-ZS_METRICS = ["rho", "ndcg", "rocauc"]
-ZS_N_MUTS = ["all", "double", "single"]
 ZS_COMB_VIS_OPTS = ["both", "nocomb", "comb"]
 
 ZS_OPTS_APPENDED = deepcopy(ZS_OPTS_LEGEND)
@@ -369,7 +369,7 @@ class ZSSSumVis(SumVis):
         # if metric == "rocauc":
         #     # Create a horizontal line
         #     hline = hv.HLine(0.5).opts(
-        #         line_color=PRESENTATION_PALETTE_SATURATE["gray"],
+        #         line_color=FZL_PALETTE["gray"],
         #         line_width=1,
         #         line_dash="dotted",
         #     )
@@ -484,10 +484,10 @@ def plot_de_v_mlde(
     for zs in tqdm(zs_opts):
 
         """
-        "struc-comb_score": "Triad + ESM-IF",
-        "msanoif-comb_score": "EVMutation + ESM",
-        "msa-comb_score": "EVMutation + ESM + ESM-IF",
-        "structnmsa-comb_score": "Triad + EVMutation + ESM + ESM-IF"
+        "Triad-esmif_score": "Triad + ESM-IF",
+        "ev-esm_score": "EVMutation + ESM",
+        "ev-esm-esmif_score": "EVMutation + ESM + ESM-IF",
+        "Triad-ev-esm-esmif_score": "Triad + EVMutation + ESM + ESM-IF"
         """
 
         if min_ftlib and zs != "none":
@@ -1514,7 +1514,7 @@ def plot_ftlib_v_size(
         ax.plot(
             FTLIB_FRAC_LIST,
             rand_mean,
-            color=PRESENTATION_PALETTE_SATURATE["gray"],
+            color=FZL_PALETTE["gray"],
             linestyle="solid",
             linewidth=2,
         )
@@ -1522,13 +1522,13 @@ def plot_ftlib_v_size(
             FTLIB_FRAC_LIST,
             np.array(rand_mean) - np.array(rand_std),
             np.array(rand_mean) + np.array(rand_std),
-            color=PRESENTATION_PALETTE_SATURATE["gray"],
+            color=FZL_PALETTE["gray"],
             alpha=0.05,
         )
         frac_ax.plot(
             FTLIB_FRAC_LIST,
             rand_frac,
-            color=PRESENTATION_PALETTE_SATURATE["gray"],
+            color=FZL_PALETTE["gray"],
             linestyle="dotted",
             linewidth=2,
         )

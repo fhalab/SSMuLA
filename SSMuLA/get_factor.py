@@ -20,7 +20,7 @@ from SSMuLA.de_simulations import DE_TYPES
 from SSMuLA.zs_analysis import ZS_OPTS, ZS_COMB_OPTS
 from SSMuLA.vis_summary import ZS_METRICS
 from SSMuLA.get_corr import LANDSCAPE_ATTRIBUTES, val_list, zs_list
-from SSMuLA.vis import PRESENTATION_PALETTE_SATURATE, save_plt
+from SSMuLA.vis import FZL_PALETTE, save_plt
 from SSMuLA.util import checkNgen_folder
 
 # Custom colormap for the MSE row, using greens
@@ -32,9 +32,9 @@ cmap_mse = LinearSegmentedColormap.from_list(
 custom_cmap = LinearSegmentedColormap.from_list(
     "bwg",
     [
-        PRESENTATION_PALETTE_SATURATE["blue"],
+        FZL_PALETTE["blue"],
         "white",
-        PRESENTATION_PALETTE_SATURATE["green"],
+        FZL_PALETTE["green"],
     ],
     N=100,
 )

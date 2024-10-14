@@ -44,9 +44,9 @@ if __name__ == "__main__":
         scale_types=["max"], 
         filter_min_by="none", 
         ev_esm_folder = "ev_esm2",
-        zs_comb_dir = "results/zs_comb_5",
-        zs_vis_dir = "results/zs_vis_5",
-        zs_sum_dir = "results/zs_sum_5",
+        zs_comb_dir = "results/zs_comb_6",
+        zs_vis_dir = "results/zs_vis_6",
+        zs_sum_dir = "results/zs_sum_6",
     )
     
     f.close()

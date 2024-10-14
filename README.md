@@ -2,13 +2,16 @@
 
 ## About
 
-Code base for Site Saturation Mutagenesis Landscape Analysis
+* Code base termed "Site Saturation Mutagenesis Landscape Analysis (SSMuLA)" for paper titled "Evaluation of Machine Learning-Assisted Directed Evolution Across Diverse Combinatorial Landscapes"
+* Data and results can be found at [Zenodo](10.5281/zenodo.13910506)
 
 ### Datasets
 * The `data` folder is structured based on the landscape name, for each:
-    - `fasta`: the fasta file for the parent
-    - `fitness_landscape`: the csv file for the mutants and fitness values
-    - `processed`: processed fitness file
+    - `.fasta`: the fasta file for the parent
+    - `.pdb`: the pdb file for the parent
+    - `.model`: the EVmutation model file
+    - `fitness_landscape`: the folder containing csv files for the mutants and fitness values from the original sources
+    - `scale2max`: the folder containing processed fitness csv files returned from the `process_all` function in the `SSMuLA.fitness_process_vis` module
 
 #### Three systems
 ##### DHFR
@@ -46,9 +49,15 @@ Code base for Site Saturation Mutagenesis Landscape Analysis
 * 4-site-saturation landscape (V39, D40, G41, V54)
 
 ### Preprocessing
+* Run
+```
+python -m SSMuLA.tests.test_preprocess
+```
 * Processed with `fitness_process_vis`
 * Rename columns to be `AAs`, `AA1`, `AA2`, `AA3`, `AA4`, `fitness`, add `active` if not already there and add `muts` columns
-* Scale to parents or max
+* Scale to `max` (with option to scale to `parent`)
+* Processed data saved in `scale2max` folder
+* 
 
 ### Simulations
 #### DE
@@ -69,36 +78,11 @@ Code base for Site Saturation Mutagenesis Landscape Analysis
 * All EVMutation predictions run with [EVcouplings](https://v2.evcouplings.org/)
 * All settings remain default
 * Model parameters in the `.model` files are downloaded and renamed
-* Use the recommneded results and full results can be obtained from the links
-- [DHFR](https://v2.evcouplings.org/results/057bbf069e4b43789bd87bd22b9982ab)
-- [GB1](https://v2.evcouplings.org/results/c12744e78f4744ee8102d8021c243398)
-- [TrpB](https://v2.evcouplings.org/results/db0701748dce4dfe8f27ac5a535391bf)
 
 
+### Analysis
+* 
 
-## Prepare for installation
 
-If you don't already have twine installed run the following:
-`python -m pip install --user --upgrade twine`
-
-## The following will create the package
-```
-python setup.py sdist bdist_wheel
-twine check dist/SSMuLA-1.0.0.tar.gz
-```
-
-## Install to python environment localling
-
-`pip install PATH_TO_SSMuLA/dist/SSMuLA-1.0.0.tar.gz`
-You should run this before uploading it and check all works as expected.
-
-## The following will push the package to pip 
-**Note you need to set up a pip account first**
-
-```
-twine upload dist/*
-```
-
-## Have a look at your projects page on pip
-
-`https://pypi.org/project/SSMuLA/`
+### Reproduce figures
+* All notebooks in `fig_notebooks` are used to reproduce figures in the paper with files downloaded from [Zenodo](10.5281/zenodo.13910506)

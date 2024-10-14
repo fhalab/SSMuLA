@@ -170,7 +170,6 @@ EV_META = {
     },
 }
 
-
 def get_msa_dict():
     msa_dict = {}
 
@@ -192,8 +191,20 @@ def get_msa_dict():
 
     return msa_dict
 
-
 MSA_DICT = deepcopy(get_msa_dict())
+
+
+def get_msa_df() -> pd.DataFrame:
+    """
+    A function for getting the MSA dataframe for all landscapes
+    """
+
+    msa_df = pd.DataFrame(MSA_DICT, index=["MSA"]).T.reset_index()
+    msa_df.columns = ["lib", "msa"]
+    return msa_df
+
+MSA_DF = get_msa_df()
+
 
 def chop_pdb(
     input_pdb: str, output_pdb: str, start_resid: int, end_resid: int, chain_id: str
@@ -629,5 +640,4 @@ class DataProcessor:
         if _pos:
             data = self.store_pos_list(data)
         return data
-
 

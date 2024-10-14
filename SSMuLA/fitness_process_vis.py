@@ -43,7 +43,7 @@ from SSMuLA.vis import (
     plot_fit_dist,
     LIB_COLORS,
     LIB_COLORS_CODON,
-    PRESENTATION_PALETTE_SATURATE,
+    FZL_PALETTE,
 )
 from SSMuLA.util import checkNgen_folder
 
@@ -1352,7 +1352,7 @@ class SDA(LibData):
         print(f"Kolmogorov-Smirnov Statistic: {sda_ks_dict}")
 
         hv_dist = plot_fit_dist(
-            self.m_fit, color=PRESENTATION_PALETTE_SATURATE["blue"], label="All"
+            self.m_fit, color=FZL_PALETTE["blue"], label="All"
         )
 
         # get y_range for spike height
@@ -1365,13 +1365,13 @@ class SDA(LibData):
         sda_dist = (
             plot_fit_dist(
                 self.s_fit,
-                color=PRESENTATION_PALETTE_SATURATE["yellow"],
+                color=FZL_PALETTE["yellow"],
                 label="Single",
                 spike_length=spike_length,
             )
             * plot_fit_dist(
                 self.d_fit,
-                color=PRESENTATION_PALETTE_SATURATE["green"],
+                color=FZL_PALETTE["green"],
                 label="Double",
                 spike_length=spike_length,
             )
@@ -1808,3 +1808,39 @@ def parse_lib_stat(
 
     return pd.concat([lib_stat, df_expanded], axis=1)
 
+def simple_lib_stat(
+    df: pd.DataFrame,
+):
+    """
+    A function to get the simple statistics of the library
+
+    Args:
+    - df, pd.DataFrame: the dataframe of the library statistics
+    """
+
+    return df[
+        [
+            "lib",
+            "n_mut_cuttoff",
+            "numb_measured",
+            "percent_measured",
+            "numb_active",
+            "percent_active",
+            "active_fit_min",
+            "parent_fit",
+            "parent_rank",
+            "parent_rank_percent",
+            "mean",
+            "median",
+            "range",
+            "iqr",
+            "std_dev",
+            "variance",
+            "skewness",
+            "kurt",
+            "Q1",
+            "Q2",
+            "Q3",
+            "numb_kde_peak",
+        ]
+    ]

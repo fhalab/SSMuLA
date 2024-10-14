@@ -3,14 +3,19 @@
 from __future__ import annotations
 
 import os
+from ast import literal_eval
+
 from glob import glob
 from tqdm import tqdm
 
 import numpy as np
 import pandas as pd
 
-from scipy.stats import spearmanr
+from scipy.stats import spearmanr, ttest_ind
 from sklearn.metrics import roc_curve, auc
+
+import matplotlib.pyplot as plt
+import seaborn as sns
 
 # Basic plotting
 import holoviews as hv
@@ -18,7 +23,7 @@ import holoviews as hv
 # Large data plotting
 from holoviews.operation.datashader import rasterize
 
-from SSMuLA.landscape_global import LibData, n_mut_cutoff_dict
+from SSMuLA.landscape_global import LibData, n_mut_cutoff_dict, LIB_INFO_DICT
 from SSMuLA.vis import (
     JSON_THEME,
     LIGHT_COLORS,
@@ -26,20 +31,31 @@ from SSMuLA.vis import (
     one_decimal_y,
     fixmargins,
     save_bokeh_hv,
+    FZL_PALETTE,
+    glasbey_category10
 )
+from SSMuLA.zs_data import MSA_DF
 from SSMuLA.util import ndcg_scale, checkNgen_folder
 
 hv.extension("bokeh")
 hv.renderer("bokeh").theme = JSON_THEME
 
-ZS_OPTS = ["ed_score", "ev_score", "esm_score", "esmif_score", "coves_score", "Triad_score"]
+ZS_OPTS = [
+    "ed_score",
+    "ev_score",
+    "esm_score",
+    "esmif_score",
+    "coves_score",
+    "Triad_score",
+]
+
 ZS_COMB_OPTS = [
     "Triad-ev_score",
     "Triad-esm_score",
-    "struc-comb_score",
-    "msanoif-comb_score",
-    "msa-comb_score",
-    "structnmsa-comb_score",
+    "Triad-esmif_score",
+    "ev-esm_score",
+    "ev-esm-esmif_score",
+    "Triad-ev-esm-esmif_score",
     "two-best_score",
 ]
 
@@ -61,14 +77,39 @@ ZS_OPTS_LEGEND = {
     "esm_score": "ESM",
     "esmif_score": "ESM-IF",
     "coves_score": "CoVES",
-    "struc-comb_score": "Triad + ESM-IF",
+    "Triad-esmif_score": "Triad + ESM-IF",  # prev struc-comb
     "Triad-ev_score": "Triad + EVmutation",
     "Triad-esm_score": "Triad + ESM",
-    "msanoif-comb_score": "EVmutation + ESM",
+    "ev-esm_score": "EVmutation + ESM",  # prev msanoif-comb
     "two-best_score": "EVmutation + ESM-IF",
-    "msa-comb_score": "EVmutation + ESM + ESM-IF",
-    "structnmsa-comb_score": "Triad + EVmutation + ESM + ESM-IF",
+    "ev-esm-esmif_score": "EVmutation + ESM + ESM-IF",  # prev msa-comb
+    "Triad-ev-esm-esmif_score": "Triad + EVmutation + ESM + ESM-IF",  # prev structnev-esm-esmif
 }
+
+ZS_METRICS = ["rho", "ndcg", "rocauc"]
+
+ZS_METIRC_MAP_TITLE = {
+    "rho": "Fitness ranking\n(Spearman's ρ)",
+    "rocauc": "Active / inactive classification\n(ROC-AUC)",
+}
+
+ZS_METIRC_MAP_LABEL = {
+    "rho": "Spearman's ρ",
+    "rocauc": "ROC-AUC",
+}
+
+ZS_N_MUTS = ["all", "double", "single"]
+
+
+SIX_ZS_COLORS = {
+    "ed_score": FZL_PALETTE["blue"],
+    "ev_score": FZL_PALETTE["green"],
+    "esm_score": FZL_PALETTE["purple"],
+    "esmif_score": FZL_PALETTE["yellow"],
+    "coves_score": FZL_PALETTE["brown"],
+    "Triad_score": FZL_PALETTE["orange"],
+}
+
 
 
 class ZS_Analysis(LibData):
@@ -159,10 +200,12 @@ class ZS_Analysis(LibData):
         df["Triad-ev_score"] = -1 * (df["Triad_rank"] + df["ev_rank"])
         df["Triad-esm_score"] = -1 * (df["Triad_rank"] + df["esm_rank"])
 
-        df["struc-comb_score"] = -1 * (df["Triad_rank"] + df["esmif_rank"])
-        df["msa-comb_score"] = -1 * (df["ev_rank"] + df["esm_rank"] + df["esmif_rank"])
-        df["msanoif-comb_score"] = -1 * (df["ev_rank"] + df["esm_rank"])
-        df["structnmsa-comb_score"] = -1 * (
+        df["Triad-esmif_score"] = -1 * (df["Triad_rank"] + df["esmif_rank"])
+        df["ev-esm-esmif_score"] = -1 * (
+            df["ev_rank"] + df["esm_rank"] + df["esmif_rank"]
+        )
+        df["ev-esm_score"] = -1 * (df["ev_rank"] + df["esm_rank"])
+        df["Triad-ev-esm-esmif_score"] = -1 * (
             df["Triad_rank"] + df["ev_rank"] + df["esm_rank"] + df["esmif_rank"]
         )
 
@@ -171,10 +214,10 @@ class ZS_Analysis(LibData):
         for comb_opt in [
             "Triad-ev",
             "Triad-esm",
-            "struc-comb",
-            "msa-comb",
-            "msanoif-comb",
-            "structnmsa-comb",
+            "Triad-esmif",
+            "ev-esm-esmif",
+            "ev-esm",
+            "Triad-ev-esm-esmif",
             "two-best",
         ]:
             df[f"{comb_opt}_rank"] = df[f"{comb_opt}_score"].rank(ascending=False)
@@ -209,7 +252,9 @@ class ZS_Analysis(LibData):
                 zs_coord_dict[zs]["rocauc"] = np.nan
                 continue
 
-            print(f"number of values in {self.lib_name} {zs}: {np.sum(~np.isnan(df[zs]))}")
+            print(
+                f"number of values in {self.lib_name} {zs}: {np.sum(~np.isnan(df[zs]))}"
+            )
             print(f"number of nan in {self.lib_name} {zs}: {np.sum(np.isnan(df[zs]))}")
 
             if zs in ZS_OPTS:
@@ -233,10 +278,14 @@ class ZS_Analysis(LibData):
                 zs_coord_dict[zs]["ndcg"] = ndcg_scale(y_true_fitness, y_score)
 
                 # roc curves
-                roc_name = f"{self.lib_name} active variant zero-shot predictor ROC curves"
+                roc_name = (
+                    f"{self.lib_name} active variant zero-shot predictor ROC curves"
+                )
 
                 fpr, tpr, _ = roc_curve(y_true_active, y_score, pos_label=True)
-                temp = pd.DataFrame({"False Positive Rate": fpr, "True Positive Rate": tpr})
+                temp = pd.DataFrame(
+                    {"False Positive Rate": fpr, "True Positive Rate": tpr}
+                )
 
                 roc_plots.append(
                     hv.Curve(
@@ -675,4 +724,260 @@ def run_zs_analysis(
         zs_stat_df.to_csv(
             f"{checkNgen_folder(os.path.join(zs_sum_dir, filter_min_by))}/zs_stat_scale2{scale_type}.csv",
             index=False,
+        )
+
+
+def plot_zs_corr(
+    n_mut_cutoff="all",
+    active_cutoff=1,
+    lib_stat_csv="results4upload/landscape/lib_stats.csv",
+    zs_df_dir="results/zs_comb_6/none/scale2max/",
+    save_dir="figs",
+    fig_id="3d",
+    ifsave=True,
+):
+    """
+    Plot the ZS correlations
+
+    Args:
+    - n_mut_cutoff, str: the number of mutations cutoff
+    - actvie_cutoff, int: the active cutoff, default 1%
+    - lib_list, list: the list of libraries
+    - zs_df_dir, str: the folder for the ZS dataframes
+    - save_dir, str: the folder to save the figure
+    - fig_id, str: the figure id
+    - ifsave, bool: if save the figure
+    """
+
+    lib_stat = pd.read_csv(lib_stat_csv)
+
+    lib_list = lib_stat[(lib_stat["percent_active"] >= active_cutoff)]["lib"].tolist()
+
+    corr_dict = {}
+    for lib in lib_list:
+
+        lib_csv = os.path.join(zs_df_dir, n_mut_cutoff, f"{lib}.csv")
+
+        df = pd.read_csv(lib_csv)
+        corr_dict[lib] = df[ZS_OPTS].corr(method="spearman", min_periods=1)
+
+    zs_names = [ZS_OPTS_LEGEND[z] for z in ZS_OPTS]
+    avg_corr_df = pd.DataFrame(
+        np.nanmean(np.stack(list(corr_dict.values())), axis=0),
+        index=zs_names,
+        columns=zs_names,
+    )
+    # Create a mask for the upper triangle
+    mask = np.triu(np.ones_like(avg_corr_df, dtype=bool))
+    # Modifying the mask to exclude the diagonal
+    np.fill_diagonal(mask, False)
+
+    # Set up the matplotlib figure
+    fig, ax = plt.subplots(figsize=(6, 4))
+
+    # Draw the heatmap with the mask and correct aspect ratio
+    hm = sns.heatmap(
+        avg_corr_df,
+        mask=mask,
+        annot=True,
+        fmt=".2f",
+        cmap="Blues",
+        cbar_kws={"shrink": 0.8},
+        linewidths=0.8,
+        square=True,
+        vmin=0,
+        vmax=1,
+    )  # Setting vmin and vmax
+    cbar = hm.collections[0].colorbar
+    # Add a title to the color bar
+    cbar.set_label(r"Spearman's $\rho$", rotation=270, labelpad=20)
+
+    # Setting vmin and vmax
+    ax.set_xlabel("ZS predictor")
+    ax.set_ylabel("ZS predictor")
+    # Add titles and labels as necessary
+    plt.title(f"ZS correlations for {n_mut_cutoff}", fontweight="bold")
+    plt.show()
+    if ifsave:
+        save_dir = checkNgen_folder(save_dir)
+        fig.savefig(
+            f"{save_dir}/{fig_id}.svg", dpi=300, bbox_inches="tight", format="svg"
+        )
+
+def parse_zs(
+    zs_sum_csv: str = "results/zs_sum_6/none/zs_stat_scale2max.csv",
+    zs_parse_csv: str = "results/zs_sum_6/none/zs_stat_parsed.csv",
+) -> pd.DataFrame:
+
+    """
+    A function to parse the zs_sum csv file into a pandas dataframe
+    """
+
+    zs_df = pd.read_csv(zs_sum_csv)
+
+    # init zs_df
+    zs_df_list = [zs_df[["lib", "n_mut"]]]
+    # Create new columns for each score type
+    for c in ZS_OPTS + ZS_COMB_OPTS:
+
+        zs_name = c.replace("_score", "")
+        zs_df_list.append(
+            zs_df[f"{zs_name}_score"]
+            .str.replace(": nan", ": None")
+            .apply(literal_eval)
+            .apply(pd.Series)
+            .rename(columns={m: f"{zs_name}_{m}" for m in ZS_METRICS})
+        )
+
+    zs_df_expend = pd.concat(zs_df_list, axis=1)
+
+    # note this n_mut == all is necearry to get the expanded df with all zs options
+    zs_mut_df_list = [zs_df_expend[zs_df_expend["n_mut"] == "all"]["lib"]]
+    for n_mut in ZS_N_MUTS:
+        slice_df = (
+            zs_df_expend[zs_df_expend["n_mut"] == n_mut]
+            .drop(columns=["lib", "n_mut"])
+            .reset_index(drop=True)
+        )
+        zs_mut_df_list.append(
+            slice_df.rename(columns={c: f"{n_mut}_{c}" for c in slice_df.columns})
+        )
+
+    zs_parsed_df = pd.concat(zs_mut_df_list, axis=1)
+    zs_parsed_df["type"] = zs_parsed_df["lib"].map(
+        {n: v["type"] for n, v in LIB_INFO_DICT.items()}
+    )
+
+    zs_append_msa = pd.merge(zs_parsed_df, MSA_DF, on="lib")
+    
+    zs_append_msa.to_csv(zs_parse_csv, index=False)
+
+    return zs_append_msa
+
+
+def plot_app_type_zs(
+    metric: str,
+    n_mut: str,
+    slice_zs: pd.DataFrame,
+    fig_name = "4b",
+    y_min = None,
+    y_max = None,
+    y_annotation = None,
+    save_dir: str = "figs",
+    if_save: bool = True,
+):
+
+    """
+    Plot the ZS scores for the different types across different landscapes
+
+    Args:
+    - metric, str: the metric to plot
+    - n_mut, str: the number of mutations, all, single, or double
+    - slice_zs, pd.DataFrame: the dataframe with the ZS scores
+    - save_dir, str: the folder to save the figure
+    - fig_name, str: the figure name
+    """
+    fig, axes = plt.subplots(1, 6, figsize=(6, 3.6), sharey=True)
+
+    for z, zs in enumerate(ZS_OPTS):
+        ax = axes.flatten()[z]
+        x = f"{n_mut}_" + zs.split("_")[0] + f"_{metric}"
+        bar_type_df = slice_zs[["lib", "type", x]].sort_values(["lib", "type"]).copy()
+
+        if len(bar_type_df["type"].unique()) == 1:
+            bar_order = ["Enzyme activity"]
+            do_ttest = False
+            bar_width = 0.3
+        else:
+            bar_order = ["Binding", "Enzyme activity"]
+            do_ttest = True
+            bar_width = 0.6
+
+        sns.boxplot(
+            x="type",
+            y=x,
+            data=bar_type_df,
+            order=bar_order,
+            width=bar_width,
+            ax=ax,
+            boxprops={
+                "facecolor": "None",
+                "edgecolor": FZL_PALETTE["gray"],
+            },
+        )
+        sns.stripplot(
+            x="type",
+            y=x,
+            data=bar_type_df,
+            order=bar_order,
+            hue="lib",
+            hue_order=bar_type_df["lib"].unique(),
+            jitter=True,
+            size=7.5,
+            palette=glasbey_category10[:12],
+            marker="o",
+            alpha=0.8,
+            ax=ax,
+        )
+
+        labels = [
+            label.get_text().replace("Enzyme activity", "Enzyme\nactivity")
+            for label in ax.get_xticklabels()
+        ]
+
+        if metric == "rho":
+            axhline_val = 0
+            if y_annotation is None:
+                y_annotation = 0.6
+
+        elif metric == "rocauc" :
+            axhline_val = 0.5
+            if y_annotation is None:
+                y_annotation = 1
+
+        if y_min is not None and y_max is not None:
+            ax.set_ylim(y_min, y_max)
+
+        ax.set_xlabel("")
+        ax.set_xticklabels(labels, rotation=90, ha="center")
+        ax.set_title(
+            ZS_OPTS_LEGEND[x.split("_")[1] + "_score"].replace(" ", "\n"), fontsize=10
+        )
+        ax.axhline(axhline_val, color="gray", lw=1.2, ls="--")
+
+        # Hide the top and right spine
+        ax.spines["top"].set_visible(False)
+        ax.spines["right"].set_visible(False)
+
+        if z != len(ZS_OPTS) - 1:
+            ax.legend().remove()
+        else:
+            ax.legend(loc="upper left", bbox_to_anchor=(1, 1.025))
+        if z == 0:
+            ax.set_ylabel(ZS_METIRC_MAP_LABEL[metric])
+        else:
+            ax.set_ylabel("")
+
+        if do_ttest:
+            t_val, p_value = ttest_ind(
+                list(bar_type_df[bar_type_df["type"] == "Binding"][x]),
+                list(bar_type_df[bar_type_df["type"] == "Enzyme activity"][x]),
+                equal_var=False,
+                nan_policy="omit",
+            )
+            print(f"{zs} t={t_val:.3f} and p={p_value:.3f}")
+
+            # Draw a line between points
+            p = 0.1
+            q = 1
+            annot_y = y_annotation
+            if p_value < 0.05:
+                ax.text((p + q) * 0.5, annot_y, "*", ha="center", va="bottom", color="gray")
+
+    plt.tight_layout(pad=0, h_pad=-0.0, w_pad=0.5)
+    plt.show()
+
+    if if_save:
+        fig.savefig(
+            f"{save_dir}/{fig_name}_{metric}.svg", dpi=300, bbox_inches="tight", format="svg"
         )

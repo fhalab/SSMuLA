@@ -22,8 +22,24 @@ if __name__ == "__main__":
     sys.stdout = f
 
 
-    zs_folder = "results/zs_comb_5"
+    # zs_folder = "results/zs_comb_5"
     # mlde_folder = "results/mlde_coves_2"
+
+
+    run_all_mlde_parallelized(
+        encodings=["one-hot"],
+        n_mut_cutoffs=[0],
+        zs_predictors=["none", "ev", "coves", "esm", "esmif", "Triad", "two-best", "Triad-esmif", "Triad-ev", "Triad-esm"],
+        n_samples=[192, 288, 480, 576],
+        n_replicate=50,
+        n_job=96,
+        all_libs=False,
+        ft_first=True,
+        lib_list=["TrpB3F"],
+        mlde_folder="results/mlde_TrpB3F",
+        zs_folder="results/zs_comb_6",
+        
+    )
 
 
     # run_all_mlde_parallelized(
@@ -42,21 +58,21 @@ if __name__ == "__main__":
 
 
 
-    run_all_mlde_parallelized(
-        encodings=DEFAULT_LEARNED_EMB_COMBO,
-        n_mut_cutoffs=[0],
-        zs_predictors=["ev"],
-        n_samples=[96, 384, 24, 48],
-        n_replicate=50,
-        n_job=96,
-        all_libs=False,
-        ft_first=True,
-        lib_list=["TEV"],
-        mlde_folder="results/mlde_emb",
-        zs_folder=zs_folder,
-        ft_lib_fracs=[0.125],
-        model_classes = ["boosting"]
-    )
+    # run_all_mlde_parallelized(
+    #     encodings=DEFAULT_LEARNED_EMB_COMBO,
+    #     n_mut_cutoffs=[0],
+    #     zs_predictors=["ev"],
+    #     n_samples=[96, 384, 24, 48],
+    #     n_replicate=50,
+    #     n_job=96,
+    #     all_libs=False,
+    #     ft_first=True,
+    #     lib_list=["TEV"],
+    #     mlde_folder="results/mlde_emb",
+    #     zs_folder=zs_folder,
+    #     ft_lib_fracs=[0.125],
+    #     model_classes = ["boosting"]
+    # )
 
 
 
@@ -224,7 +240,7 @@ if __name__ == "__main__":
     # run_all_mlde_parallelized(
     #     encodings=["one-hot"],
     #     n_mut_cutoffs=[2],
-    #     zs_predictors=["struc-comb", "msanoif-comb", "msa-comb", "structnmsa-comb"],
+    #     zs_predictors=["Triad-esmif", "ev-esm", "ev-esm-esmif", "Triad-ev-esm-esmif"],
     #     n_samples=[384],
     #     n_replicate=50,
     #     n_job=256,
@@ -437,7 +453,7 @@ if __name__ == "__main__":
     # run_all_mlde_parallelized(
     #     encodings=["one-hot"],
     #     n_mut_cutoffs=[0],
-    #     zs_predictors=["struc-comb", "msanoif-comb", "msa-comb", "structnmsa-comb"],
+    #     zs_predictors=["Triad-esmif", "ev-esm", "ev-esm-esmif", "Triad-ev-esm-esmif"],
     #     n_replicate=100,
     #     n_job=256
     # )
@@ -445,7 +461,7 @@ if __name__ == "__main__":
     # run_all_mlde_parallelized(
     #     encodings=["one-hot"],
     #     n_mut_cutoffs=[0],
-    #     zs_predictors=["struc-comb", "msanoif-comb", "msa-comb", "structnmsa-comb"],
+    #     zs_predictors=["Triad-esmif", "ev-esm", "ev-esm-esmif", "Triad-ev-esm-esmif"],
     #     n_samples=[24, 48],
     #     n_replicate=50,
     #     n_job=256
@@ -454,7 +470,7 @@ if __name__ == "__main__":
     # run_all_mlde_parallelized(
     #     encodings=["one-hot"],
     #     n_mut_cutoffs=[0],
-    #     zs_predictors=["struc-comb", "msanoif-comb", "msa-comb", "structnmsa-comb"],
+    #     zs_predictors=["Triad-esmif", "ev-esm", "ev-esm-esmif", "Triad-ev-esm-esmif"],
     #     n_samples=[960, 1920],
     #     n_replicate=50,
     #     n_job=256
@@ -463,7 +479,7 @@ if __name__ == "__main__":
     # run_all_mlde_parallelized(
     #     encodings=["one-hot"],
     #     n_mut_cutoffs=[0],
-    #     zs_predictors=["struc-comb", "msanoif-comb", "msa-comb", "structnmsa-comb"],
+    #     zs_predictors=["Triad-esmif", "ev-esm", "ev-esm-esmif", "Triad-ev-esm-esmif"],
     #     n_samples=[96, 192, 288, 480, 576],
     #     n_replicate=50,
     #     n_job=256

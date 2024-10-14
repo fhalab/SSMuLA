@@ -34,7 +34,7 @@ from SSMuLA.vis import (
     save_bokeh_hv,
     JSON_THEME,
     LIB_COLORS,
-    PRESENTATION_PALETTE_SATURATE,
+    FZL_PALETTE,
     one_decimal_x,
     one_decimal_y,
     fixmargins,
@@ -54,9 +54,9 @@ DE_TYPES = deepcopy(["recomb_SSM", "single_step_DE", "top96_SSM"])
 
 DE_COLORS = deepcopy(
     {
-        "recomb_SSM": PRESENTATION_PALETTE_SATURATE["light_brown"],
-        "single_step_DE": PRESENTATION_PALETTE_SATURATE["light_orange"],
-        "top96_SSM": PRESENTATION_PALETTE_SATURATE["brown"],
+        "recomb_SSM": FZL_PALETTE["light_brown"],
+        "single_step_DE": FZL_PALETTE["light_orange"],
+        "top96_SSM": FZL_PALETTE["brown"],
     }
 )
 

@@ -9,6 +9,9 @@ from cairosvg import svg2png
 import seaborn as sns
 
 import matplotlib.pyplot as plt
+import matplotlib.colors as mcolors
+
+import colorcet as cc
 
 import bokeh
 from bokeh.io import export_svg
@@ -17,12 +20,17 @@ from bokeh.themes.theme import Theme
 
 import holoviews as hv
 
-
 from SSMuLA.landscape_global import LIB_NAMES
 from SSMuLA.util import checkNgen_folder
 
 bokeh.io.output_notebook()
 hv.extension("bokeh", "matplotlib")
+
+# Select a colorcet colormap, for example, 'fire' or 'CET_CBL1'
+colormap = cc.cm["glasbey_category10"]
+
+# Extract a list of hex codes from the colormap
+glasbey_category10 = [mcolors.to_hex(colormap(i)) for i in range(colormap.N)]
 
 
 JSON_THEME = Theme(
@@ -64,7 +72,7 @@ hv.renderer("bokeh").theme = JSON_THEME
 HM_GREY = "#76777B"
 
 # blue, orange, green, yellow, purple, gray
-PRESENTATION_PALETTE_SATURATE = {
+FZL_PALETTE = {
     "blue": "#4bacc6",
     "orange": "#f79646ff",
     "light_orange": "#ffbb78",
@@ -94,15 +102,15 @@ LIB_COLORS = {
     for (n, c) in zip(
         LIB_NAMES,
         [
-            PRESENTATION_PALETTE_SATURATE["orange"],
-            PRESENTATION_PALETTE_SATURATE["light_orange"],
-            PRESENTATION_PALETTE_SATURATE["brown"],
-            PRESENTATION_PALETTE_SATURATE["yellow"],
-            PRESENTATION_PALETTE_SATURATE["maroon"],
-            PRESENTATION_PALETTE_SATURATE["purple"],
+            FZL_PALETTE["orange"],
+            FZL_PALETTE["light_orange"],
+            FZL_PALETTE["brown"],
+            FZL_PALETTE["yellow"],
+            FZL_PALETTE["maroon"],
+            FZL_PALETTE["purple"],
         ]
         + sns.color_palette("crest", 9).as_hex()
-        + [PRESENTATION_PALETTE_SATURATE["gray"]],
+        + [FZL_PALETTE["gray"]],
     )
 }
 
@@ -110,32 +118,35 @@ LIB_COLORS_CODON = {"DHFR": "#ffbb78"}  # light orange
 
 MLDE_COLORS = (
     [
-        PRESENTATION_PALETTE_SATURATE["orange"],
-        PRESENTATION_PALETTE_SATURATE["yellow"],
+        FZL_PALETTE["orange"],
+        FZL_PALETTE["yellow"],
     ]
     + sns.color_palette("crest", 9).as_hex()
-    + [PRESENTATION_PALETTE_SATURATE["gray"]]
+    + [FZL_PALETTE["gray"]]
 )
 
 SIMPLE_ZS_COLOR_MAP = {
-    "none": PRESENTATION_PALETTE_SATURATE["gray"],
-    "Triad_score": PRESENTATION_PALETTE_SATURATE["blue"],
-    "ev_score": PRESENTATION_PALETTE_SATURATE["green"],
-    "esm_score": PRESENTATION_PALETTE_SATURATE["purple"],
-    "esmif_score": PRESENTATION_PALETTE_SATURATE["red"],
+    "none": FZL_PALETTE["gray"],
+    "ed_score": FZL_PALETTE["blue"],
+    "ev_score": FZL_PALETTE["green"],
+    "esm_score": FZL_PALETTE["purple"],
+    "esmif_score": FZL_PALETTE["yellow"],
+    "coves_score": FZL_PALETTE["brown"],
+    "Triad_score": FZL_PALETTE["orange"],
 }
 
 ZS_COLOR_MAP = {
-    "none": PRESENTATION_PALETTE_SATURATE["gray"],
-    "Triad_score": PRESENTATION_PALETTE_SATURATE["blue"],
-    "ev_score": PRESENTATION_PALETTE_SATURATE["green"],
-    "esm_score": PRESENTATION_PALETTE_SATURATE["purple"],
-    "esmif_score": PRESENTATION_PALETTE_SATURATE["red"],
-    "struc-comb_score": PRESENTATION_PALETTE_SATURATE["light_blue"],
-    "msanoif-comb_score": PRESENTATION_PALETTE_SATURATE["light_green"],
-    "msa-comb_score": PRESENTATION_PALETTE_SATURATE["light_yellow"],
-    "structnmsa-comb_score": PRESENTATION_PALETTE_SATURATE["light_brown"],
-    "two-best-comb_score": PRESENTATION_PALETTE_SATURATE["light_gray"],
+    "none": FZL_PALETTE["gray"],
+    "ev_score": FZL_PALETTE["green"],
+    "esm_score": FZL_PALETTE["purple"],
+    "esmif_score": FZL_PALETTE["yellow"],
+    "coves_score": FZL_PALETTE["brown"],
+    "Triad_score": FZL_PALETTE["orange"],
+    "Triad-esmif_score": FZL_PALETTE["light_blue"],
+    "ev-esm_score": FZL_PALETTE["light_green"],
+    "ev-esm-esmif_score": FZL_PALETTE["light_yellow"],
+    "Triad-ev-esm-esmif_score": FZL_PALETTE["light_brown"],
+    "two-best-comb_score": FZL_PALETTE["light_gray"],
 }
 
 
@@ -266,7 +277,7 @@ def plot_fit_dist(
         cap_label = label
 
     if color == "":
-        color = PRESENTATION_PALETTE_SATURATE["blue"]
+        color = FZL_PALETTE["blue"]
 
     if ignore_line_label:
         mean_label = {}

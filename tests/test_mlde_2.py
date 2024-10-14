@@ -21,33 +21,33 @@ if __name__ == "__main__":
     )
     sys.stdout = f
 
-    zs_folder = "results/zs_comb_5"
+    # zs_folder = "results/zs_comb_5"
     # mlde_folder = "results/mlde_emb"
    # mlde_folder = "results/mlde_ft3"
 
     # two-best_score,Triad-ev_rank,Triad-esm_rank
 
 
-    run_all_mlde_parallelized(
-        encodings=DEFAULT_LEARNED_EMB_COMBO,
-        n_mut_cutoffs=[0],
-        zs_predictors=["ev"],
-        n_samples=[192, 288, 480, 576],
-        n_replicate=50,
-        n_job=192,
-        all_libs=False,
-        ft_first=True,
-        lib_list=["T7", "TEV"],
-        mlde_folder="results/mlde_emb",
-        zs_folder=zs_folder,
-        ft_lib_fracs=[0.125],
-        model_classes = ["boosting"]
-    )
+    # run_all_mlde_parallelized(
+    #     encodings=DEFAULT_LEARNED_EMB_COMBO,
+    #     n_mut_cutoffs=[0],
+    #     zs_predictors=["ev"],
+    #     n_samples=[192, 288, 480, 576],
+    #     n_replicate=50,
+    #     n_job=192,
+    #     all_libs=False,
+    #     ft_first=True,
+    #     lib_list=["T7", "TEV"],
+    #     mlde_folder="results/mlde_emb",
+    #     zs_folder=zs_folder,
+    #     ft_lib_fracs=[0.125],
+    #     model_classes = ["boosting"]
+    # )
 
     # run_all_mlde_parallelized(
     #     encodings=["one-hot"],
     #     n_mut_cutoffs=[0],
-    #     zs_predictors=["struc-comb"], # ["Triad-ev", "Triad-esm", "two-best"],
+    #     zs_predictors=["Triad-esmif"], # ["Triad-ev", "Triad-esm", "two-best"],
     #     n_samples=[96, 384, 24, 48],
     #     n_replicate=50,
     #     n_job=256,
@@ -61,7 +61,7 @@ if __name__ == "__main__":
     # run_all_mlde_parallelized(
     #     encodings=["one-hot"],
     #     n_mut_cutoffs=[0],
-    #     zs_predictors=["struc-comb"], # ["Triad-ev", "Triad-esm", "two-best"],
+    #     zs_predictors=["Triad-esmif"], # ["Triad-ev", "Triad-esm", "two-best"],
     #     n_samples=[192, 288, 480, 576],
     #     n_replicate=50,
     #     n_job=256,
@@ -76,7 +76,7 @@ if __name__ == "__main__":
     # run_all_mlde_parallelized(
     #     encodings=["one-hot"],
     #     n_mut_cutoffs=[0],
-    #     zs_predictors=["struc-comb"],# ["Triad-ev", "Triad-esm", "two-best"],
+    #     zs_predictors=["Triad-esmif"],# ["Triad-ev", "Triad-esm", "two-best"],
     #     n_samples=[960, 1920],
     #     n_replicate=50,
     #     n_job=256,

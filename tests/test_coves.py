@@ -20,7 +20,7 @@ if __name__ == "__main__":
     sys.stdout = f
 
     # run_all_coves(patern=["coves_data/TEV1/TEV1.pdb"], n_ave=100)
-    append_all_coves_scores(["TEV"])
+    append_all_coves_scores(["TrpB3F"])
 
     f.close()
 
