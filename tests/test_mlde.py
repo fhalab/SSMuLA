@@ -25,12 +25,11 @@ if __name__ == "__main__":
     # zs_folder = "results/zs_comb_5"
     # mlde_folder = "results/mlde_coves_2"
 
-
     run_all_mlde_parallelized(
         encodings=["one-hot"],
         n_mut_cutoffs=[0],
         zs_predictors=["none", "ev", "coves", "esm", "esmif", "Triad", "two-best", "Triad-esmif", "Triad-ev", "Triad-esm"],
-        n_samples=[192, 288, 480, 576],
+        n_samples=[384, 96, 24, 48],
         n_replicate=50,
         n_job=96,
         all_libs=False,
@@ -41,6 +40,33 @@ if __name__ == "__main__":
         
     )
 
+    run_all_mlde_parallelized(
+        encodings=["one-hot"],
+        n_mut_cutoffs=[2],
+        zs_predictors=["none", "ev", "coves", "esm", "esmif", "Triad"],
+        n_samples=[384, 96, 24, 48],
+        n_replicate=50,
+        n_job=96,
+        all_libs=False,
+        ft_first=False,
+        lib_list=["TrpB3F"],
+        mlde_folder="results/mlde_TrpB3F",
+        zs_folder="results/zs_comb_6",
+    )
+
+    run_all_mlde_parallelized(
+        encodings=DEFAULT_LEARNED_EMB_COMBO,
+        n_mut_cutoffs=[0],
+        zs_predictors=["none", "ev"],
+        n_samples=[384, 96, 24, 48],
+        n_replicate=50,
+        n_job=96,
+        all_libs=False,
+        ft_first=False,
+        lib_list=["TrpB3F"],
+        mlde_folder="results/mlde_TrpB3F",
+        zs_folder="results/zs_comb_6",
+    )
 
     # run_all_mlde_parallelized(
     #     encodings=DEFAULT_LEARNED_EMB_COMBO,

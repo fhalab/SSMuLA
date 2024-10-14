@@ -51,13 +51,11 @@ def determine_optima(active_variant: str, df: pd.DataFrame, fit_col: str) -> int
         ]
         .sort_values(fit_col, ascending=False)
         .reset_index(drop=True)
-    )
+    ).copy()
 
     # determine the rank of the active variant or
     # how many variants are more active than it (0 is the best)
     variant_rank = temp[temp["AAs"] == active_variant].index[0]
-
-    del temp
 
     return variant_rank
 
@@ -70,6 +68,7 @@ class LocOpt:
         self,
         input_csv: str,
         output_folder: str = "results/local_optima",
+        if_append_escape: bool = True,
         n_jobs: int = 16,
     ) -> None:
         """
@@ -93,63 +92,70 @@ class LocOpt:
         print("after find loc opt")
         print(self._loc_opt_df.head())
 
-        self._hd2_escape_df, self._loc_opt_escape_df = self._append_escape()
-        print("after append escape")
-        print("hd2_escape_df")
-        print(self._hd2_escape_df.head())
-        print("loc_opt_escape_df")
-        print(self._loc_opt_escape_df.head(), len(self._loc_opt_escape_df))
+        if if_append_escape:
 
-        self._merged_escape_df = pd.merge(
-            self.hd2_escape_df, self.loc_opt_escape_df, on="AAs"
-        )
-        print("after merge")
+            self._hd2_escape_df, self._loc_opt_escape_df = self._append_escape()
+            print("after append escape")
+            print("hd2_escape_df")
+            print(self._hd2_escape_df.head())
+            print("loc_opt_escape_df")
+            print(self._loc_opt_escape_df.head(), len(self._loc_opt_escape_df))
 
-        # do the plottings
-        self._loc_opt_scatter = self._plot_loc_opt()
-        print("after plot loc opt")
-        self._escape_hist = self._plot_escape()
-        print("after plot escape")
-
-        print("Calculating and analyzing local optima for {}...".format(self.lib_name))
-        print(
-            "Saving results and visualizations in {} {}".format(
-                self._output_folder, self._vis_folder
+            self._merged_escape_df = pd.merge(
+                self.hd2_escape_df, self.loc_opt_escape_df, on="AAs"
             )
-        )
+            print("after merge")
 
-        print(f"{self.frac_measured} of the library are measured.")
-        print(
-            "Number of active {} out of total {}, fraction {}".format(
-                self.numb_active, self.numb_no_stop, self.frac_active
-            )
-        )
-        print(
-            "Local optima number: {}, fraction of active: {}, fraction of total: {}".format(
-                self.numb_loc_opt, self.frac_loc_opt_active, self.frac_loc_opt_total
-            )
-        )
+            # do the plottings
+            self._loc_opt_scatter = self._plot_loc_opt()
+            print("after plot loc opt")
+            self._escape_hist = self._plot_escape()
+            print("after plot escape")
 
-        # now test the escape
-        print("Testing escape with double-site saturation mutagenesis...")
-        print(
-            "fraction of local optima that can be escaped: {:.2f}% (n={}))".format(
-                self.frac_loc_opt_hd2_escape_numb, self.hd2_can_escape_numb
+            print("Calculating and analyzing local optima for {}...".format(self.lib_name))
+            print(
+                "Saving results and visualizations in {} {}".format(
+                    self._output_folder, self._vis_folder
+                )
             )
-        )
 
-        print(
-            "fraction of local optima still cannot be escaped: {:.2f}% (n={})".format(
-                self.frac_loc_opt_hd2_cannot_escape_numb, self.hd2_cannot_escape_numb
+            print(f"{self.frac_measured} of the library are measured.")
+            print(
+                "Number of active {} out of total {}, fraction {}".format(
+                    self.numb_active, self.numb_no_stop, self.frac_active
+                )
             )
-        )
+            print(
+                "Local optima number: {}, fraction of active: {}, fraction of total: {}".format(
+                    self.numb_loc_opt, self.frac_loc_opt_active, self.frac_loc_opt_total
+                )
+            )
 
-        # save the merged loc opt with escape data
-        self._merged_escape_df.to_csv(
-            os.path.join(self._output_folder, f"{self.lib_name}_loc_opt_escape.csv"),
-            index=False,
-        )
-        print("Saving local optima data to {}...".format(self._output_folder))
+            # now test the escape
+            print("Testing escape with double-site saturation mutagenesis...")
+            print(
+                "fraction of local optima that can be escaped: {:.2f}% (n={}))".format(
+                    self.frac_loc_opt_hd2_escape_numb, self.hd2_can_escape_numb
+                )
+            )
+
+            print(
+                "fraction of local optima still cannot be escaped: {:.2f}% (n={})".format(
+                    self.frac_loc_opt_hd2_cannot_escape_numb, self.hd2_cannot_escape_numb
+                )
+            )
+
+            # save the merged loc opt with escape data
+            self._merged_escape_df.to_csv(
+                os.path.join(self._output_folder, f"{self.lib_name}_loc_opt_escape.csv"),
+                index=False,
+            )
+            print("Saving local optima data to {}...".format(self._output_folder))
+
+        else:
+            self._loc_opt_df.to_csv(
+                os.path.join(self._output_folder, f"{self.lib_name}_loc_opt.csv"), index=False
+            )
 
     def _find_loc_opt(self) -> pd.DataFrame:
         """
@@ -179,9 +185,8 @@ class LocOpt:
         )
 
         # Get the local optima by finding the variants where no single mutant is more fit
-        loc_opt_df = temp[temp["n_greater"] == 0].reset_index(drop=True)
+        loc_opt_df = temp[temp["n_greater"] == 0].reset_index(drop=True).copy()
 
-        del temp
         return loc_opt_df.sort_values("fitness", ascending=False).reset_index(drop=True)
 
     def _append_escape(self) -> pd.DataFrame:
@@ -487,7 +492,8 @@ class LocOpt:
 def run_loc_opt(
     input_folder: str = "data",
     fitness_process_type: str = "scale2max",
-    output_folder: str = "results/local_optima",
+    output_folder: str = "results/local_optima_2",
+    if_append_escape: bool = True,
     n_jobs: int = 16,
     rerun: bool = False,
 ) -> None:
@@ -517,7 +523,10 @@ def run_loc_opt(
 
         print(f"Processing {lib}...")
 
-        opt_df_path = f"{output_folder}/{fitness_process_type}/{lib}_loc_opt_escape.csv"
+        if if_append_escape:
+            opt_df_path = f"{output_folder}/{fitness_process_type}/{lib}_loc_opt_escape.csv"
+        else:
+            opt_df_path = f"{output_folder}/{fitness_process_type}/{lib}_loc_opt.csv"
 
         if os.path.exists(opt_df_path):
             opt_df = pd.read_csv(opt_df_path)
@@ -531,8 +540,18 @@ def run_loc_opt(
             opt_class = LocOpt(
                 lib,
                 checkNgen_folder(os.path.join(output_folder, fitness_process_type)),
-                n_jobs,
+                n_jobs=n_jobs,
+                if_append_escape=if_append_escape,
             )
+
+            if if_append_escape:
+                append_dict = {"frac_loc_opt_active": opt_class.frac_loc_opt_active,
+                    "frac_loc_opt_total": opt_class.frac_loc_opt_total,
+                    "frac_loc_opt_hd2_escape_numb": opt_class.frac_loc_opt_hd2_escape_numb,
+                    "frac_loc_opt_hd2_cannot_escape_numb": opt_class.frac_loc_opt_hd2_cannot_escape_numb,
+                }
+            else:
+                append_dict = {}
 
             summary_df = summary_df._append(
                 {
@@ -542,10 +561,7 @@ def run_loc_opt(
                     # "numb_active": opt_class.numb_active,
                     # "frac_active": opt_class.frac_active,
                     "numb_loc_opt": opt_class.numb_loc_opt,
-                    "frac_loc_opt_active": opt_class.frac_loc_opt_active,
-                    "frac_loc_opt_total": opt_class.frac_loc_opt_total,
-                    "frac_loc_opt_hd2_escape_numb": opt_class.frac_loc_opt_hd2_escape_numb,
-                    "frac_loc_opt_hd2_cannot_escape_numb": opt_class.frac_loc_opt_hd2_cannot_escape_numb,
+                    **append_dict
                 },
                 ignore_index=True,
             )

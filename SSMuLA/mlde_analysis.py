@@ -13,19 +13,27 @@ import warnings
 import numpy as np
 import pandas as pd
 
+import matplotlib.pyplot as plt
+from matplotlib.ticker import FuncFormatter
+
 # Basic plotting
 import holoviews as hv
 
 from SSMuLA.aa_global import DEFAULT_LEARNED_EMB_COMBO
 from SSMuLA.landscape_global import n_mut_cutoff_dict, LIB_NAMES, LIB_INFO_DICT
 from SSMuLA.zs_analysis import ZS_OPTS_LEGEND
-from SSMuLA.vis import save_bokeh_hv, one_decimal_x, one_decimal_y, fixmargins
+from SSMuLA.vis import save_bokeh_hv, one_decimal_x, one_decimal_y, fixmargins, FZL_PALETTE
 from SSMuLA.util import checkNgen_folder, get_file_name
 
 hv.extension("bokeh")
 
 # Suppress all warnings
 warnings.filterwarnings("ignore")
+
+
+N_SAMPLE_LIST = [24, 48, 96, 192, 288, 384, 480, 576, 960, 1920]
+TOTAL_N_LIST = [n + 96 for n in N_SAMPLE_LIST]
+
 
 DEFAULT_MLDE_METRICS = [
     "all_maxes", # max of predicted values
@@ -38,6 +46,28 @@ DEFAULT_MLDE_METRICS = [
     "truemax_inds",
 ]
 
+
+ENCODING_STYLE = {
+    'one-hot': "solid",
+    'esm2_t33_650M_UR50D-flatten_site': "dashed",
+    'esm2_t33_650M_UR50D-mean_all': "dashdot",
+    'esm2_t33_650M_UR50D-mean_site': "dotted"
+}
+
+
+ENCODING_DETS = {
+    'one-hot': "One-hot",
+    'esm2_t33_650M_UR50D-flatten_site': "ESM2 flatten over mutation sites",
+    'esm2_t33_650M_UR50D-mean_site': "ESM2 mean pooling over sites",
+    'esm2_t33_650M_UR50D-mean_all': "ESM2 mean pooling over full sequence",
+}
+
+ENCODING_COLOR = {
+    'one-hot': "gray",
+    'esm2_t33_650M_UR50D-flatten_site': "yellow",
+    'esm2_t33_650M_UR50D-mean_all': "blue",
+    'esm2_t33_650M_UR50D-mean_site': "green"
+}
 
 def get_mlde_avg_df(
     mlde_all: pd.DateFrame,
@@ -591,3 +621,75 @@ def comb_mlde_dfs(
     df_comb = pd.concat([df0, df1, df2])
 
     df_comb.to_csv(save_path, index=False)
+
+
+def plot_mlde_emb(
+    sliced_mlde,
+    lib_list,
+    zs,
+    fig_name,
+    n_top=96,
+    fig_dir="figs",
+    ifsave=True,
+):
+
+    fig, axes = plt.subplots(1, 2, figsize=(10, 4))
+
+    for ax, mlde_metric, de_metric, y_label in zip(
+        axes,
+        ["top_maxes", "if_truemaxs"],
+        ["mean_all", "fraction_max"],
+        ["Average max fitness achieved", "Fraction reaching the global optimum"],
+    ):
+
+        for i, (emb_opt, ls) in enumerate(ENCODING_STYLE.items()):
+            avg_mlde_df = get_mlde_avg_sdf(
+                sliced_mlde,
+                n_top,
+                n_mut_cutoff="all",
+                zs=zs,
+                encoding_list=[emb_opt],
+                active_lib_list=lib_list,
+            )
+
+            ax.plot(
+                TOTAL_N_LIST,
+                avg_mlde_df[f"{mlde_metric}_mean"],
+                marker="o",
+                linestyle=ls,
+                linewidth=2,
+                color=FZL_PALETTE[ENCODING_COLOR[emb_opt]],
+                label=ENCODING_DETS[emb_opt],
+            )
+            ax.fill_between(
+                TOTAL_N_LIST,
+                avg_mlde_df[f"{mlde_metric}_mean"] - avg_mlde_df[f"{mlde_metric}_std"],
+                avg_mlde_df[f"{mlde_metric}_mean"] + avg_mlde_df[f"{mlde_metric}_std"],
+                color=FZL_PALETTE[ENCODING_COLOR[emb_opt]],
+                alpha=0.05,
+            )
+
+        ax.set_xlim(TOTAL_N_LIST[0], TOTAL_N_LIST[-1])
+
+        ax.set_ylim(0, 1.0)
+
+        ax.set_xscale("log")
+        # label the orignial xticks labels
+
+        ax.set_xticks([120, 192, 288, 480, 1056, 2016])
+
+        # Use FuncFormatter to display the original values on the log-scaled axis
+        ax.xaxis.set_major_formatter(FuncFormatter(lambda x, _: f"{int(x)}"))
+        ax.xaxis.set_minor_locator(plt.NullLocator())
+
+        ax.set_xlabel("Total number of variants")
+        ax.set_ylabel(y_label)
+
+        if ax == axes[1]:
+            ax.legend(loc="upper left", bbox_to_anchor=(1, 1.025))
+
+    if ifsave:
+        fig_dir = checkNgen_folder(fig_dir)
+        fig.savefig(
+            f"{fig_dir}/{fig_name}.svg", dpi=300, bbox_inches="tight", format="svg"
+        )

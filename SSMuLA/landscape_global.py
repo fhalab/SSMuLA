@@ -12,8 +12,6 @@ import pandas as pd
 
 from SSMuLA.util import get_file_name
 
-N_SAMPLE_LIST = [24, 48, 96, 192, 288, 384, 480, 576, 960, 1920]
-TOTAL_N_LIST = [n + 96 for n in N_SAMPLE_LIST]
 
 DEFALT_SPLITS = ["single", "double", "multi"]
 

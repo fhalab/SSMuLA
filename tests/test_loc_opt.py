@@ -17,11 +17,12 @@ if __name__ == "__main__":
     f = open(os.path.join(log_folder, f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}.out"), 'w')
     sys.stdout = f
 
-    run_loc_opt(input_folder = "data", 
+    run_loc_opt(input_folder = "data4upload", 
                 fitness_process_type = "scale2max",
                 output_folder = "results/local_optima", 
                 n_jobs = 16,
-                rerun = False,
+                if_append_escape = True,
+                rerun = True,
                 )
     
     f.close()
