@@ -9,7 +9,7 @@ import pandas as pd
 import numpy as np
 
 
-from SSMuLA.landscape_global import N_SAMPLE_LIST
+from SSMuLA.mlde_analysis import N_SAMPLE_LIST
 
 
 def avg_alde_df(

@@ -24,10 +24,10 @@ if __name__ == "__main__":
     sys.stdout = f
 
     gen_all_learned_emb(
-        input_folder = "results/zs_comb_5/none/scale2max/all",
+        input_folder = "results/zs_comb_6/none/scale2max/all",
         all_libs = False,
         regen = True,
-        lib_list = ["T7", "TEV"],
+        lib_list = ["TrpB3F"],
     )
 
     f.close()

@@ -21,7 +21,7 @@ import holoviews as hv
 
 from SSMuLA.aa_global import DEFAULT_LEARNED_EMB_COMBO
 from SSMuLA.landscape_global import n_mut_cutoff_dict, LIB_NAMES, LIB_INFO_DICT
-from SSMuLA.zs_analysis import ZS_OPTS_LEGEND
+from SSMuLA.zs_analysis import ZS_OPTS, ZS_OPTS_LEGEND
 from SSMuLA.vis import save_bokeh_hv, one_decimal_x, one_decimal_y, fixmargins, FZL_PALETTE
 from SSMuLA.util import checkNgen_folder, get_file_name
 
@@ -33,6 +33,8 @@ warnings.filterwarnings("ignore")
 
 N_SAMPLE_LIST = [24, 48, 96, 192, 288, 384, 480, 576, 960, 1920]
 TOTAL_N_LIST = [n + 96 for n in N_SAMPLE_LIST]
+
+FTLIB_FRAC_LIST = [0.0625, 0.125, 0.25, 0.5, 1]
 
 
 DEFAULT_MLDE_METRICS = [
@@ -693,3 +695,4 @@ def plot_mlde_emb(
         fig.savefig(
             f"{fig_dir}/{fig_name}.svg", dpi=300, bbox_inches="tight", format="svg"
         )
+

@@ -21,39 +21,39 @@ if __name__ == "__main__":
     )
     sys.stdout = f
 
-    zs_folder = "results/zs_comb_5"
+    # zs_folder = "results/zs_comb_6"
     # mlde_folder = "results/mlde_hm2zs_3"
 
 
-    run_all_mlde_parallelized(
-        encodings=["one-hot"],
-        n_mut_cutoffs=[0],
-        zs_predictors=["none", "ev", "coves", "esm", "esmif", "Triad", "two-best", "Triad-esmif", "Triad-ev", "Triad-esm"],
-        n_samples=[960, 1920],
-        n_replicate=50,
-        n_job=96,
-        all_libs=False,
-        ft_first=True,
-        lib_list=["TrpB3F"],
-        mlde_folder="results/mlde_TrpB3F",
-        zs_folder="results/zs_comb_6",
+    # run_all_mlde_parallelized(
+    #     encodings=["one-hot"],
+    #     n_mut_cutoffs=[0],
+    #     zs_predictors=["none", "ev", "coves", "esm", "esmif", "Triad", "two-best", "Triad-esmif", "Triad-ev", "Triad-esm"],
+    #     n_samples=[960, 1920],
+    #     n_replicate=50,
+    #     n_job=96,
+    #     all_libs=False,
+    #     ft_first=True,
+    #     lib_list=["TrpB3F"],
+    #     mlde_folder="results/mlde_TrpB3F",
+    #     zs_folder="results/zs_comb_6",
         
-    )
+    # )
 
 
-    run_all_mlde_parallelized(
-        encodings=["one-hot"],
-        n_mut_cutoffs=[2],
-        zs_predictors=["none", "ev", "coves", "esm", "esmif", "Triad"],
-        n_samples=[960, 1920],
-        n_replicate=50,
-        n_job=96,
-        all_libs=False,
-        ft_first=False,
-        lib_list=["TrpB3F"],
-        mlde_folder="results/mlde_TrpB3F",
-        zs_folder="results/zs_comb_6",
-    )
+    # run_all_mlde_parallelized(
+    #     encodings=["one-hot"],
+    #     n_mut_cutoffs=[2],
+    #     zs_predictors=["none", "ev", "coves", "esm", "esmif", "Triad"],
+    #     n_samples=[960, 1920],
+    #     n_replicate=50,
+    #     n_job=96,
+    #     all_libs=False,
+    #     ft_first=False,
+    #     lib_list=["TrpB3F"],
+    #     mlde_folder="results/mlde_TrpB3F",
+    #     zs_folder="results/zs_comb_6",
+    # )
 
     run_all_mlde_parallelized(
         encodings=DEFAULT_LEARNED_EMB_COMBO,
@@ -67,6 +67,8 @@ if __name__ == "__main__":
         lib_list=["TrpB3F"],
         mlde_folder="results/mlde_TrpB3F",
         zs_folder="results/zs_comb_6",
+        ft_lib_fracs=[0.125],
+        model_classes = ["boosting"]
     )
 
 
