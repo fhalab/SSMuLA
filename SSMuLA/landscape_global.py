@@ -49,6 +49,12 @@ LIB_INFO_DICT = deepcopy(
             "AAs": {1: "A", 2: "D", 3: "L"},
             "type": "Enzyme activity",
         },
+        "GB1": {
+            "positions": {1: 39, 2: 40, 3: 41, 4: 54},
+            "codons": {1: "", 2: "", 3: "", 4: ""},
+            "AAs": {1: "V", 2: "D", 3: "G", 4: "V"},
+            "type": "Binding",
+        },
         "ParD2": {
             "positions": {1: 61, 2: 64, 3: 80},
             "codons": {1: "", 2: "", 3: ""},
@@ -59,12 +65,6 @@ LIB_INFO_DICT = deepcopy(
             "positions": {1: 61, 2: 64, 3: 80},
             "codons": {1: "", 2: "", 3: ""},
             "AAs": {1: "D", 2: "K", 3: "E"},
-            "type": "Binding",
-        },
-        "GB1": {
-            "positions": {1: 39, 2: 40, 3: 41, 4: 54},
-            "codons": {1: "", 2: "", 3: "", 4: ""},
-            "AAs": {1: "V", 2: "D", 3: "G", 4: "V"},
             "type": "Binding",
         },
         "T7": {
@@ -178,6 +178,7 @@ LIB_POS_0_IDX = deepcopy(
     }
 )
 
+N_SAMPLE_LIST = [24, 48, 96, 192, 288, 384, 480, 576, 960, 1920]
 
 def map_lib_pos() -> dict:
     """

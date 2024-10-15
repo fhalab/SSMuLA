@@ -28,10 +28,6 @@ def process_aa(aa, all_aas, all_fitnesses):
     return aa, np.mean(hm2_fits), np.std(hm2_fits)
 
 
-# Call main function with your DataFrame
-# result_dict = main(df)
-
-
 def get_hd_avg_fit(
     df_csv: str,
     hd_dir: str = "results/hd",
@@ -43,8 +39,11 @@ def get_hd_avg_fit(
     # no stop codons
     df = df[~df["AAs"].str.contains("\*")].copy()
 
-    all_aas = df["AAs"].tolist()
-    all_fitnesses = df.loc[df["AAs"].isin(all_aas), "fitness"].tolist()
+    # only active variants
+    active_df = df[df["active"]].copy()
+
+    all_aas = active_df["AAs"].tolist()
+    all_fitnesses = active_df.loc[active_df["AAs"].isin(all_aas), "fitness"].tolist()
 
     hm2_dict = {}
     # Set number of processes; if None, use all available cores
@@ -73,6 +72,7 @@ def get_hd_avg_fit(
 def run_hd_avg_fit(
     data_dir: str = "data", 
     scalefit: str = "max", 
+    hd_dir: str = "results/hd",
     num_processes: None | int = None,
     all_lib: bool = True,
     lib_list: list[str] = [],
@@ -84,6 +84,7 @@ def run_hd_avg_fit(
     Args:
     - data_dir: str, the directory containing the data
     - scalefit: str, the scale of the fitness values
+    - hd_dir: str, the directory to save the results
     - num_processes: None | int, the number of processes to use
     - all_lib: bool, whether to use all libraries
     - lib_list: list[str], the list of libraries to use
@@ -98,7 +99,7 @@ def run_hd_avg_fit(
     
     for df_csv in df_csvs:
         print(f"Processing {df_csv} ...")
-        df = get_hd_avg_fit(df_csv)
+        df = get_hd_avg_fit(df_csv, hd_dir)
 
         del df
 

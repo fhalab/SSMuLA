@@ -18,12 +18,14 @@ if __name__ == "__main__":
     sys.stdout = f
     
     run_hd_avg_fit(
+        data_dir = "data4upload",
         num_processes=256, 
-        all_lib=False, 
-        lib_list=["T7"]
+        all_lib=False,
+        lib_list=["TEV"], 
+        hd_dir = "results/hd_active",
     )
 
-    plot_all_hd2(hd_dir = "results/hd")
+    plot_all_hd2(hd_dir = "results/hd_active")
 
     """
     run_hd_avg_fit(

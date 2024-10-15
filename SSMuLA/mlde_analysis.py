@@ -16,12 +16,15 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from matplotlib.ticker import FuncFormatter
 
+import seaborn as sns
+
 # Basic plotting
 import holoviews as hv
 
 from SSMuLA.aa_global import DEFAULT_LEARNED_EMB_COMBO
-from SSMuLA.landscape_global import n_mut_cutoff_dict, LIB_NAMES, LIB_INFO_DICT
-from SSMuLA.zs_analysis import ZS_OPTS, ZS_OPTS_LEGEND
+from SSMuLA.landscape_global import n_mut_cutoff_dict, LIB_NAMES, LIB_INFO_DICT, N_SAMPLE_LIST
+from SSMuLA.zs_analysis import ZS_OPTS_LEGEND
+from SSMuLA.alde_analysis import avg_alde_df
 from SSMuLA.vis import save_bokeh_hv, one_decimal_x, one_decimal_y, fixmargins, FZL_PALETTE
 from SSMuLA.util import checkNgen_folder, get_file_name
 
@@ -31,8 +34,8 @@ hv.extension("bokeh")
 warnings.filterwarnings("ignore")
 
 
-N_SAMPLE_LIST = [24, 48, 96, 192, 288, 384, 480, 576, 960, 1920]
 TOTAL_N_LIST = [n + 96 for n in N_SAMPLE_LIST]
+N_TICK_LIST = [120, 192, 288, 480, 1056, 2016]
 
 FTLIB_FRAC_LIST = [0.0625, 0.125, 0.25, 0.5, 1]
 
@@ -70,6 +73,17 @@ ENCODING_COLOR = {
     'esm2_t33_650M_UR50D-mean_all': "blue",
     'esm2_t33_650M_UR50D-mean_site': "green"
 }
+
+MLDE_ALDE_COLORS = [
+    sns.color_palette("colorblind")[9],
+    sns.color_palette("colorblind")[0],
+    sns.color_palette("colorblind")[8],
+    sns.color_palette("colorblind")[1],
+    sns.color_palette("colorblind")[6],
+    sns.color_palette("colorblind")[4],
+    sns.color_palette("colorblind")[5],
+    sns.color_palette("colorblind")[3],
+]
 
 def get_mlde_avg_df(
     mlde_all: pd.DateFrame,
@@ -677,8 +691,7 @@ def plot_mlde_emb(
 
         ax.set_xscale("log")
         # label the orignial xticks labels
-
-        ax.set_xticks([120, 192, 288, 480, 1056, 2016])
+        ax.set_xticks(N_TICK_LIST)
 
         # Use FuncFormatter to display the original values on the log-scaled axis
         ax.xaxis.set_major_formatter(FuncFormatter(lambda x, _: f"{int(x)}"))
@@ -689,6 +702,116 @@ def plot_mlde_emb(
 
         if ax == axes[1]:
             ax.legend(loc="upper left", bbox_to_anchor=(1, 1.025))
+
+    if ifsave:
+        fig_dir = checkNgen_folder(fig_dir)
+        fig.savefig(
+            f"{fig_dir}/{fig_name}.svg", dpi=300, bbox_inches="tight", format="svg"
+        )
+
+
+def get_model_comp_dict(mlde_csv, lib_list, n_top=96, alde_dir="/disk2/fli/alde4ssmula"):
+
+    mlde_all = pd.read_csv(mlde_csv)
+
+    avg_mlde_df_dict = {}
+
+    # just mlde
+    avg_mlde_df_dict["MLDE boosting"] = get_mlde_avg_sdf(
+        mlde_all,
+        n_top,
+        n_mut_cutoff="all",
+        zs="none",
+        active_lib_list=lib_list,
+        model_list=["boosting"],
+        ft_frac=0.125,
+    )
+
+    avg_mlde_df_dict["MLDE ridge"] = get_mlde_avg_sdf(
+        mlde_all,
+        n_top,
+        n_mut_cutoff="all",
+        zs="none",
+        active_lib_list=lib_list,
+        model_list=["ridge"],
+        ft_frac=0.125,
+    )
+
+    for eq_n in [2, 3, 4]:
+
+        avg_mlde_df_dict[f"ALDE boosting x {eq_n}"] = avg_alde_df(
+            eq_n, lib_list, alde_model="Boosting Ensemble", alde_dir=alde_dir
+        )
+
+        avg_mlde_df_dict[f"ALDE DNN x {eq_n}"] = avg_alde_df(
+            eq_n, lib_list, alde_model="DNN Ensemble", alde_dir=alde_dir
+        )
+
+    return avg_mlde_df_dict
+
+
+def plot_mlde_dict(
+    avg_mlde_df_dict,
+    fig_name,
+    n_top=96,
+    n_corr=384,
+    ifvline=False,
+    fig_dir="figs",
+    ifsave=True,
+    ):
+
+    # for avg cross number of samples
+    fig, axes = plt.subplots(1, 2, figsize=(10, 4))
+
+    line_styles = ["dashed", "solid"] + ["dotted", "solid"]*3
+
+    for ax, mlde_metric, de_metric, y_label in zip(
+        axes,
+        ["top_maxes", "if_truemaxs"],
+        ["mean_all", "fraction_max"],
+        ["Average max fitness achieved", "Fraction reaching the global optimum"],
+    ):
+
+        for i, (mlde_opts, mlde_df) in enumerate(avg_mlde_df_dict.items()):
+
+            ax.plot(
+                TOTAL_N_LIST,
+                mlde_df[f"{mlde_metric}_mean"],
+                label=mlde_opts.replace("Average ", "").replace(" x 2", ""),
+                marker="o",
+                linestyle=line_styles[i],
+                linewidth=2,
+                color=MLDE_ALDE_COLORS[i]
+            )
+            ax.fill_between(
+                TOTAL_N_LIST,
+                mlde_df[f"{mlde_metric}_mean"] - mlde_df[f"{mlde_metric}_std"],
+                mlde_df[f"{mlde_metric}_mean"] + mlde_df[f"{mlde_metric}_std"],
+                color=MLDE_ALDE_COLORS[i],
+                alpha=0.08,
+            )
+
+        if ifvline:
+            ax.axvline(n_corr+n_top, color="gray", linewidth=0.5, linestyle="dotted")
+
+        ax.set_xlim(TOTAL_N_LIST[0], TOTAL_N_LIST[-1])
+        ax.set_ylim(0, 1.0)
+
+        ax.set_xscale("log")
+        ax.set_xlabel("Total number of variants")
+        ax.set_ylabel(y_label)
+
+        # label the orignial xticks labels
+        ax.set_xticks(N_TICK_LIST)
+
+        # Use FuncFormatter to display the original values on the log-scaled axis
+        ax.xaxis.set_major_formatter(FuncFormatter(lambda x, _: f"{int(x)}"))
+        ax.xaxis.set_minor_locator(plt.NullLocator())
+
+        if ax == axes[1]:
+            ax.legend(loc="upper left", bbox_to_anchor=(1, 1.025))
+
+    plt.show()
 
     if ifsave:
         fig_dir = checkNgen_folder(fig_dir)
