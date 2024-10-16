@@ -7,9 +7,12 @@ from glob import glob
 
 import pandas as pd
 import numpy as np
+
+from scipy.stats import spearmanr
+from sklearn.metrics import roc_curve, auc
+
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from tqdm import tqdm
-
 
 import seaborn as sns
 import matplotlib.pyplot as plt
@@ -148,3 +151,112 @@ def plot_all_hd2(hd_dir: str = "results/hd"):
     ax.legend(loc="upper left", bbox_to_anchor=(1, 1))
 
     save_plt(fig, plot_title="average_fitness_hd2", path2folder=hd_dir)
+
+
+def correlate_hd2fit(aa, all_aas, all_fitnesses, all_ifactive):
+
+    """
+    A function to correlate the Hamming distance of a sequence
+    with all other sequences with the fitness values
+    """
+
+    hms = [-1*hamming(aa, aa2) for aa2 in all_aas]
+    rho = spearmanr(all_fitnesses, hms)[0]
+
+    fpr, tpr, _ = roc_curve(all_ifactive, hms, pos_label=1)
+    roc_auc = auc(fpr, tpr)
+
+    return aa, rho, roc_auc
+
+
+def get_hd_avg_metric(
+    df_csv: str,
+    hd_dir: str = "results/hd_corr",
+    num_processes: None | int = None,
+):
+
+    df = pd.read_csv(df_csv)
+
+    # no stop codons
+    df = df[~df["AAs"].str.contains("\*")].copy()
+
+    all_aas = df["AAs"].tolist()
+    all_fitnesses = df["fitness"].values
+    all_ifactive = df["active"].values
+
+    # only active variants
+    active_df = df[df["active"]].copy()
+
+    all_active_aas = active_df["AAs"].tolist()
+
+    hm_dict = {}
+    # Set number of processes; if None, use all available cores
+    if num_processes is None:
+        num_processes = int(np.round(os.cpu_count() * 0.8))
+
+    with ProcessPoolExecutor(max_workers=num_processes) as executor:
+        futures = [
+            executor.submit(correlate_hd2fit, aa, all_aas, all_fitnesses, all_ifactive) for aa in all_active_aas
+        ]
+        for future in tqdm(as_completed(futures), total=len(futures)):
+            aa, rho, roc_auc = future.result()
+            hm_dict[aa] = {"rho": rho, "roc_auc": roc_auc}
+
+    hm_df = pd.DataFrame.from_dict(hm_dict, orient="index")
+
+    # Set the index name to 'aa'
+    hm_df.index.name = "AAs"
+
+    checkNgen_folder(hd_dir)
+    hm_df.to_csv(os.path.join(hd_dir, get_file_name(df_csv) + ".csv"))
+
+    return hm_df["rho"].mean(), hm_df["roc_auc"].mean()
+
+
+def run_hd_avg_metric(
+    data_dir: str = "data", 
+    scalefit: str = "max", 
+    hd_dir: str = "results/hd_corr",
+    num_processes: None | int = None,
+    all_lib: bool = True,
+    lib_list: list[str] = [],
+):
+
+    """
+    Run the calculation of the average fitness for all sequences within a Hamming distance of 2
+
+    Args:
+    - data_dir: str, the directory containing the data
+    - scalefit: str, the scale of the fitness values
+    - hd_dir: str, the directory to save the results
+    - num_processes: None | int, the number of processes to use
+    - all_lib: bool, whether to use all libraries
+    - lib_list: list[str], the list of libraries to use
+    """
+
+    hd_avg_metric = pd.DataFrame(columns=["lib", "rho", "roc_auc"])
+
+    if all_lib or len(lib_list) == 0:
+        df_csvs = sorted(
+            glob(f"{os.path.normpath(data_dir)}/*/scale2{scalefit}/*.csv")
+        )
+    else:
+        df_csvs = [f"{os.path.normpath(data_dir)}/{lib}/scale2{scalefit}/{lib}.csv" for lib in lib_list]
+    
+    for df_csv in df_csvs:
+        print(f"Processing {df_csv} ...")
+        rho, roc_aud = get_hd_avg_metric(df_csv, hd_dir)
+
+        hd_avg_metric = hd_avg_metric._append(
+            {
+                "lib": get_file_name(df_csv),
+                "rho": rho,
+                "roc_auc": roc_aud,
+            },
+            ignore_index=True,
+        )
+    
+    checkNgen_folder(hd_dir)
+    hd_avg_metric.to_csv(os.path.join(hd_dir, "hd_avg_metric.csv"))
+
+    return hd_avg_metric

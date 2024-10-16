@@ -5,7 +5,7 @@ import os
 
 from datetime import datetime
 
-from SSMuLA.calc_hd import run_hd_avg_fit, plot_all_hd2
+from SSMuLA.calc_hd import run_hd_avg_fit, plot_all_hd2, run_hd_avg_metric
 from SSMuLA.util import checkNgen_folder
 
 
@@ -16,16 +16,18 @@ if __name__ == "__main__":
     # log outputs
     f = open(os.path.join(log_folder, f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}.out"), 'w')
     sys.stdout = f
-    
-    run_hd_avg_fit(
-        data_dir = "data4upload",
-        num_processes=256, 
-        all_lib=False,
-        lib_list=["TEV"], 
-        hd_dir = "results/hd_active",
-    )
 
-    plot_all_hd2(hd_dir = "results/hd_active")
+    run_hd_avg_metric()
+    
+    # run_hd_avg_fit(
+    #     data_dir = "data4upload",
+    #     num_processes=256, 
+    #     all_lib=False,
+    #     lib_list=["TEV"], 
+    #     hd_dir = "results/hd_active",
+    # )
+
+    # plot_all_hd2(hd_dir = "results/hd_active")
 
     """
     run_hd_avg_fit(
