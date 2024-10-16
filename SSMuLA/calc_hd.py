@@ -16,10 +16,18 @@ from tqdm import tqdm
 
 import seaborn as sns
 import matplotlib.pyplot as plt
+import matplotlib.colors as mcolors
+from matplotlib.lines import Line2D
 
-from SSMuLA.vis import LIB_COLORS, save_plt
-from SSMuLA.landscape_global import LIB_INFO_DICT, hamming
+from SSMuLA.landscape_global import LIB_INFO_DICT, hamming, lib2prot
+from SSMuLA.zs_analysis import (
+    ZS_METRIC_MAP_TITLE,
+    ZS_METRIC_MAP_LABEL,
+    ZS_METRIC_BASELINE,
+)
+from SSMuLA.vis import LIB_COLORS, FZL_PALETTE, LIB_COLORS_GLASBEY, save_plt, save_svg
 from SSMuLA.util import checkNgen_folder, get_file_name
+
 
 # Define the function that will be executed in parallel
 def process_aa(aa, all_aas, all_fitnesses):
@@ -73,9 +81,9 @@ def get_hd_avg_fit(
 
 
 def run_hd_avg_fit(
-    data_dir: str = "data", 
-    scalefit: str = "max", 
-    hd_dir: str = "results/hd",
+    data_dir: str = "data",
+    scalefit: str = "max",
+    hd_dir: str = "results/hd_fit",
     num_processes: None | int = None,
     all_lib: bool = True,
     lib_list: list[str] = [],
@@ -94,63 +102,18 @@ def run_hd_avg_fit(
     """
 
     if all_lib or len(lib_list) == 0:
-        df_csvs = sorted(
-            glob(f"{os.path.normpath(data_dir)}/*/scale2{scalefit}/*.csv")
-        )
+        df_csvs = sorted(glob(f"{os.path.normpath(data_dir)}/*/scale2{scalefit}/*.csv"))
     else:
-        df_csvs = [f"{os.path.normpath(data_dir)}/{lib}/scale2{scalefit}/{lib}.csv" for lib in lib_list]
-    
+        df_csvs = [
+            f"{os.path.normpath(data_dir)}/{lib}/scale2{scalefit}/{lib}.csv"
+            for lib in lib_list
+        ]
+
     for df_csv in df_csvs:
         print(f"Processing {df_csv} ...")
         df = get_hd_avg_fit(df_csv, hd_dir)
 
         del df
-
-    # You can now specify the number of processes when calling the main function
-
-
-# For example, to use 4 processes:
-# result_dict = main(df, num_processes=4)
-
-
-def plot_all_hd2(hd_dir: str = "results/hd"):
-
-    all_dfs = []
-    parent_mean = {}
-
-    for lib, lib_dict in LIB_INFO_DICT.items():
-
-        df = pd.read_csv(os.path.join(hd_dir, lib + ".csv"))
-        df["lib"] = lib
-        all_dfs.append(df)
-
-        parent_mean[lib] = df[df["AAs"] == "".join(lib_dict["AAs"].values())][
-            "mean"
-        ].values[0]
-
-    all_df = pd.concat(all_dfs)
-
-    fig = plt.figure(figsize=(16, 8))  # Adjust the size as needed
-    ax = sns.violinplot(x="lib", y="mean", data=all_df, hue="lib", palette=LIB_COLORS)
-
-    for lib in LIB_INFO_DICT.keys():
-
-        # Find the position of the violin to add the line to
-        position = all_df["lib"].unique().tolist().index(lib)
-        ax.axhline(
-            parent_mean[lib],
-            color=LIB_COLORS[lib],
-            linestyle="--",
-            linewidth=2,
-            xmin=position / len(LIB_INFO_DICT),
-            xmax=(position + 1) / len(LIB_INFO_DICT),
-            label=f"{lib} parent",
-        )
-
-    ax.set_title("Average fitness of HD2 with different backgrounds")
-    ax.legend(loc="upper left", bbox_to_anchor=(1, 1))
-
-    save_plt(fig, plot_title="average_fitness_hd2", path2folder=hd_dir)
 
 
 def correlate_hd2fit(aa, all_aas, all_fitnesses, all_ifactive):
@@ -160,13 +123,13 @@ def correlate_hd2fit(aa, all_aas, all_fitnesses, all_ifactive):
     with all other sequences with the fitness values
     """
 
-    hms = [-1*hamming(aa, aa2) for aa2 in all_aas]
+    hms = [-1 * hamming(aa, aa2) for aa2 in all_aas]
     rho = spearmanr(all_fitnesses, hms)[0]
 
     fpr, tpr, _ = roc_curve(all_ifactive, hms, pos_label=1)
-    roc_auc = auc(fpr, tpr)
+    rocauc = auc(fpr, tpr)
 
-    return aa, rho, roc_auc
+    return aa, rho, rocauc
 
 
 def get_hd_avg_metric(
@@ -196,11 +159,12 @@ def get_hd_avg_metric(
 
     with ProcessPoolExecutor(max_workers=num_processes) as executor:
         futures = [
-            executor.submit(correlate_hd2fit, aa, all_aas, all_fitnesses, all_ifactive) for aa in all_active_aas
+            executor.submit(correlate_hd2fit, aa, all_aas, all_fitnesses, all_ifactive)
+            for aa in all_active_aas
         ]
         for future in tqdm(as_completed(futures), total=len(futures)):
-            aa, rho, roc_auc = future.result()
-            hm_dict[aa] = {"rho": rho, "roc_auc": roc_auc}
+            aa, rho, rocauc = future.result()
+            hm_dict[aa] = {"rho": rho, "rocauc": rocauc}
 
     hm_df = pd.DataFrame.from_dict(hm_dict, orient="index")
 
@@ -210,12 +174,12 @@ def get_hd_avg_metric(
     checkNgen_folder(hd_dir)
     hm_df.to_csv(os.path.join(hd_dir, get_file_name(df_csv) + ".csv"))
 
-    return hm_df["rho"].mean(), hm_df["roc_auc"].mean()
+    return hm_df["rho"].mean(), hm_df["rocauc"].mean()
 
 
 def run_hd_avg_metric(
-    data_dir: str = "data", 
-    scalefit: str = "max", 
+    data_dir: str = "data",
+    scalefit: str = "max",
     hd_dir: str = "results/hd_corr",
     num_processes: None | int = None,
     all_lib: bool = True,
@@ -234,15 +198,16 @@ def run_hd_avg_metric(
     - lib_list: list[str], the list of libraries to use
     """
 
-    hd_avg_metric = pd.DataFrame(columns=["lib", "rho", "roc_auc"])
+    hd_avg_metric = pd.DataFrame(columns=["lib", "rho", "rocauc"])
 
     if all_lib or len(lib_list) == 0:
-        df_csvs = sorted(
-            glob(f"{os.path.normpath(data_dir)}/*/scale2{scalefit}/*.csv")
-        )
+        df_csvs = sorted(glob(f"{os.path.normpath(data_dir)}/*/scale2{scalefit}/*.csv"))
     else:
-        df_csvs = [f"{os.path.normpath(data_dir)}/{lib}/scale2{scalefit}/{lib}.csv" for lib in lib_list]
-    
+        df_csvs = [
+            f"{os.path.normpath(data_dir)}/{lib}/scale2{scalefit}/{lib}.csv"
+            for lib in lib_list
+        ]
+
     for df_csv in df_csvs:
         print(f"Processing {df_csv} ...")
         rho, roc_aud = get_hd_avg_metric(df_csv, hd_dir)
@@ -251,12 +216,207 @@ def run_hd_avg_metric(
             {
                 "lib": get_file_name(df_csv),
                 "rho": rho,
-                "roc_auc": roc_aud,
+                "rocauc": roc_aud,
             },
             ignore_index=True,
         )
-    
+
     checkNgen_folder(hd_dir)
     hd_avg_metric.to_csv(os.path.join(hd_dir, "hd_avg_metric.csv"))
 
     return hd_avg_metric
+
+
+def plot_hd_avg_fit(
+    figname: str,
+    hd_fit_dir: str = "results4upload/hd/hd_fit",
+    fit_dir: str = "data4upload",
+    fitscale: str = "scale2max",
+    ifsave: bool = True,
+    fig_dir: str = "figs",
+):
+
+    all_dfs = []
+    wt_mean = {}
+    full_mean = {}
+
+    for lib, lib_dict in LIB_INFO_DICT.items():
+
+        df = pd.read_csv(os.path.join(hd_fit_dir, f"{lib}.csv"))
+        df["lib"] = lib
+        all_dfs.append(df)
+
+        wt_mean[lib] = df[df["AAs"] == "".join(lib_dict["AAs"].values())][
+            "mean"
+        ].values[0]
+
+        fit_df = pd.read_csv(
+            os.path.join(fit_dir, lib2prot(lib), fitscale, f"{lib}.csv")
+        )
+        full_mean[lib] = fit_df["fitness"].mean()
+
+    all_df = pd.concat(all_dfs)
+
+    fig = plt.figure(figsize=(16, 8))
+    ax = sns.violinplot(
+        x="lib", y="mean", data=all_df, hue="lib", palette=LIB_COLORS_GLASBEY
+    )
+
+    # Set the alpha value of the facecolor automatically to 0.8
+    for violin in ax.collections[:]:  # Access only the violin bodies
+        facecolor = violin.get_facecolor().flatten()  # Get the current facecolor
+        violin.set_facecolor(mcolors.to_rgba(facecolor, alpha=0.4))  # Set new facecolor
+
+    for lib in LIB_INFO_DICT.keys():
+
+        # Find the position of the violin to add the line to
+        position = all_df["lib"].unique().tolist().index(lib)
+
+        # Overlay the mean as a scatter plot
+        ax.axhline(
+            all_df[all_df["lib"] == lib]["mean"].mean(),
+            color=FZL_PALETTE["light_gray"],
+            linestyle="solid",
+            marker="x",
+            linewidth=2,
+            xmin=position / len(LIB_INFO_DICT) + 0.03125,
+            xmax=(position + 1) / len(LIB_INFO_DICT) - 0.03125,
+        )
+        ax.axhline(
+            wt_mean[lib],
+            color=LIB_COLORS_GLASBEY[lib],
+            linestyle="--",
+            linewidth=2,
+            xmin=position / len(LIB_INFO_DICT),
+            xmax=(position + 1) / len(LIB_INFO_DICT),
+        )
+        ax.axhline(
+            full_mean[lib],
+            color=LIB_COLORS_GLASBEY[lib],
+            linestyle="dotted",
+            linewidth=2,
+            xmin=position / len(LIB_INFO_DICT),
+            xmax=(position + 1) / len(LIB_INFO_DICT),
+        )
+
+    lines = [
+        Line2D(
+            [0],
+            [0],
+            color=FZL_PALETTE["light_gray"],
+            linestyle="none",
+            lw=2,
+            marker="x",
+        ),
+        Line2D([0], [0], color="black", linestyle="--", lw=2),
+        Line2D([0], [0], color="black", linestyle="dotted", lw=2),
+    ]
+    labels = [
+        "Mean of the mean variant fitness of double-site library\nconstructed with any active variant",
+        "Mean variant fitness of double-site library\nconstruscted with the landscape parent",
+        "Mean of all variants",
+    ]
+
+    ax.legend(lines, labels, loc="upper left", bbox_to_anchor=(1, 1))
+
+    ax.set_xlabel("Landscapes")
+    ax.set_ylabel(
+        "Mean variant fitness of double-site library constructed with an active variant"
+    )
+
+    if ifsave:
+        save_svg(fig, figname, fig_dir)
+
+
+def plot_hd_corr(
+    metric: str,
+    figname: str,
+    hd_corr_dir: str = "results4upload/hd/hd_corr",
+    ifsave: bool = True,
+    fig_dir: str = "figs",
+):
+
+    all_dfs = []
+    wt_mean = {}
+
+    for lib, lib_dict in LIB_INFO_DICT.items():
+
+        df = pd.read_csv(os.path.join(hd_corr_dir, f"{lib}.csv"))
+        df["lib"] = lib
+        all_dfs.append(df)
+
+        wt_mean[lib] = df[df["AAs"] == "".join(lib_dict["AAs"].values())][
+            metric
+        ].values[0]
+
+    all_df = pd.concat(all_dfs)
+
+    fig = plt.figure(figsize=(16, 8))
+    ax = sns.violinplot(
+        x="lib", y=metric, data=all_df, hue="lib", palette=LIB_COLORS_GLASBEY
+    )
+
+    # Set the alpha value of the facecolor
+    for violin in ax.collections[:]:  # Access only the violin bodies
+        facecolor = violin.get_facecolor().flatten()  # Get the current facecolor
+        violin.set_facecolor(mcolors.to_rgba(facecolor, alpha=0.4))  # Set new facecolor
+
+    for lib in LIB_INFO_DICT.keys():
+
+        # Find the position of the violin to add the line to
+        position = all_df["lib"].unique().tolist().index(lib)
+
+        # Overlay the mean
+        ax.axhline(
+            all_df[all_df["lib"] == lib][metric].mean(),
+            color=FZL_PALETTE["light_gray"],
+            linestyle="solid",
+            marker="x",
+            linewidth=2,
+            xmin=position / len(LIB_INFO_DICT) + 0.03125,
+            xmax=(position + 1) / len(LIB_INFO_DICT) - 0.03125,
+        )
+        ax.axhline(
+            wt_mean[lib],
+            color=LIB_COLORS_GLASBEY[lib],
+            linestyle="--",
+            linewidth=2,
+            xmin=position / len(LIB_INFO_DICT),
+            xmax=(position + 1) / len(LIB_INFO_DICT),
+        )
+
+    lines = [
+        Line2D(
+            [0],
+            [0],
+            color=FZL_PALETTE["light_gray"],
+            linestyle="none",
+            lw=2,
+            marker="x",
+        ),
+        Line2D([0], [0], color="black", linestyle="--", lw=2),
+        Line2D([0], [0], color="black", linestyle="dotted", lw=2),
+    ]
+    labels = [
+        f"Mean {ZS_METRIC_MAP_LABEL[metric]}\nfrom any active variant",
+        "From the landscape parent",
+    ]
+    ax.axhline(
+        ZS_METRIC_BASELINE[metric],
+        color=FZL_PALETTE["light_gray"],
+        linestyle="dotted",
+        linewidth=2,
+    )
+    ax.legend(lines, labels, loc="upper left", bbox_to_anchor=(1, 1))
+
+    ax.set_xlabel("Landscapes")
+    y_dets = (
+        ZS_METRIC_MAP_TITLE[metric]
+        .replace("\n", " ")
+        .replace("F", "f")
+        .replace("A", "a")
+    )
+    ax.set_ylabel(f"Hamming distance {y_dets}")
+
+    if ifsave:
+        save_svg(fig, figname, fig_dir)

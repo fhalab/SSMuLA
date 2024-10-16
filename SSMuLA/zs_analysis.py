@@ -88,14 +88,19 @@ ZS_OPTS_LEGEND = {
 
 ZS_METRICS = ["rho", "ndcg", "rocauc"]
 
-ZS_METIRC_MAP_TITLE = {
+ZS_METRIC_MAP_TITLE = {
     "rho": "Fitness ranking\n(Spearman's ρ)",
     "rocauc": "Active / inactive classification\n(ROC-AUC)",
 }
 
-ZS_METIRC_MAP_LABEL = {
+ZS_METRIC_MAP_LABEL = {
     "rho": "Spearman's ρ",
     "rocauc": "ROC-AUC",
+}
+
+ZS_METRIC_BASELINE = {
+    "rho": 0,
+    "rocauc": 0.5,
 }
 
 ZS_N_MUTS = ["all", "double", "single"]
@@ -926,12 +931,10 @@ def plot_app_type_zs(
         ]
 
         if metric == "rho":
-            axhline_val = 0
             if y_annotation is None:
                 y_annotation = 0.6
 
         elif metric == "rocauc" :
-            axhline_val = 0.5
             if y_annotation is None:
                 y_annotation = 1
 
@@ -943,7 +946,7 @@ def plot_app_type_zs(
         ax.set_title(
             ZS_OPTS_LEGEND[x.split("_")[1] + "_score"].replace(" ", "\n"), fontsize=10
         )
-        ax.axhline(axhline_val, color="gray", lw=1.2, ls="--")
+        ax.axhline(ZS_METRIC_BASELINE[metric], color="gray", lw=1.2, ls="--")
 
         # Hide the top and right spine
         ax.spines["top"].set_visible(False)
@@ -954,7 +957,7 @@ def plot_app_type_zs(
         else:
             ax.legend(loc="upper left", bbox_to_anchor=(1, 1.025))
         if z == 0:
-            ax.set_ylabel(ZS_METIRC_MAP_LABEL[metric])
+            ax.set_ylabel(ZS_METRIC_MAP_LABEL[metric])
         else:
             ax.set_ylabel("")
 

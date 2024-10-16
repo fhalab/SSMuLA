@@ -33,6 +33,7 @@ colormap = cc.cm["glasbey_category10"]
 glasbey_category10 = [mcolors.to_hex(colormap(i)) for i in range(colormap.N)]
 
 
+
 JSON_THEME = Theme(
     json={
         "attrs": {
@@ -111,6 +112,18 @@ LIB_COLORS = {
         ]
         + sns.color_palette("crest", 9).as_hex()
         + [FZL_PALETTE["gray"]],
+    )
+}
+
+LIB_COLORS_GLASBEY = {
+    n: c
+    for (n, c) in zip(
+        LIB_NAMES,
+        glasbey_category10[:6]
+        + glasbey_category10[12:15]
+        + glasbey_category10[6:10]
+        + [glasbey_category10[15]]
+        + glasbey_category10[10:12],
     )
 }
 
@@ -226,6 +239,23 @@ def save_bokeh_hv(
         )
     else:
         print("Skipping png export")
+
+
+def save_svg(fig, plot_title: str, path2folder: str, ifshow: bool = True):
+    """
+    A function for saving svg plots
+    """
+
+    plot_title_no_space = plot_title.replace(" ", "_")
+    plt.savefig(
+        os.path.join(checkNgen_folder(path2folder), f"{plot_title_no_space}.svg"),
+        bbox_inches="tight",
+        dpi=300,
+        format="svg",
+    )
+    
+    if ifshow:
+        plt.show()
 
 
 def save_plt(fig, plot_title: str, path2folder: str):
