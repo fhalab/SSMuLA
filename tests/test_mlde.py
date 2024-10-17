@@ -73,21 +73,37 @@ if __name__ == "__main__":
     #     zs_folder="results/zs_comb_6",
     # )
 
-    run_all_mlde_parallelized(
-        encodings=DEFAULT_LEARNED_EMB_COMBO,
-        n_mut_cutoffs=[0],
-        zs_predictors=["none", "ev"],
-        n_samples=[384, 96, 24, 48],
-        n_replicate=50,
-        n_job=96,
-        all_libs=False,
-        ft_first=False,
-        lib_list=["TrpB3F"],
-        mlde_folder="results/mlde_TrpB3F",
-        zs_folder="results/zs_comb_6",
-        ft_lib_fracs=[0.125],
-        model_classes = ["boosting"]
-    )
+    # run_all_mlde_parallelized(
+    #     encodings=DEFAULT_LEARNED_EMB_COMBO,
+    #     n_mut_cutoffs=[0],
+    #     zs_predictors=["none"],
+    #     n_samples=[384, 96, 24, 48],
+    #     n_replicate=50,
+    #     n_job=96,
+    #     all_libs=False,
+    #     ft_first=False,
+    #     lib_list=["TrpB3F"],
+    #     mlde_folder="results/mlde_TrpB3F",
+    #     zs_folder="results/zs_comb_6",
+    #     ft_lib_fracs=[0.125],
+    #     model_classes = ["boosting"]
+    # )
+
+    # run_all_mlde_parallelized(
+    #     encodings=DEFAULT_LEARNED_EMB_COMBO,
+    #     n_mut_cutoffs=[0],
+    #     zs_predictors=["ev"],
+    #     n_samples=[384, 96, 24, 48],
+    #     n_replicate=50,
+    #     n_job=96,
+    #     all_libs=False,
+    #     ft_first=True,
+    #     lib_list=["TrpB3F"],
+    #     mlde_folder="results/mlde_TrpB3F",
+    #     zs_folder="results/zs_comb_6",
+    #     ft_lib_fracs=[0.125],
+    #     model_classes = ["boosting"]
+    # )
 
     # run_all_mlde_parallelized(
     #     encodings=DEFAULT_LEARNED_EMB_COMBO,
@@ -103,6 +119,22 @@ if __name__ == "__main__":
     #     zs_folder=zs_folder,
     # )
 
+
+    run_all_mlde_parallelized(
+        encodings=DEFAULT_LEARNED_EMB_COMBO,
+        n_mut_cutoffs=[0],
+        zs_predictors=["ev"],
+        n_samples=[384],
+        n_replicate=50,
+        n_job=96,
+        all_libs=False,
+        ft_first=True,
+        lib_list=["ParD2", "ParD3"],
+        mlde_folder="results/mlde_emb",
+        zs_folder="results/zs_comb_6",
+        ft_lib_fracs=[0.125],
+        model_classes = ["boosting"]
+    )
 
 
     # run_all_mlde_parallelized(

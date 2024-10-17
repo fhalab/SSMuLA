@@ -47,16 +47,14 @@ def avg_alde_df(
 
         if zs != "":
             zs_append = f"{zs}_"
-            res_append = ""
         else:
             zs_append = ""
-            res_append = "_2"
 
         if eq_n == 1:
-            csv_path = f"{alde_dir}/results/{zs_append}all_{str(n)}+96/all_results{res_append}.csv"
+            csv_path = f"{alde_dir}/results/{zs_append}all_{str(n)}+96/all_results.csv"
 
         else:
-            csv_path = f"{alde_dir}/results/{zs_append}{str(eq_n)}eq_{str(int((n+96)/eq_n))}/all_results{res_append}.csv"
+            csv_path = f"{alde_dir}/results/{zs_append}{str(eq_n)}eq_{str(int((n+96)/eq_n))}/all_results.csv"
 
         if os.path.exists(csv_path):
             a_df = pd.read_csv(csv_path)

@@ -93,6 +93,15 @@ FZL_PALETTE = {
     "black": "#000000",
 }
 
+GRAY_COLORS = {
+    "gray-blue": "#749aa3",
+    "gray-orange": "#c58a6c",
+    "gray-green": "#8b946e",
+    "gray-yellow": "#d6b969",
+    "gray-purple": "#897a8f",
+    "gray-brown": "#8b6e57",
+}
+
 LIGHT_COLORS = {"yellow": "#F1D384"}
 
 PLOTEXTENTIONS = [".svg", ".png"]

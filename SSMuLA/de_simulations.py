@@ -1128,3 +1128,28 @@ def run_plot_de(
                         n_mut_cutoff=n_mut,
                         vis_folder=vis_folder,
                     )
+
+
+def get_de_avg(de_csv: str, lib_list: list) -> pd.DataFrame:
+    """
+    Get the average characteristics of the DE simulations
+
+    Args:
+    - de_csv: str, the path to the DE simulation results
+    - lib_list: list, the list of libraries to include in the average
+
+    Returns:
+    - pd.DataFrame, the average characteristics of the DE simulations
+    """
+
+    de_all = pd.read_csv(de_csv)
+
+    de_avg = (
+        de_all[de_all["lib"].isin(lib_list)][["de_type", "mean_all", "fraction_max"]]
+        .groupby("de_type")
+        .agg(["mean", "std"])
+    )
+    de_avg.columns = ["{}_{}".format(i, j) for i, j in de_avg.columns]
+    de_avg = de_avg.rename(columns={"de_type_": "de_type"})
+
+    return de_avg

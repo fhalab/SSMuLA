@@ -32,7 +32,8 @@ from SSMuLA.vis import (
     fixmargins,
     save_bokeh_hv,
     FZL_PALETTE,
-    glasbey_category10
+    glasbey_category10,
+    save_svg
 )
 from SSMuLA.zs_data import MSA_DF
 from SSMuLA.util import ndcg_scale, checkNgen_folder
@@ -978,9 +979,6 @@ def plot_app_type_zs(
                 ax.text((p + q) * 0.5, annot_y, "*", ha="center", va="bottom", color="gray")
 
     plt.tight_layout(pad=0, h_pad=-0.0, w_pad=0.5)
-    plt.show()
 
     if if_save:
-        fig.savefig(
-            f"{save_dir}/{fig_name}_{metric}.svg", dpi=300, bbox_inches="tight", format="svg"
-        )
+        save_svg(fig, f"{fig_name}_{metric}", save_dir)
