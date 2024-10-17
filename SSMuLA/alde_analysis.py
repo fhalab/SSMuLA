@@ -9,7 +9,7 @@ import pandas as pd
 import numpy as np
 
 
-from SSMuLA.mlde_analysis import N_SAMPLE_LIST
+from SSMuLA.landscape_global import N_SAMPLE_LIST
 
 
 def avg_alde_df(
@@ -153,16 +153,14 @@ def aggregate_alde_df(
 
                 if zs != "":
                     zs_append = f"{zs}_"
-                    res_append = ""
                 else:
                     zs_append = ""
-                    res_append = "_2"
 
                 if eq_n == 1:
-                    csv_path = f"{alde_dir}/results/{zs_append}all_{str(n)}+96/all_results{res_append}.csv"
+                    csv_path = f"{alde_dir}/results/{zs_append}all_{str(n)}+96/all_results.csv"
 
                 else:
-                    csv_path = f"{alde_dir}/results/{zs_append}{str(eq_n)}eq_{str(int((n+96)/eq_n))}/all_results{res_append}.csv"
+                    csv_path = f"{alde_dir}/results/{zs_append}{str(eq_n)}eq_{str(int((n+96)/eq_n))}/all_results.csv"
 
                 if os.path.exists(csv_path):
                     print(f"Reading {csv_path}...")
@@ -177,7 +175,7 @@ def aggregate_alde_df(
                     slice_df["n_samples"] = n + 96
 
                     # replace T7_2 with T7
-                    slice_df = slice_df.replace("T7_2", "T7")
+                    # slice_df = slice_df.replace("T7_2", "T7")
 
                     alde_all = alde_all._append(slice_df, ignore_index=True)
 

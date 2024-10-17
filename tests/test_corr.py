@@ -20,7 +20,7 @@ if __name__ == "__main__":
     )
     sys.stdout = f
 
-    MergeMLDEAttributes(mlde_path = "results/mlde/all_df_comb_onehot_3.csv", models=["boosting"])
+    # MergeMLDEAttributes(mlde_path = "results4upload/mlde/all_results.csv", merge_dir = "results/merged_2", models=["boosting"])
 
     # MergeLandscapeAttributes(
     #     lib_stat_path="results/fitness_distribution/max/all_lib_stats.csv",
@@ -30,6 +30,15 @@ if __name__ == "__main__":
     #     de_path="results/de/DE-active/scale2max/all_landscape_de_summary.csv",
     #     merge_dir="results/merged",
     # )
+
+    perfom_corr(
+        n_mut_cutoff=0,
+        n_list=[384],
+        zs_path="results/zs_sum_6/none/zs_stat_scale2max.csv",
+        mlde_path="results/mlde/all_df_comb_onehot_5.csv",
+        corr_dir="results/corr_4",
+        ifplot=False,
+    )
 
     # perfom_corr(
     #     n_mut_cutoff=0,

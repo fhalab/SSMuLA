@@ -51,13 +51,34 @@
 ### Preprocessing
 * Run
 ```
-python -m SSMuLA.tests.test_preprocess
+python -m tests.test_preprocess
 ```
 * Processed with `fitness_process_vis`
 * Rename columns to be `AAs`, `AA1`, `AA2`, `AA3`, `AA4`, `fitness`, add `active` if not already there and add `muts` columns
 * Scale to `max` (with option to scale to `parent`)
 * Processed data saved in `scale2max` folder
-* 
+* The landcape stats will be saved 
+
+
+### Landscape attributes
+#### Local optima
+* Run
+```
+python -m tests.local_optima
+```
+* Calculate local optima with `calc_local_optima` function in `SSMuLA.local_optima`
+
+#### Pairwise epistasis
+* Run
+```
+python -m tests.pairwise_epistasis
+```
+* Calculate pairwise epistasis with `calc_all_pairwise_epistasis` function in `SSMuLA.pairwise_epistasis`
+* Start from all active variants scaled to max fitenss without post filtering
+* Initial results will be saved under the default path `results/pairwise_epistasis` folder (corresponding to the `active_start` subfolder in the zenodo repo)
+* Post processing the output with `plot_pairwise_epistasis` function in `SSMuLA.pairwise_epistasis`
+* Post processed results will be saved under the default path `results/pairwise_epistasis_dets` folder with summary files (corresponding to the `processed` subfolder) and `results/pairwise_epistasis_vis` for each of the landscape with a master summary file across all landscapes (in the `pairwise_epistasis_summary.csv`)
+
 
 ### Simulations
 #### DE

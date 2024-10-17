@@ -41,9 +41,6 @@ LANDSCAPE_ATTRIBUTES = [
     "numb_active",
     "percent_active",
     "active_fit_min",
-    "parent_fit",
-    "parent_rank",
-    "parent_rank_percent",
     "mean",
     "median",
     "range",
@@ -223,9 +220,9 @@ class MergeLandscapeAttributes:
         print(f"Loaded pwe from: {self._pwe_path} for libs:")
         print(self._pwe_df["lib"].unique())
 
-        self._zs_stat_df = self._get_zs_stat()
-        print(f"Loaded zs from: {self._zs_path} for libs:")
-        print(self._zs_stat_df["lib"].unique())
+        # self._zs_stat_df = self._get_zs_stat()
+        # print(f"Loaded zs from: {self._zs_path} for libs:")
+        # print(self._zs_stat_df["lib"].unique())
 
         self._de_stat_df, self._de_types = self._get_de_stat()
         print(f"Loaded de from: {self._de_path} for libs:")
@@ -360,15 +357,15 @@ class MergeLandscapeAttributes:
 
         merge_df = pd.merge(
             # pd.merge(
-                pd.merge(
+                # pd.merge(
                     pd.merge(
                         pd.merge(self._lib_stat_df, self._loc_opt_df, on="lib"),
                         self._pwe_df,
                         on="lib",
                     ),
-                    self._zs_stat_df,
-                    on="lib",
-                ),
+                #     self._zs_stat_df,
+                #     on="lib",
+                # ),
                 self._de_stat_df,
                 on="lib",
             # ),
@@ -414,10 +411,10 @@ class MergeLandscapeAttributes:
         """Return the local optima dataframe"""
         return self._loc_opt_df
 
-    @property
-    def zs_stat_df(self) -> pd.DataFrame:
-        """Return the zs stat dataframe"""
-        return self._zs_stat_df
+    # @property
+    # def zs_stat_df(self) -> pd.DataFrame:
+    #     """Return the zs stat dataframe"""
+    #     return self._zs_stat_df
 
     @property
     def de_stat_df(self) -> pd.DataFrame:

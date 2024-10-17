@@ -23,7 +23,12 @@ if __name__ == "__main__":
     )
     sys.stdout = f
 
-    aggregate_alde_df()
+    aggregate_alde_df(
+        eq_ns = [2, 3, 4], 
+        alde_dir = "results4upload/alde",
+        alde_df_path = "results4upload/alde/alde_all.csv",
+
+    )
 
     f.close()
 
