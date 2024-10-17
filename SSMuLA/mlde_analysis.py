@@ -1828,7 +1828,7 @@ def get_ftmlde_stat(
 
 # Helper function to create scatter plots with common settings
 def scatter_plot(
-    ax, x_data, y_data, y_data2, x_label, title_label, clist, xlabel_scale=None
+    ax, x_data, y_data, y_data2, x_label, y_label, title_label, clist, xlabel_scale=None
 ):
     ax.scatter(
         x_data,
@@ -1851,6 +1851,8 @@ def scatter_plot(
     if xlabel_scale:
         ax.set_xscale(xlabel_scale)
     ax.set_title(title_label)
+    if y_label != "":
+        ax.set_ylabel(y_label)
 
 
 # Helper function to create the title with spearman correlation
@@ -1918,6 +1920,11 @@ def plot_mlde_attribute_corr(
 
     # Iterate through the axes and plot each
     for i, (x_col, x_label, scale) in enumerate(plot_data):
+        if i % 3 == 0:
+            y_label = "Average max fitness improvement"
+        else:
+            y_label = ""
+
         row, col = divmod(i, 3)
         scatter_plot(
             ax[row, col],
@@ -1925,6 +1932,7 @@ def plot_mlde_attribute_corr(
             y,
             y2,
             x_label,
+            y_label,
             create_spearman_title(
                 landscape_attribute_df["single_step_DE_mean_all"],
                 landscape_attribute_df[x_col],
@@ -2467,6 +2475,155 @@ def plot_mlde_type(
 
     if ifsave:
         save_svg(fig, fig_name, fig_dir)
+
+
+def plot_mlde_type_split(
+    mlde_csv: str,
+    lib_list: list,
+    n_sample: int,
+    fig_name: str,
+    ymin1: float = -0.15,
+    ymax1: float = 0.5,
+    ymin2: float = -0.8,
+    ymax2: float = 1.0,
+    h_pad: float = 0,
+    models: list = ["boosting"],
+    n_top: int = 96,
+    ifpad_y1: bool = False,
+    set_ymin2_scale: bool = True,
+    ifsave: bool = True,
+    fig_dir: str = "figs",
+):
+
+    slice_df = slice_lib_mlde(
+        mlde_csv=mlde_csv,
+        lib_list=lib_list,
+        n_sample=n_sample,
+        models=models,
+        n_top=n_top,
+    )
+
+    for i , x in enumerate(PLOT_MLDE_METRICS):
+        fig, axes = plt.subplots(1, 7, figsize=(7, 3.6))
+
+        rand_df = (
+            slice_df[slice_df["zs"] == "none"][["lib", "type", x]]
+            .reset_index(drop=True)
+            .copy()
+        )
+
+        for z, zs in enumerate(
+            ZS_OPTS
+            + [
+                "ds-ev"
+            ]
+        ):
+
+            ax = axes[z]
+            bar_type_df = (
+                slice_df[slice_df["zs"] == zs][["lib", "type", x]]
+                .reset_index(drop=True)
+                .copy()
+            )
+
+            # subtract random
+            merg_df = pd.merge(bar_type_df, rand_df, on=["lib", "type"], how="outer")
+            merg_df["delta"] = merg_df[x + "_x"] - merg_df[x + "_y"]
+
+            if len(bar_type_df["type"].unique()) == 1:
+                bar_order = ["Enzyme activity"]
+                do_ttest = False
+                bar_width = 0.3
+            else:
+                bar_order = ["Binding", "Enzyme activity"]
+                do_ttest = True
+                bar_width = 0.6
+
+            sns.boxplot(
+                x="type", y="delta", 
+                data=merg_df, 
+                width=bar_width, 
+                ax=ax,
+                order=bar_order,
+                boxprops={'facecolor': 'None', 'edgecolor': FZL_PALETTE["gray"]},
+            )
+            sns.stripplot(
+                x="type",
+                y="delta",
+                data=merg_df,
+                order=bar_order,
+                hue="lib",
+                hue_order=merg_df['lib'].unique(),
+                jitter=True,
+                size=7.5,
+                palette=glasbey_category10[:12],
+                marker="o",
+                alpha=0.8,
+                ax=ax
+            )
+
+            labels = [label.get_text().replace('Enzyme activity', 'Enzyme\nactivity') for label in ax.get_xticklabels()]
+            
+            if i == 0:
+                ymax = ymax1
+                ax.set_ylim(ymin1, ymax1)
+                
+            else:
+                ymax = ymax2
+                ax.set_ylim(ymin2, ymax2)
+                ax.set_yticks([-0.5, 0, 0.5, 1])
+                
+            if z==0:
+                ax.set_ylabel(PLOT_LINE_PERFORMANCE_YAXIS[i])
+            else:
+                ax.set_ylabel("")
+                ax.set_yticklabels([])
+
+            ax.legend().remove()
+            ax.set_xlabel("")
+            if "ds-" in zs:
+                ax_title = (
+                    "Hamming\ndistance\n"
+                    + ZS_OPTS_LEGEND[zs.replace("ds-", "") + "_score"]
+                )
+            else:
+                ax_title = ZS_OPTS_LEGEND[zs]
+            ax.set_title(ax_title.replace(" ", "\n"),fontdict={
+                'fontsize': 10,
+            })
+            ax.set_xticklabels(labels, rotation=90, ha="center")
+            ax.yaxis.set_label_coords(-0.64, 0.55)
+
+            # # Hide the top and right spine
+            ax.spines['top'].set_visible(False)
+            ax.spines['right'].set_visible(False)
+
+            ax.axhline(0, color='gray', lw=1, ls="dotted")
+            
+            if do_ttest:
+
+                t_val, p_value = ttest_ind(
+                    list(bar_type_df[bar_type_df["type"]=="Binding"][x]),
+                    list(bar_type_df[bar_type_df["type"]=="Enzyme activity"][x]),
+                    equal_var=False,
+                )
+
+                print(f"{zs} : t={t_val:.3f} and p={p_value:.3f}")
+
+                # # Draw a line between points
+                p = 0.1
+                q = 1
+                annot_y = ymax
+                if p_value < 0.05:
+                    # ax.plot([p+0.5*(q-p), q-0.5*(q-p)], [annot_y, annot_y], color='gray', lw=1.5)
+                    ax.text((p+q)*.5, annot_y, "*", ha='center', va='bottom', color='gray')
+        # axes[0,0].yaxis.set_label_coords(-0.8, 0.55)
+        # axes[1,0].yaxis.set_label_coords(-0.8, 0.42)
+        axes[6].legend(loc="upper left", bbox_to_anchor=(1.01, 1.075))
+        plt.tight_layout(pad=0, h_pad=1, w_pad=0.5)
+
+        if ifsave:
+            save_svg(fig, f"{fig_name}_{x}", fig_dir)
 
 
 def plot_alde_type(
