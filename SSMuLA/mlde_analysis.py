@@ -13,7 +13,9 @@ import warnings
 import numpy as np
 import pandas as pd
 
-from scipy.stats import spearmanr
+from scipy.stats import stats, spearmanr, ttest_ind
+from itertools import combinations
+from statsmodels.stats.multicomp import pairwise_tukeyhsd
 
 import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
@@ -116,6 +118,18 @@ PLOT_LINE_PERFORMANCE_YAXIS = [
 ]
 
 ALDE_MARKER_STYLES = {2: "o", 3: "s", 4: "X"}
+
+ALDE_METRICS = ["Mean", "Frac"]
+
+ALDE_METRIC_MAP = {
+    "Mean": "Average max fitness improved",
+    "Frac": "Fraction reaching the global optimum improved",
+}
+
+MLDE_METRIC_MAP = {
+    "top_maxes": "Average max fitness achieved",
+    "if_truemaxs": "Fraction reaching the global optimum",
+}
 
 
 def get_mlde_avg_df(
@@ -2202,6 +2216,711 @@ def plot_alde_attribute_corr(
         bbox_to_anchor=(1, 1.0315),
     )
     plt.tight_layout()
+
+    if ifsave:
+        save_svg(fig, fig_name, fig_dir)
+
+
+def slice_lib_mlde(
+    mlde_csv: str,
+    lib_list: list,
+    n_sample: int,
+    models: list = ["boosting"],
+    n_top: int = 96,
+):
+
+    mlde_df = pd.read_csv(mlde_csv)
+
+    common_slice = mlde_df[
+        (mlde_df["encoding"] == "one-hot")
+        & (mlde_df["model"].isin(models))
+        & (mlde_df["n_sample"] == n_sample)
+        & (mlde_df["n_top"] == n_top)
+        & (mlde_df["lib"].isin(lib_list))
+    ]
+
+    noft_df = common_slice[
+        (common_slice["zs"] == "none") & (common_slice["n_mut_cutoff"] == "all")
+    ]
+
+    no_combo_df = common_slice[
+        (common_slice["n_mut_cutoff"] == "all")
+        & (common_slice["zs"].isin(ZS_OPTS[1:]))
+        & (common_slice["ft_lib"].isin([0.125 * 20 ** 3, 0.125 * 20 ** 4]))
+    ].copy()
+
+    ds_only_df = common_slice[
+        (common_slice["n_mut_cutoff"] == "double") & (common_slice["zs"] == "none")
+    ].copy()
+    ds_only_df["zs"] = ds_only_df["zs"].replace({"none": "ed_score"})
+
+    ds_comb_df = common_slice[
+        (common_slice["n_mut_cutoff"] == "double")
+        & (common_slice["zs"].isin(["ev_score", "esmif_score", "esm_score"]))
+        & (common_slice["ft_lib"].isin([0.125 * 3 * 20 ** 2, 0.125 * 6 * 20 ** 2]))
+    ].copy()
+
+    ds_comb_df["zs"] = ds_comb_df["zs"].replace(
+        {
+            "ev_score": "ds-ev",
+            "esmif_score": "ds-esmif",
+            "esm_score": "ds-esm",
+        }
+    )
+
+    slice_df = pd.concat(
+        [noft_df, ds_only_df, no_combo_df, ds_comb_df], ignore_index=True
+    )
+
+    # Convert 'Category' column to categorical with defined order
+    slice_df["zs"] = pd.Categorical(
+        slice_df["zs"],
+        categories=["none"]
+        + ZS_OPTS
+        + [
+            "ds-ev",
+            "ds-esmif",
+            "ds-esm",
+        ],
+        ordered=True,
+    )
+
+    slice_df = (
+        slice_df[["lib", "zs", "top_maxes", "if_truemaxs"]]
+        .groupby(["lib", "zs"])
+        .mean()
+        .reset_index()
+        .sort_values(by=["zs", "lib"])
+    )
+
+    slice_df["type"] = slice_df["lib"].map(lambda x: LIB_INFO_DICT[x]["type"])
+
+    return slice_df
+
+
+def plot_mlde_type(
+    mlde_csv: str,
+    lib_list: list,
+    n_sample: int,
+    fig_name: str,
+    ymin1: float = -0.15,
+    ymax1: float = 0.5,
+    ymin2: float = -0.8,
+    ymax2: float = 1.0,
+    h_pad: float = 0,
+    models: list = ["boosting"],
+    n_top: int = 96,
+    ifpad_y1: bool = False,
+    set_ymin2_scale: bool = True,
+    ifsave: bool = True,
+    fig_dir: str = "figs",
+):
+
+    slice_df = slice_lib_mlde(
+        mlde_csv=mlde_csv,
+        lib_list=lib_list,
+        n_sample=n_sample,
+        models=models,
+        n_top=n_top,
+    )
+
+    fig, axes = plt.subplots(2, 9, figsize=(8.4, 6.4))
+
+    for i, x in enumerate(PLOT_MLDE_METRICS):
+
+        rand_df = (
+            slice_df[slice_df["zs"] == "none"][["lib", "type", x]]
+            .reset_index(drop=True)
+            .copy()
+        )
+
+        for z, zs in enumerate(
+            ZS_OPTS
+            + [
+                "ds-ev",
+                "ds-esmif",
+                "ds-esm",
+            ]
+        ):
+
+            ax = axes[i, z]
+            bar_type_df = (
+                slice_df[slice_df["zs"] == zs][["lib", "type", x]]
+                .reset_index(drop=True)
+                .copy()
+            )
+
+            # subtract random
+            merg_df = pd.merge(bar_type_df, rand_df, on=["lib", "type"], how="outer")
+            merg_df["delta"] = merg_df[x + "_x"] - merg_df[x + "_y"]
+
+            if len(bar_type_df["type"].unique()) == 1:
+                bar_order = ["Enzyme activity"]
+                do_ttest = False
+                bar_width = 0.3
+            else:
+                bar_order = ["Binding", "Enzyme activity"]
+                do_ttest = True
+                bar_width = 0.6
+
+            sns.boxplot(
+                x="type",
+                y="delta",
+                data=merg_df,
+                width=bar_width,
+                ax=ax,
+                order=bar_order,
+                boxprops={
+                    "facecolor": "None",
+                    "edgecolor": FZL_PALETTE["gray"],
+                },
+            )
+
+            sns.stripplot(
+                x="type",
+                y="delta",
+                data=merg_df,
+                order=bar_order,
+                hue="lib",
+                hue_order=merg_df["lib"].unique(),
+                jitter=True,
+                size=7.5,
+                palette=glasbey_category10[:12],
+                marker="o",
+                alpha=0.8,
+                ax=ax,
+            )
+
+            labels = [
+                label.get_text().replace("Enzyme activity", "Enzyme\nactivity")
+                for label in ax.get_xticklabels()
+            ]
+
+            if i == 0:
+                ymax = ymax1
+                ax.set_xlabel("")
+                ax.set_xticks([])  # Removes x-axis ticks
+                ax.set_ylim(ymin1, ymax1)
+            else:
+                ymax = ymax2
+                ax.set_xlabel("")
+                ax.set_ylim(ymin2, ymax2)
+                ax.set_xticklabels(labels, rotation=90, ha="center")
+                if set_ymin2_scale:
+                    ax.set_yticks([-0.5, 0, 0.5, 1])
+
+            if z == 0:
+                ax.set_ylabel(MLDE_METRIC_MAP[x])
+                if ifpad_y1 and i == 0:
+                    ax.set_ylabel(MLDE_METRIC_MAP[x], labelpad=12)
+            else:
+                ax.set_ylabel("")
+                ax.set_yticks([])  # Removes y-axis ticks
+
+            # # ax.set_yticks([0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7])
+            if "ds-" in zs:
+                ax_title = (
+                    "Hamming\ndistance\n"
+                    + ZS_OPTS_LEGEND[zs.replace("ds-", "") + "_score"]
+                )
+            else:
+                ax_title = ZS_OPTS_LEGEND[zs]
+            ax.legend().remove()
+            ax.set_title(
+                ax_title.replace(" ", "\n"),
+                fontdict={
+                    "fontsize": 10,
+                },
+            )
+
+            # # Hide the top and right spine
+            ax.spines["top"].set_visible(False)
+            ax.spines["right"].set_visible(False)
+
+            ax.axhline(0, color="gray", lw=1, ls="dotted")
+
+            if do_ttest:
+                t_val, p_value = ttest_ind(
+                    list(bar_type_df[bar_type_df["type"] == "Binding"][x]),
+                    list(bar_type_df[bar_type_df["type"] == "Enzyme activity"][x]),
+                    equal_var=False,
+                )
+                print(f"{zs} : t={t_val:.3f} and p={p_value:.3f}")
+
+                # Draw a line between points
+                p = 0.1
+                q = 1
+                annot_y = ymax
+                if p_value < 0.05:
+                    # ax.plot([p+0.5*(q-p), q-0.5*(q-p)], [annot_y, annot_y], color='gray', lw=1.5)
+                    ax.text(
+                        (p + q) * 0.5,
+                        annot_y,
+                        "*",
+                        ha="center",
+                        va="bottom",
+                        color="gray",
+                    )
+
+    axes[0, 8].legend(loc="upper left", bbox_to_anchor=(1, 1.12))
+    plt.tight_layout(pad=0, h_pad=h_pad, w_pad=0.5)
+
+    if ifsave:
+        save_svg(fig, fig_name, fig_dir)
+
+
+def plot_alde_type(
+    alde_csv: str,
+    lib_list: list,
+    n_sample: int,
+    n_round: int,
+    fig_name: str,
+    ymin1: float = -0.15,
+    ymax1: float = 0.5,
+    ymin2: float = -0.8,
+    ymax2: float = 1.0,
+    h_pad: float = 0,
+    models: list = ["Boosting Ensemble"],
+    acquisition: list = ["GREEDY"],
+    n_top: int = 96,
+    ifpad_y1: bool = False,
+    set_ymin2_scale: bool = True,
+    ifsave: bool = True,
+    fig_dir: str = "figs",
+):
+
+    alde_all = pd.read_csv(alde_csv)
+
+    # Replace NaN values in column 'zs' with the string "none"
+    alde_all["zs"] = alde_all["zs"].fillna("none")
+
+    slice_df = alde_all[
+        (alde_all["rounds"] == n_round)
+        & (alde_all["Encoding"] == "onehot")
+        & (alde_all["Model"].isin(models))
+        & (alde_all["Acquisition"].isin(acquisition))
+        & (alde_all["n_samples"] == n_sample + n_top)
+        & (alde_all["Protein"].isin(lib_list))
+        # & (alde_all["n_mut_cutoff"] == "all")
+    ].copy()
+
+    fig, axes = plt.subplots(2, 9, figsize=(8.4, 6.4))
+
+    # Convert 'Category' column to categorical with defined order
+    slice_df["zs"] = pd.Categorical(
+        slice_df["zs"],
+        categories=["none"]
+        + [o.replace("_score", "") for o in ZS_OPTS]
+        + [
+            "ds-esmif",
+            "ds-ev",
+            "ds-coves",
+        ],
+        ordered=True,
+    )
+
+    slice_df = slice_df.sort_values(by=["zs", "Protein"])
+
+    slice_df["zs"] = slice_df["zs"].replace(ZS_OPTS_LEGEND)
+    slice_df["type"] = slice_df["Protein"].map(lambda x: LIB_INFO_DICT[x]["type"])
+
+    for i, x in enumerate(ALDE_METRICS):
+
+        rand_df = (
+            slice_df[slice_df["zs"] == "Random"][["Protein", "type", x]]
+            .reset_index(drop=True)
+            .copy()
+        )
+
+        for z, zs in enumerate(list(slice_df["zs"].unique()[1:10])):
+            ax = axes[i, z]
+            bar_type_df = (
+                slice_df[slice_df["zs"] == zs][["Protein", "type", x]]
+                .reset_index(drop=True)
+                .copy()
+            )
+
+            # subtract random
+            merg_df = pd.merge(
+                bar_type_df, rand_df, on=["Protein", "type"], how="outer"
+            )
+            merg_df["delta"] = merg_df[x + "_x"] - merg_df[x + "_y"]
+
+            if len(bar_type_df["type"].unique()) == 1:
+                bar_order = ["Enzyme activity"]
+                do_ttest = False
+                bar_width = 0.3
+            else:
+                bar_order = ["Binding", "Enzyme activity"]
+                do_ttest = True
+                bar_width = 0.6
+
+            sns.boxplot(
+                x="type",
+                y="delta",
+                data=merg_df,
+                width=bar_width,
+                ax=ax,
+                order=bar_order,
+                boxprops={
+                    "facecolor": "None",
+                    "edgecolor": FZL_PALETTE["gray"],
+                },
+            )
+
+            sns.stripplot(
+                x="type",
+                y="delta",
+                data=merg_df,
+                order=bar_order,
+                hue="Protein",
+                hue_order=merg_df["Protein"].unique(),
+                jitter=True,
+                size=7.5,
+                palette=glasbey_category10[:12],
+                marker="o",
+                alpha=0.8,
+                ax=ax,
+            )
+
+            labels = [
+                label.get_text().replace("Enzyme activity", "Enzyme\nactivity")
+                for label in ax.get_xticklabels()
+            ]
+
+            if i == 0:
+                ymax = ymax1
+                ax.set_xlabel("")
+                ax.set_xticks([])  # Removes x-axis ticks
+                ax.set_ylim(ymin1, ymax1)
+            else:
+                ymax = ymax2
+                ax.set_xlabel("")
+                ax.set_ylim(ymin2, ymax2)
+                ax.set_xticklabels(labels, rotation=90, ha="center")
+                if set_ymin2_scale:
+                    ax.set_yticks([-0.5, 0, 0.5, 1])
+
+            if z == 0:
+                ax.set_ylabel(ALDE_METRIC_MAP[x])
+                if ifpad_y1 and i == 0:
+                    ax.set_ylabel(ALDE_METRIC_MAP[x], labelpad=12)
+            else:
+                ax.set_ylabel("")
+                ax.set_yticks([])  # Removes y-axis ticks
+
+            # # ax.set_yticks([0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7])
+            if "ds-" in zs:
+                ax_title = (
+                    "Hamming\ndistance\n"
+                    + ZS_OPTS_LEGEND[zs.replace("ds-", "") + "_score"]
+                )
+            else:
+                ax_title = ZS_OPTS_LEGEND[zs + "_score"]
+            ax.legend().remove()
+            ax.set_title(
+                ax_title.replace(" ", "\n"),
+                fontdict={
+                    "fontsize": 10,
+                },
+            )
+
+            # # Hide the top and right spine
+            ax.spines["top"].set_visible(False)
+            ax.spines["right"].set_visible(False)
+
+            ax.axhline(0, color="gray", lw=1, ls="dotted")
+
+            if do_ttest:
+                t_val, p_value = ttest_ind(
+                    list(bar_type_df[bar_type_df["type"] == "Binding"][x]),
+                    list(bar_type_df[bar_type_df["type"] == "Enzyme activity"][x]),
+                    equal_var=False,
+                )
+                print(f"{zs} : t={t_val:.3f} and p={p_value:.3f}")
+
+                # Draw a line between points
+                p = 0.1
+                q = 1
+                annot_y = ymax
+                if p_value < 0.05:
+                    # ax.plot([p+0.5*(q-p), q-0.5*(q-p)], [annot_y, annot_y], color='gray', lw=1.5)
+                    ax.text(
+                        (p + q) * 0.5,
+                        annot_y,
+                        "*",
+                        ha="center",
+                        va="bottom",
+                        color="gray",
+                    )
+
+    axes[0, 8].legend(loc="upper left", bbox_to_anchor=(1, 1.12))
+    plt.tight_layout(pad=0, h_pad=h_pad, w_pad=0.5)
+
+    if ifsave:
+        save_svg(fig, fig_name, fig_dir)
+
+
+def comp_de_mlde_alde_lib(
+    mlde_csv: str,
+    alde_csv: str,
+    de_csv: str,
+    lib_list: list,
+    n_sample: int,
+    fig_name: str,
+    models: list = ["boosting"],
+    n_top: int = 96,
+    ifannotate: bool = False,
+    ifsave: bool = True,
+    fig_dir: str = "figs",
+):
+
+    mlde_df = pd.read_csv(mlde_csv)
+
+    common_slice = mlde_df[
+        (mlde_df["encoding"] == "one-hot")
+        & (mlde_df["model"].isin(models))
+        & (mlde_df["n_sample"] == n_sample)
+        & (mlde_df["n_top"] == n_top)
+        & (mlde_df["lib"].isin(lib_list))
+    ]
+
+    noft_df = common_slice[
+        (common_slice["zs"] == "none") & (common_slice["n_mut_cutoff"] == "all")
+    ]
+
+    no_combo_df = common_slice[
+        (common_slice["n_mut_cutoff"] == "all")
+        & (common_slice["zs"].isin(ZS_OPTS[1:]))
+        & (common_slice["ft_lib"].isin([0.125 * 20 ** 3, 0.125 * 20 ** 4]))
+    ].copy()
+
+    ds_only_df = common_slice[
+        (common_slice["n_mut_cutoff"] == "double") & (common_slice["zs"] == "none")
+    ].copy()
+    ds_only_df["zs"] = ds_only_df["zs"].replace({"none": "ed_score"})
+
+    merge_mlde = pd.concat([noft_df, no_combo_df, ds_only_df], ignore_index=True)
+    merge_mlde["method"] = merge_mlde["zs"].apply(
+        lambda x: "MLDE" if x == "none" else "ftMLDE"
+    )
+    merge_mlde = merge_mlde[["method", "lib", "top_maxes", "if_truemaxs"]].copy()
+
+    slice_alde_list = []
+
+    alde_all = pd.read_csv(alde_csv)
+    alde_all["zs"] = alde_all["zs"].fillna("none")
+
+    for r in [2, 3, 4]:
+
+        slice_alde = alde_all[
+            (alde_all["rounds"] == r)
+            & (alde_all["Encoding"] == "onehot")
+            & (alde_all["Model"] == "Boosting Ensemble")
+            & (alde_all["Acquisition"] == "GREEDY")
+            & (alde_all["n_samples"] == n_sample + n_top)
+            & (alde_all["Protein"].isin(lib_list))
+            & (
+                alde_all["zs"].isin(
+                    ["none"] + [z.replace("_score", "") for z in ZS_OPTS]
+                )
+            )
+        ].copy()
+
+        slice_alde["method"] = slice_alde["zs"].apply(
+            lambda x: f"ALDE x {str(r)}" if x == "none" else f"ftALDE x {str(r)}"
+        )
+        slice_alde_list.append(slice_alde)
+
+    slice_aldes = pd.concat(slice_alde_list)
+
+    merge_mlal = pd.concat(
+        [
+            merge_mlde,
+            slice_aldes[["zs", "Protein", "Mean", "Frac", "method"]].rename(
+                columns={
+                    "Protein": "lib",
+                    "Mean": "top_maxes",
+                    "Frac": "if_truemaxs",
+                }
+            ),
+        ]
+    )
+
+    de_all = pd.read_csv(de_csv)
+
+    merge_demlal = pd.concat(
+        [
+            de_all[de_all["lib"].isin(lib_list)][
+                ["lib", "mean_all", "fraction_max", "de_type"]
+            ].rename(
+                {
+                    "mean_all": "top_maxes",
+                    "fraction_max": "if_truemaxs",
+                    "de_type": "method",
+                },
+                axis=1,
+            ),
+            merge_mlal[["lib", "top_maxes", "if_truemaxs", "method"]],
+        ]
+    )
+    merge_demlal_avg = (
+        merge_demlal[["lib", "top_maxes", "if_truemaxs", "method"]]
+        .groupby(["lib", "method"])
+        .mean()
+        .reset_index()
+    )
+
+    fig, axes = plt.subplots(1, 2, figsize=(10, 3.6))
+
+
+    order = [
+        "DE",
+        "MLDE",
+        "ftMLDE",
+        "ALDE x 2",
+        "ftALDE x 2",
+        "ALDE x 3",
+        "ftALDE x 3",
+        "ALDE x 4",
+        "ftALDE x 4",
+    ]
+
+    merge_demlal_avg_sliced = merge_demlal_avg[
+        ~merge_demlal_avg["method"].isin(["recomb_SSM", "top96_SSM"])
+    ].replace("single_step_DE", "DE")
+
+    for i, m in enumerate(PLOT_MLDE_METRICS):
+ 
+        ax = axes[i]
+
+        sns.boxplot(
+            # x="Type", y="Rho",
+            x="method",
+            y=m,
+            data=merge_demlal_avg_sliced.replace(" x 2", ""),
+            width=0.6,
+            ax=ax,
+            order=order,
+            # color=FZL_PALETTE["light_gray"],# palette="pastel", showmeans=True
+            boxprops={
+                "facecolor": "None",
+                "edgecolor": FZL_PALETTE["gray"],
+            },
+        )
+        # Perform pairwise t-tests between each pair of groups in the `model` column
+        pairs = list(combinations(order, 2))
+        p_values = []
+
+        # Perform t-tests and store p-values
+        for pair in pairs:
+            group1 = merge_demlal_avg_sliced[
+                merge_demlal_avg_sliced["method"] == pair[0]
+            ][m]
+            group2 = merge_demlal_avg_sliced[
+                merge_demlal_avg_sliced["method"] == pair[1]
+            ][m]
+            t_stat, p_value = stats.ttest_ind(group1, group2)
+            p_values.append((pair, p_value))
+
+        # Filter significant results (p < 0.05)
+        significant_pairs = [pair for pair, p_value in p_values if p_value < 0.05]
+
+        # add mean as x for each model
+        # Calculate means for each category (model)
+        means = merge_demlal_avg_sliced.groupby("method")[m].mean().reindex(order)
+
+        # Add mean as a scatter plot (dot) for each model category
+        ax.scatter(
+            x=range(len(means)),  # x-values corresponding to the boxplot positions
+            y=means,
+            color=FZL_PALETTE["black"],  # Color of the mean dot
+            marker="x",  # Shape of the mean marker (dot)
+            alpha=0.8,
+            zorder=20,  # Ensure dots appear on top of the boxplot
+            label="Approach Mean",
+        )
+
+        sns.stripplot(
+            x="method",
+            y=m,
+            data=merge_demlal_avg_sliced.replace(" x 2", ""),
+            hue="lib",
+            hue_order=merge_demlal_avg_sliced["lib"].unique(),
+            jitter=True,
+            size=7.5,
+            alpha=0.8,
+            ax=ax,
+            palette=glasbey_category10[:12],  # Updated palette
+            order=order,
+        )
+
+        ax.set_xlabel("")
+        # Get current xtick labels
+        xticks = ax.get_xticklabels()
+
+        # Update the labels, replacing ' x 2' with ''
+        for label in xticks:
+            new_text = label.get_text().replace(" x 2", "")
+            label.set_text(new_text)
+
+        # rotate x-axis labels
+        ax.set_xticklabels(xticks, rotation=90, ha="center")
+        ax.set_ylabel(PLOT_LINE_PERFORMANCE_YAXIS[i])
+        ax.set_ylim(-0.05, 1.05)
+        # # Hide the top and right spine
+        ax.spines["top"].set_visible(False)
+        ax.spines["right"].set_visible(False)
+        ax.legend().remove()
+
+    def add_stat_annotation(merge_mlal_avg, ax, pair, y_offset=0.06, level=1):
+        """
+        Adds a line and a star between the two groups indicating significance,
+        with staggered y positions to avoid overlap.
+
+        Parameters:
+        - ax: The matplotlib axes object.
+        - pair: The tuple of two categories between which the significance is drawn.
+        - y_offset: The base offset for the lines.
+        - level: The staggered level to place the current annotation.
+        """
+        x1, x2 = order.index(pair[0]), order.index(pair[1])  # Get positions of the bars
+        y_max = merge_mlal_avg[m].max()  # Maximum y-value to determine the line height
+        h = 0.02  # The height difference between the lines
+        y = y_max + y_offset * level  # Increase the y-position for each level
+
+        # Plot the line
+        ax.plot([x1, x1, x2, x2], [y, y + h, y + h, y], lw=1, c=FZL_PALETTE["gray"])
+
+        # Add the star to indicate significance
+        ax.text(
+            (x1 + x2) * 0.5,
+            y + h / 4,
+            "*",
+            ha="center",
+            va="bottom",
+            color=FZL_PALETTE["gray"],
+        )
+
+    if ifannotate:
+        # Add significance lines for each significant pair with increasing levels
+        for i, pair in enumerate(significant_pairs):
+            add_stat_annotation(ax, pair, level=i + 1)
+
+    # Get handles and labels from the existing legend
+    handles, labels = ax.get_legend_handles_labels()
+
+    # Move the "Model Mean" label to the last position
+    handles.append(handles.pop(0))  # Move the first handle (Model Mean) to the end
+    labels.append(labels.pop(0))  # Move the first label (Model Mean) to the end
+
+    # Add a reordered legend
+    axes[1].legend(
+        handles=handles, labels=labels, loc="upper left", bbox_to_anchor=(1.02, 1.02)
+    )
+    # plt.legend(handles=[handles[0]], labels=[labels[0]], loc="upper left", bbox_to_anchor=(1.02, 0.5))
+
+    plt.tight_layout(pad=0, h_pad=0, w_pad=1)
 
     if ifsave:
         save_svg(fig, fig_name, fig_dir)
