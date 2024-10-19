@@ -16,7 +16,7 @@ from copy import deepcopy
 import numpy as np
 import pandas as pd
 from scipy.stats import ks_2samp, skew, kurtosis, cauchy, gaussian_kde
-from scipy.signal import argrelextrema
+from scipy.signal import argrelextrema, find_peaks
 from scipy.special import comb
 
 from Bio.Seq import Seq

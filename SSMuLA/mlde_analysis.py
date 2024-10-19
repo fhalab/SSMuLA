@@ -1897,15 +1897,17 @@ def plot_mlde_attribute_corr(
         .sort_values("lib")
     )
 
+    single_step_de = landscape_attribute_df["single_step_DE_mean_all"]
+
     # Create figure and axes
     fig, ax = plt.subplots(2, 3, figsize=(12, 7.2), sharey=True)
 
     # Define y and y2 values
     y = (
         merge_mldedf["top_maxes"].values
-        - landscape_attribute_df["single_step_DE_mean_all"].values
+        - single_step_de.values
     )
-    y2 = pooled_ft.values - landscape_attribute_df["single_step_DE_mean_all"].values
+    y2 = pooled_ft.values - single_step_de.values
     clist = glasbey_category10[: len(lib_list)]
 
     # Scatter plot data and corresponding labels
@@ -1934,7 +1936,7 @@ def plot_mlde_attribute_corr(
             x_label,
             y_label,
             create_spearman_title(
-                landscape_attribute_df["single_step_DE_mean_all"],
+                single_step_de,
                 landscape_attribute_df[x_col],
                 y,
                 y2,
@@ -1997,6 +1999,7 @@ def plot_mlde_attribute_corr(
 
     if ifsave:
         save_svg(fig, fig_name, fig_dir)
+
 
 
 def slice_alde_ftalde(n: int, alde_all: pd.DataFrame) -> pd.DataFrame:
@@ -2227,6 +2230,73 @@ def plot_alde_attribute_corr(
 
     if ifsave:
         save_svg(fig, fig_name, fig_dir)
+
+
+def get_fold_stats(
+    mlde_csv: str,
+    alde_csv: str,
+    attribute_csv: str,
+    lib_list: list,
+    models: list = ["boosting"],
+    n_sample: int = 384,
+    n_top: int = 96,
+):  
+    merge_mldedf = get_ftmlde_stat(
+        mlde_csv=mlde_csv,
+        lib_list=lib_list,
+        models=models,
+        n_sample=n_sample,
+        n_top=n_top,
+    ).sort_values("lib")
+
+    pooled_ft = merge_mldedf[merge_mldedf["lib"].isin(lib_list)][
+        ["top_maxes_" + zs.replace("_score", "") for zs in ZS_OPTS]
+    ].mean(axis=1, skipna=True)
+
+    # Load and filter data
+    all_landscape_attribute = pd.read_csv(attribute_csv)
+    landscape_attribute_df = (
+        all_landscape_attribute[all_landscape_attribute["lib"].isin(lib_list)]
+        .reset_index(drop=True)
+        .sort_values("lib")
+    )
+
+    single_step_de = landscape_attribute_df["single_step_DE_mean_all"]
+    
+    # Combine arrays into a DataFrame
+    fold_df = pd.DataFrame({
+        "MLDE": merge_mldedf["top_maxes"].values / single_step_de.values,
+        "ftMLDE": pooled_ft.values / single_step_de.values
+    })
+
+    # Add row index (if needed)
+    fold_df.index = merge_mldedf["lib"]
+
+    # now add alde
+    alde_all = pd.read_csv(alde_csv)
+
+    # prep merge alde
+    alde_dfs = [slice_alde_ftalde(n=i, alde_all=alde_all) for i in [4, 3, 2]]
+
+    # Perform the merge step-by-step
+    alde_n = landscape_attribute_df
+    for df in alde_dfs:
+        alde_n = pd.merge(alde_n, df, on="lib")
+
+    merge_df = alde_n[alde_n["lib"].isin(lib_list)].sort_values("lib")
+
+    alde_fold_df = pd.DataFrame({
+        "ALDE": merge_df["top_max_2"] / single_step_de.values,
+        "ftALDE": merge_df["zs_top_max_2"] / single_step_de.values,
+        "ALDE x 3": merge_df["top_max_3"] / single_step_de.values,
+        "ftALDE x 3": merge_df["zs_top_max_3"] / single_step_de.values,
+        "ALDE x 4": merge_df["top_max_4"] / single_step_de.values,
+        "ftALDE x 4": merge_df["zs_top_max_4"] / single_step_de.values
+    })
+
+    alde_fold_df.index = merge_df["lib"]
+
+    return pd.concat([fold_df, alde_fold_df], axis=1, ignore_index=False).round(2)
 
 
 def slice_lib_mlde(
@@ -2629,7 +2699,7 @@ def plot_mlde_type_split(
 def plot_alde_type(
     alde_csv: str,
     lib_list: list,
-    n_sample: int,
+    n_total: int,
     n_round: int,
     fig_name: str,
     ymin1: float = -0.15,
@@ -2639,7 +2709,6 @@ def plot_alde_type(
     h_pad: float = 0,
     models: list = ["Boosting Ensemble"],
     acquisition: list = ["GREEDY"],
-    n_top: int = 96,
     ifpad_y1: bool = False,
     set_ymin2_scale: bool = True,
     ifsave: bool = True,
@@ -2656,7 +2725,7 @@ def plot_alde_type(
         & (alde_all["Encoding"] == "onehot")
         & (alde_all["Model"].isin(models))
         & (alde_all["Acquisition"].isin(acquisition))
-        & (alde_all["n_samples"] == n_sample + n_top)
+        & (alde_all["n_samples"] == n_total)
         & (alde_all["Protein"].isin(lib_list))
         # & (alde_all["n_mut_cutoff"] == "all")
     ].copy()
