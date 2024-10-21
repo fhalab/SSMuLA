@@ -109,7 +109,7 @@ def calc_zs(
     wt = data_processor.get_Seq(fasta_path)
 
     if zs_model_names == "all":
-        zs_model_list = ["esm", "bert", "ev", "ddg"]
+        zs_model_list = ["esm", "ev"]
     else:
         zs_model_list = zs_model_names.split(",")
 

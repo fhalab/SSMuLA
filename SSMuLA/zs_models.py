@@ -205,8 +205,13 @@ class EvMutation(ZeroShotPrediction):
             df_n.loc[:, "n_mut"] = i
             # score_n = pd.DataFrame(score_n, columns=['ev_score'])
 
+            if "fit" in df_n.columns:
+                fit_col = "fit"
+            elif "fitness" in df_n.columns:
+                fit_col = "fitness"
+
             # Choose only the columns we want
-            df_n = df_n[["muts", "fit", "n_mut", "ev_score"]]
+            df_n = df_n[["muts", fit_col, "n_mut", "ev_score"]]
             df_n_list.append(df_n)
 
         return pd.concat(df_n_list, axis=0)
@@ -351,8 +356,13 @@ class ESM(ZeroShotPrediction):
             df_n.loc[:, "n_mut"] = i
             # score_n = pd.DataFrame(score_n, columns=['ev_score'])
 
+            if "fit" in df_n.columns:
+                fit_col = "fit"
+            elif "fitness" in df_n.columns:
+                fit_col = "fitness"
+
             # Choose only the columns we want
-            df_n = df_n[["muts", "fit", "n_mut", "esm_score"]]
+            df_n = df_n[["muts", fit_col, "n_mut", "esm_score"]]
             df_n_list.append(df_n)
 
         return pd.concat(df_n_list, axis=0)
