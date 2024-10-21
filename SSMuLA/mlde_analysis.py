@@ -846,10 +846,10 @@ def plot_mlde_dict(
             )
             ax.fill_between(
                 TOTAL_N_LIST,
-                mlde_df[f"{mlde_metric}_mean"] - mlde_df[f"{mlde_metric}_std"],
-                mlde_df[f"{mlde_metric}_mean"] + mlde_df[f"{mlde_metric}_std"],
+                mlde_df[f"{mlde_metric}_mean"].values.flatten() - mlde_df[f"{mlde_metric}_std"].values.flatten(),
+                mlde_df[f"{mlde_metric}_mean"].values.flatten() + mlde_df[f"{mlde_metric}_std"].values.flatten(),
                 color=MLDE_ALDE_COLORS[i],
-                alpha=0.08,
+                alpha=0.05,
             )
 
         if ifvline:
@@ -1100,13 +1100,13 @@ def plot_de_vs_mlde(
                 linewidth=2,
                 color=MLDE_ALDE_COLORS[i],
             )
-
+     
             ax.fill_between(
                 TOTAL_N_LIST,
-                mlde_df[f"{mlde_metric}_mean"] - mlde_df[f"{mlde_metric}_std"],
-                mlde_df[f"{mlde_metric}_mean"] + mlde_df[f"{mlde_metric}_std"],
+                mlde_df[f"{mlde_metric}_mean"].values.flatten() - mlde_df[f"{mlde_metric}_std"].values.flatten(),
+                mlde_df[f"{mlde_metric}_mean"].values.flatten() + mlde_df[f"{mlde_metric}_std"].values.flatten(),
                 color=MLDE_ALDE_COLORS[i],
-                alpha=0.08,
+                alpha=0.05,
             )
 
         de_colors = sns.color_palette("Greys", 4)
@@ -1225,10 +1225,10 @@ def plot_ftmlde_simple(
 
             ax.fill_between(
                 TOTAL_N_LIST,
-                mlde_df[f"{mlde_metric}_mean"] - mlde_df[f"{mlde_metric}_std"],
-                mlde_df[f"{mlde_metric}_mean"] + mlde_df[f"{mlde_metric}_std"],
+                mlde_df[f"{mlde_metric}_mean"].values.flatten() - mlde_df[f"{mlde_metric}_std"].values.flatten(),
+                mlde_df[f"{mlde_metric}_mean"].values.flatten() + mlde_df[f"{mlde_metric}_std"].values.flatten(),
                 color=FZL_PALETTE[mlde_color_list[i % len(mlde_color_list)]],
-                alpha=0.01,
+                alpha=0.05,
             )
 
         ax.axvline(n_corr + n_top, color="gray", linewidth=0.5, linestyle="dotted")
@@ -1338,10 +1338,10 @@ def plot_ftmlde_doubles(
 
             ax.fill_between(
                 TOTAL_N_LIST,
-                mlde_df[f"{mlde_metric}_mean"] - mlde_df[f"{mlde_metric}_std"],
-                mlde_df[f"{mlde_metric}_mean"] + mlde_df[f"{mlde_metric}_std"],
+                mlde_df[f"{mlde_metric}_mean"].values.flatten() - mlde_df[f"{mlde_metric}_std"].values.flatten(),
+                mlde_df[f"{mlde_metric}_mean"].values.flatten() + mlde_df[f"{mlde_metric}_std"].values.flatten(),
                 color=FZL_PALETTE[FTMLDE_COLOR_LIST[i % len(FTMLDE_COLOR_LIST)]],
-                alpha=0.01,
+                alpha=0.05,
             )
             if i > 1:
                 # plot the double site same color but different linestyle and marker
@@ -1362,12 +1362,12 @@ def plot_ftmlde_doubles(
 
                 ax.fill_between(
                     TOTAL_N_LIST,
-                    mlde_df[f"{mlde_metric}_mean"] - mlde_df[f"{mlde_metric}_std"],
-                    mlde_df[f"{mlde_metric}_mean"] + mlde_df[f"{mlde_metric}_std"],
+                    mlde_df[f"{mlde_metric}_mean"].values.flatten() - mlde_df[f"{mlde_metric}_std"].values.flatten(),
+                    mlde_df[f"{mlde_metric}_mean"].values.flatten() + mlde_df[f"{mlde_metric}_std"].values.flatten(),
                     color=GRAY_COLORS[
                         "gray-" + FTMLDE_COLOR_LIST[i % len(FTMLDE_COLOR_LIST)]
                     ],
-                    alpha=0.01,
+                    alpha=0.05,
                 )
 
         ax.axvline(n_corr + n_top, color="gray", linewidth=0.5, linestyle="dotted")
@@ -1487,10 +1487,10 @@ def plot_ftmlde_ensemble(
 
             ax.fill_between(
                 TOTAL_N_LIST,
-                mlde_df[f"{mlde_metric}_mean"] - mlde_df[f"{mlde_metric}_std"],
-                mlde_df[f"{mlde_metric}_mean"] + mlde_df[f"{mlde_metric}_std"],
+                mlde_df[f"{mlde_metric}_mean"].values.flatten() - mlde_df[f"{mlde_metric}_std"].values.flatten(),
+                mlde_df[f"{mlde_metric}_mean"].values.flatten() + mlde_df[f"{mlde_metric}_std"].values.flatten(),
                 color=FZL_PALETTE[mlde_color_list[i % len(mlde_color_list)]],
-                alpha=0.01,
+                alpha=0.05,
             )
             if i > 0:
 
@@ -1512,12 +1512,12 @@ def plot_ftmlde_ensemble(
 
                 ax.fill_between(
                     TOTAL_N_LIST,
-                    mlde_df[f"{mlde_metric}_mean"] - mlde_df[f"{mlde_metric}_std"],
-                    mlde_df[f"{mlde_metric}_mean"] + mlde_df[f"{mlde_metric}_std"],
+                    mlde_df[f"{mlde_metric}_mean"].values.flatten() - mlde_df[f"{mlde_metric}_std"].values.flatten(),
+                    mlde_df[f"{mlde_metric}_mean"].values.flatten() + mlde_df[f"{mlde_metric}_std"].values.flatten(),
                     color=GRAY_COLORS[
                         "gray-" + mlde_color_list[i % len(mlde_color_list)]
                     ],
-                    alpha=0.01,
+                    alpha=0.05,
                 )
 
         ax.axvline(n_corr + n_top, color="gray", linewidth=0.5, linestyle="dotted")
@@ -1627,7 +1627,7 @@ def plot_ftalde(
                     mlde_df[f"{mlde_metric}_mean"] - mlde_df[f"{mlde_metric}_std"],
                     mlde_df[f"{mlde_metric}_mean"] + mlde_df[f"{mlde_metric}_std"],
                     color=FZL_PALETTE[FTMLDE_COLOR_LIST[i % len(FTMLDE_COLOR_LIST)]],
-                    alpha=0.01,
+                    alpha=0.05,
                 )
                 if i > 1:
                     # plot the double site same color but different linestyle and marker
@@ -1648,12 +1648,12 @@ def plot_ftalde(
 
                     axes[r, m].fill_between(
                         TOTAL_N_LIST,
-                        mlde_df[f"{mlde_metric}_mean"] - mlde_df[f"{mlde_metric}_std"],
-                        mlde_df[f"{mlde_metric}_mean"] + mlde_df[f"{mlde_metric}_std"],
+                        mlde_df[f"{mlde_metric}_mean"].values.flatten() - mlde_df[f"{mlde_metric}_std"].values.flatten(),
+                        mlde_df[f"{mlde_metric}_mean"].values.flatten() + mlde_df[f"{mlde_metric}_std"].values.flatten(),
                         color=GRAY_COLORS[
                             "gray-" + FTMLDE_COLOR_LIST[i % len(FTMLDE_COLOR_LIST)]
                         ],
-                        alpha=0.01,
+                        alpha=0.05,
                     )
 
             axes[r, m].axvline(

@@ -18,13 +18,12 @@ from pathlib import Path
 from tqdm import tqdm
 from typing import List, Tuple, Optional
 
-from SSMuLA.zs_models import ZeroShotPrediction, ESM, EvMutation
-from SSMuLA.zs.zs_data import DataProcessor
-
-
 import warnings
 
 
+from SSMuLA.zs_models import ZeroShotPrediction, ESM, EvMutation
+from SSMuLA.zs_data import DataProcessor
+from SSMuLA.landscape_global import lib2prot
 from SSMuLA.util import get_file_name, checkNgen_folder
 
 
@@ -32,7 +31,8 @@ from SSMuLA.util import get_file_name, checkNgen_folder
 
 
 def calc_zs(
-    input_folder: str,
+    fit_df_path: str,
+    scalefit: str = "scale2max",
     output_folder: str = "results/zs",
     zs_model_names: str = "all",
     ev_model_folder: str = "data/evmodels",
@@ -45,7 +45,7 @@ def calc_zs(
 
     Args:
     - input_folder: str, input folder of landscape
-        ie, 'data/processed/AAV2_Bryant_2021',
+        ie, 'data/DHFR,
         contains csv and fasta with wt seq
     - output_folder: str = "results/zs", with landscape subfolders
     - zs_model_names: str, name(s) of zero-shot models to use seperated by comma,
@@ -61,21 +61,20 @@ def calc_zs(
     """
 
     # deal with the /
-    input_folder = os.path.normpath(input_folder)
+    input_folder = os.path.normpath(fit_df_path.split(scalefit)[0])
     output_folder = os.path.normpath(output_folder)
 
     landscape_name = os.path.basename(input_folder)
 
-    fit_df_path = os.path.join(input_folder, landscape_name + ".csv")
     fasta_path = os.path.join(input_folder, landscape_name + ".fasta")
 
     ev_model_path = os.path.join(
-        os.path.normpath(ev_model_folder), landscape_name, landscape_name + ".model"
+        os.path.normpath(ev_model_folder), landscape_name + ".model"
     )
 
     # check if file exists
-    assert os.path.exists(fit_df_path) == True, f"{fit_df_path} does not exist"
-    assert os.path.exists(fasta_path) == True, f"{fasta_path} does not exist"
+    assert os.path.exists(fit_df_path), f"{fit_df_path} does not exist"
+    assert os.path.exists(fasta_path), f"{fasta_path} does not exist"
 
     output_folder = checkNgen_folder(output_folder)
     landscape_output_folder = checkNgen_folder(
@@ -180,11 +179,12 @@ def calc_zs(
 
 # TODO FIX EV MODEL PATH
 def calc_all_zs(
-    landscape_folder: str = "data/processed",
+    landscape_folder: str = "data",
+    scalefit = "scale2max",
     dataset_list: list[str] = [],
     output_folder: str = "results/zs",
     zs_model_names: str = "all",
-    ev_model_folder: str = "data/evmodels",
+    ev_model_folder: str = "data",
     regen_esm: str = False,
     rerun_zs: str = False,
 ):
@@ -192,7 +192,7 @@ def calc_all_zs(
     A function for calc same list of zs scores for all landscape datasets
 
     Args:
-    - landscape_folder: str = "data/processed", folder path for all landscape data
+    - landscape_folder: str = "data", folder path for all landscape data
     - dataset_list: list[str] = [], a list of encoders over write dataset_folder,
         ie. ['TrpB3I_Johnston_2023']
     - output_folder: str = "results/zs",
@@ -205,7 +205,8 @@ def calc_all_zs(
     """
 
     if len(dataset_list) == 0:
-        landscape_paths = glob(os.path.normpath(landscape_folder) + "/*/")
+        landscape_paths = glob(os.path.normpath(landscape_folder) + "/*/" + scalefit + "/*.csv")
+        print(f"Landscape paths: {landscape_paths}")
     else:
         landscape_paths = [
             os.path.join(landscape_folder, dataset) for dataset in dataset_list
@@ -214,7 +215,8 @@ def calc_all_zs(
     for landscape_path in landscape_paths:
         print(f"Calc zs {zs_model_names} for {landscape_path}...")
         _ = calc_zs(
-            input_folder=landscape_path,
+            fit_df_path=landscape_path,
+            scalefit=scalefit,
             output_folder=output_folder,
             zs_model_names=zs_model_names,
             ev_model_folder=ev_model_folder,

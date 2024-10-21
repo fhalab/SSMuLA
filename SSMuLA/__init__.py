@@ -22,6 +22,3 @@ __version__ = '1.0.0'
 __author__ = 'Francesca-Zhoufan Li'
 __author_email__ = 'fzl@caltech.edu'
 __license__ = 'GPL3'
-
-from SSMuLA.example import Example
-# from SSMuLA.fitness_process_vis import *

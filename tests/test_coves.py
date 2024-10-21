@@ -19,8 +19,8 @@ if __name__ == "__main__":
     f = open(os.path.join(log_folder, f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}.out"), 'w')
     sys.stdout = f
 
-    # run_all_coves(patern=["coves_data/TEV1/TEV1.pdb"], n_ave=100)
-    append_all_coves_scores(["TrpB3F"])
+    run_all_coves(n_ave=100)
+    append_all_coves_scores()
 
     f.close()
 

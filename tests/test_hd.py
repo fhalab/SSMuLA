@@ -17,11 +17,11 @@ if __name__ == "__main__":
     f = open(os.path.join(log_folder, f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}.out"), 'w')
     sys.stdout = f
 
-    # run_hd_avg_fit(
-    #     data_dir = "data4upload",
-    #     num_processes=256, 
-    #     hd_dir = "results/hd_fit",
-    # )
+    run_hd_avg_fit(
+        data_dir = "data4upload",
+        num_processes=256, 
+        hd_dir = "results/hd_fit",
+    )
 
     run_hd_avg_metric()
 
