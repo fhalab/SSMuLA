@@ -228,3 +228,6 @@ python -m tests.test_alde
 
 ### Analysis and paper figures
 * All notebooks in `fig_notebooks` are used to reproduce figures in the paper with files downloaded from [Zenodo](10.5281/zenodo.13910506)
+
+## Contact
+* [Francesca-Zhoufan Li](mailto:fzl@caltech.edu)

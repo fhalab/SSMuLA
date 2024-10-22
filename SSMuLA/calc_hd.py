@@ -229,8 +229,8 @@ def run_hd_avg_metric(
 
 def plot_hd_avg_fit(
     figname: str,
-    hd_fit_dir: str = "results4upload/hd/hd_fit",
-    fit_dir: str = "data4upload",
+    hd_fit_dir: str = "results/hd/hd_fit",
+    fit_dir: str = "data",
     fitscale: str = "scale2max",
     ifsave: bool = True,
     fig_dir: str = "figs",
@@ -331,7 +331,7 @@ def plot_hd_avg_fit(
 def plot_hd_corr(
     metric: str,
     figname: str,
-    hd_corr_dir: str = "results4upload/hd/hd_corr",
+    hd_corr_dir: str = "results/hd/hd_corr",
     ifsave: bool = True,
     fig_dir: str = "figs",
 ):

@@ -736,8 +736,8 @@ def run_zs_analysis(
 def plot_zs_corr(
     n_mut_cutoff="all",
     active_cutoff=1,
-    lib_stat_csv="results4upload/landscape/lib_stats.csv",
-    zs_df_dir="results/zs_comb_6/none/scale2max/",
+    lib_stat_csv="results/landscape/lib_stats.csv",
+    zs_df_dir="results/zs_comb/none/scale2max/",
     save_dir="figs",
     fig_id="3d",
     ifsave=True,
@@ -811,8 +811,8 @@ def plot_zs_corr(
         )
 
 def parse_zs(
-    zs_sum_csv: str = "results/zs_sum_6/none/zs_stat_scale2max.csv",
-    zs_parse_csv: str = "results/zs_sum_6/none/zs_stat_parsed.csv",
+    zs_sum_csv: str = "results/zs_sum/none/zs_stat_scale2max.csv",
+    zs_parse_csv: str = "results/zs_sum/none/zs_stat_parsed.csv",
 ) -> pd.DataFrame:
 
     """

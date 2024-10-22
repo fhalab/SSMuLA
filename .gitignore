@@ -3,6 +3,10 @@ data
 data/
 data/*
 
+data_old
+data_old/
+data_old/*
+
 data4upload
 data4upload/
 data4upload/*
@@ -23,6 +27,10 @@ results
 results/
 results/*
 results.tar.gz
+
+results_old
+results_old/
+results_old/*
 
 results4upload
 results4upload/

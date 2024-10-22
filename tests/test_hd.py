@@ -18,7 +18,7 @@ if __name__ == "__main__":
     sys.stdout = f
 
     run_hd_avg_fit(
-        data_dir = "data4upload",
+        data_dir = "data",
         num_processes=256, 
         hd_dir = "results/hd_fit",
     )
