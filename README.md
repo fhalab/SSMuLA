@@ -9,7 +9,7 @@
 ```
 conda env create -f SSMuLA.yml
 ```
-* Then intall EVmutation from the [develop branch](https://github.com/debbiemarkslab/EVcouplings/archive/develop.zip) after the environment is created
+* Then install EVmutation from the [develop branch](https://github.com/debbiemarkslab/EVcouplings/archive/develop.zip) after the environment is created
 * For the ESM-IF environment
 ```
 conda create -n inverse python=3.9
@@ -73,12 +73,12 @@ Copy code
 ```
 python -m tests.test_preprocess
 ```
-with more detailed options specified within the test file
+refer to the test file and the script documentation for further details
 * Processed with `fitness_process_vis`
 * Rename columns to be `AAs`, `AA1`, `AA2`, `AA3`, `AA4`, `fitness`, add `active` if not already there and add `muts` columns
 * Scale to `max` (with option to scale to `parent`)
 * Processed data saved in `scale2max` folder
-* The landcape stats will be saved 
+* The landscape stats will be saved 
 
 
 ### Landscape attributes
@@ -87,7 +87,7 @@ with more detailed options specified within the test file
 ```
 python -m tests.local_optima
 ```
-with more detailed options specified within the test file
+refer to the test file and the script documentation for further details
 * Calculate local optima with `calc_local_optima` function in `SSMuLA.local_optima`
 
 #### Pairwise epistasis
@@ -95,9 +95,9 @@ with more detailed options specified within the test file
 ```
 python -m tests.pairwise_epistasis
 ```
-with more detailed options specified within the test file
+refer to the test file and the script documentation for further details
 * Calculate pairwise epistasis with `calc_all_pairwise_epistasis` function in `SSMuLA.pairwise_epistasis`
-* Start from all active variants scaled to max fitenss without post filtering
+* Start from all active variants scaled to max fitness without post filtering
 * Initial results will be saved under the default path `results/pairwise_epistasis` folder (corresponding to the `active_start` subfolder in the zenodo repo)
 * Post processing the output with `plot_pairwise_epistasis` function in `SSMuLA.pairwise_epistasis`
 * Post processed results will be saved under the default path `results/pairwise_epistasis_dets` folder with summary files (corresponding to the `processed` subfolder) and `results/pairwise_epistasis_vis` for each of the landscape with a master summary file across all landscapes (in the `pairwise_epistasis_summary.csv`)
@@ -116,7 +116,7 @@ with more detailed options specified within the test file
 ```
 python -m tests.test_ev_esm
 ```
-with more detailed options specified within the test file
+refer to the test file and the script documentation for further details
 
 #### Hamming distance 
 * Directly calculated from `n_mut`  
@@ -125,15 +125,15 @@ with more detailed options specified within the test file
 python -m tests.hamming_distance
 ```
 to deploy `run_hd_avg_fit` and `run_hd_avg_metric` from `SSMuLA.calc_hd`
-with more detailed options specified within the test file
+refer to the test file and the script documentation for further details
 
 #### ESM-IF
 * Run
 ```
 python -m tests.test_esmif
 ```
-with more detailed options specified within the test file
-* Genenerate the input fasta files with `get_all_mutfasta` from `SSMuLA.zs_data` to be used in ESM-IF
+refer to the test file and the script documentation for further details
+* Generate the input fasta files with `get_all_mutfasta` from `SSMuLA.zs_data` to be used in ESM-IF
 * Set up the environment for [ESM-IF](https://github.com/facebookresearch/esm?tab=readme-ov-file#invf) to 
 ```
 conda create -n inverse python=3.9
@@ -149,7 +149,7 @@ or use
 ```
 ./esmif.sh
 ```
-* ESM-IF results will be saved in the same directory as the `emsif.sh` script
+* ESM-IF results will be saved in the same directory as the `esmif.sh` script
 
 #### CoVES
 * Follow the instructions in the [CoVES](https://github.com/ddingding/CoVES/tree/publish)
@@ -163,7 +163,7 @@ or use
 ```
 python -m tests.test_triad_pre
 ```
-with more detailed options specified within the test file
+refer to the test file and the script documentation for further details
 * With `triad-2.1.3` local command line
 * Prepare structure with `2prep_structures.sh`
 * Run `3getfixed.sh`
@@ -175,7 +175,7 @@ with more detailed options specified within the test file
 ```
 python -m tests.test_zs
 ```
-with more detailed options specified within the test file
+refer to the test file and the script documentation for further details
 
 ### Simulations
 #### DE
@@ -188,7 +188,7 @@ and
 ```
 python -m tests.test_de_vis
 ```
-with more detailed options specified within the test file
+refer to the test file and the script documentation for further details
 
 
 #### MLDE and ftMLDE
@@ -205,21 +205,21 @@ python -m tests.test_mlde
 ```
 * Important options including:
     * `n_mut_cutoffs`: list of integers for Hamming distance cutoff options where `[0]` means none and `[2]` for Hamming distance of two for ensemble
-    * `zs_predictors`: list of strings for zero-shot predictors, i.e. `["none", "Triad", "ev", "esm"]` where `none` means not focused training and thus default MLDE runs; the list can be extended for none Hamming distance ensemble, including `["Triad-esmif", "Triad-ev", "Triad-esm", "two-best"]`
+    * `zs_predictors`: list of strings for zero-shot predictors, i.e. `["none", "Triad", "ev", "esm"]` where `none` means not focused training and thus default MLDE runs; the list can be extended for non-Hamming distance ensemble, including `["Triad-esmif", "Triad-ev", "Triad-esm", "two-best"]`
     * `ft_lib_fracs`: list of floats for fraction of libraries to use for focused training, i.e. `[0.5, 0.25, 0.125]`
     * `encoding`: list of strings for encoding options, i.e. `["one-hot"] + DEFAULT_LEARNED_EMB_COMBO`
     * `model_classes`: list of strings for model classes, i.e. `["boosting", "ridge"]`
-    * `n_samples`: list of integers for number of traiing samples to use, i.e. `[96, 384]`
+    * `n_samples`: list of integers for number of training samples to use, i.e. `[96, 384]`
     * `n_split`: integer for number of splits for cross-validation, i.e. `5`
     * `n_replicate`: integer for number of replicates for each model, i.e. `50`
     * `n_tops`: integer for number of variants to test the prediction, i.e. `[96, 384]`
-with more detailed options specified within the test file
-* Run `MLDESum` from `SSMuLA.mlde_analysis` to get the summary dataframe and optional visulization
+refer to the test file and the script documentation for further details
+* Run `MLDESum` from `SSMuLA.mlde_analysis` to get the summary dataframe and optional visualization
 ```
 python -m tests.test_mlde_vis
 ```
 
-#### ADLE and ftALDE
+#### ALDE and ftALDE
 * See details in [alde4ssmula](https://github.com/fhalab/alde4ssmula) repository
 * `aggregate_alde_df` from `SSMuLA.alde_analysis` to get the summary dataframe
 ```
