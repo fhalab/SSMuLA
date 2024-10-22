@@ -1,7 +1,6 @@
 # SSMuLA
 
 ## About
-
 * Code base termed "Site Saturation Mutagenesis Landscape Analysis (SSMuLA)" for paper titled "Evaluation of Machine Learning-Assisted Directed Evolution Across Diverse Combinatorial Landscapes"
 * Data and results can be found at [Zenodo](10.5281/zenodo.13910506)
 
@@ -42,6 +41,13 @@ conda env create -f MLDE_lite.yml
     - `fitness_landscape`: the folder containing csv files for the mutants and fitness values from the original sources
     - `scale2max`: the folder containing processed fitness csv files returned from the `process_all` function in the `SSMuLA.fitness_process_vis` module
 * Landscapes summarized in the table below and described in detail in the paper:
+
+It looks like the markdown table formatting might be broken due to extra spaces or lack of alignment. Here’s a fixed version of your table:
+
+markdown
+Copy code
+* Landscapes summarized in the table below and described in detail in the paper:
+
 | Landscape | PDB ID | Sites                  |
 |-----------|--------|------------------------|
 | ParD2     | 6X0A   | I61, L64, K80           |
