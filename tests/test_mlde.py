@@ -22,55 +22,22 @@ if __name__ == "__main__":
     sys.stdout = f
 
 
-    # zs_folder = "results/zs_comb_5"
-    # mlde_folder = "results/mlde_coves_2"
+    # zs_folder = "results/zs_comb"
+    # mlde_folder = "results/mlde"
 
-
+    # example for running all zs predictors with one-hot encoding
+    # no hamming distance pre filtering
     # run_all_mlde_parallelized(
-    #     encodings=["one-hot"],
-    #     n_mut_cutoffs=[0],
-    #     zs_predictors=["ev", "coves", "esm", "esmif", "Triad"],
-    #     n_samples=[384],
-    #     n_replicate=50,
-    #     n_job=96,
-    #     all_libs=False,
-    #     ft_first=True,
-    #     ft_lib_fracs=[0.0625],
-    #     lib_list=["TrpB3F"],
-    #     mlde_folder="results/mlde_TrpB3F",
-    #     zs_folder="results/zs_comb_6",
-        
-    # )
-
-
-
-    # run_all_mlde_parallelized(
-    #     encodings=["one-hot"],
+    #     encodings=["one-hot"], # modify to `DEFAULT_LEARNED_EMB_COMBO`` for all pregenerated encodings
     #     n_mut_cutoffs=[0],
     #     zs_predictors=["none", "ev", "coves", "esm", "esmif", "Triad", "two-best", "Triad-esmif", "Triad-ev", "Triad-esm"],
     #     n_samples=[384, 96, 24, 48],
     #     n_replicate=50,
     #     n_job=96,
-    #     all_libs=False,
+    #     all_libs=True,
     #     ft_first=True,
-    #     lib_list=["TrpB3F"],
-    #     mlde_folder="results/mlde_TrpB3F",
-    #     zs_folder="results/zs_comb_6",
-        
-    # )
-
-    # run_all_mlde_parallelized(
-    #     encodings=["one-hot"],
-    #     n_mut_cutoffs=[2],
-    #     zs_predictors=["none", "ev", "coves", "esm", "esmif", "Triad"],
-    #     n_samples=[384, 96, 24, 48],
-    #     n_replicate=50,
-    #     n_job=96,
-    #     all_libs=False,
-    #     ft_first=False,
-    #     lib_list=["TrpB3F"],
-    #     mlde_folder="results/mlde_TrpB3F",
-    #     zs_folder="results/zs_comb_6",
+    #     mlde_folder=mlde_folder,
+    #     zs_folder=zs_folder,
     # )
 
     # run_all_mlde_parallelized(
@@ -120,21 +87,21 @@ if __name__ == "__main__":
     # )
 
 
-    run_all_mlde_parallelized(
-        encodings=DEFAULT_LEARNED_EMB_COMBO,
-        n_mut_cutoffs=[0],
-        zs_predictors=["ev"],
-        n_samples=[384],
-        n_replicate=50,
-        n_job=96,
-        all_libs=False,
-        ft_first=True,
-        lib_list=["ParD2", "ParD3"],
-        mlde_folder="results/mlde_emb",
-        zs_folder="results/zs_comb_6",
-        ft_lib_fracs=[0.125],
-        model_classes = ["boosting"]
-    )
+    # run_all_mlde_parallelized(
+    #     encodings=DEFAULT_LEARNED_EMB_COMBO,
+    #     n_mut_cutoffs=[0],
+    #     zs_predictors=["ev"],
+    #     n_samples=[384],
+    #     n_replicate=50,
+    #     n_job=96,
+    #     all_libs=False,
+    #     ft_first=True,
+    #     lib_list=["ParD2", "ParD3"],
+    #     mlde_folder="results/mlde_emb",
+    #     zs_folder="results/zs_comb_6",
+    #     ft_lib_fracs=[0.125],
+    #     model_classes = ["boosting"]
+    # )
 
 
     # run_all_mlde_parallelized(
@@ -677,5 +644,5 @@ if __name__ == "__main__":
         mlde_folder: str = "results/mlde",
         all_libs: bool = True,
         lib_list: list[str] = [],
-    ):
+    )
     """

@@ -20,8 +20,6 @@ if __name__ == "__main__":
     )
     sys.stdout = f
 
-    # MergeMLDEAttributes(mlde_path = "results4upload/mlde/all_results.csv", merge_dir = "results/merged_2", models=["boosting"])
-
     # MergeLandscapeAttributes(
     #     lib_stat_path="results/fitness_distribution/max/all_lib_stats.csv",
     #     loc_opt_path="results/local_optima/scale2max.csv",
@@ -31,42 +29,17 @@ if __name__ == "__main__":
     #     merge_dir="results/merged",
     # )
 
+    # MergeMLDEAttributes(mlde_path = "results/mlde/all_results.csv", merge_dir = "results/merged_2", models=["boosting"])
+
+
     perfom_corr(
         n_mut_cutoff=0,
         n_list=[384],
-        zs_path="results/zs_sum_6/none/zs_stat_scale2max.csv",
-        mlde_path="results/mlde/all_df_comb_onehot_5.csv",
-        corr_dir="results/corr_4",
+        zs_path="results/zs_sum/none/zs_stat_scale2max.csv",
+        mlde_path="results/mlde/all_df_comb_onehot.csv",
+        corr_dir="results/corr",
         ifplot=False,
     )
-
-    # perfom_corr(
-    #     n_mut_cutoff=0,
-    #     n_list=[384],
-    #     zs_path="results/zs_sum_5/none/zs_stat_scale2max.csv",
-    #     mlde_path="results/mlde/all_df_comb_onehot_2.csv",
-    #     corr_dir="results/corr_3",
-    #     ifplot=False,
-    # )
-
-    # perfom_corr(
-    #     n_mut_cutoff=0,
-    #     n_list=[384],
-    #     filter_active=0,
-    #     zs_path="results/zs_sum_5/none/zs_stat_scale2max.csv",
-    #     mlde_path="results/mlde/all_df_comb_onehot_2.csv",
-    #     corr_dir="results/corr_3",
-    #     ifplot=False,
-    # )
-
-    # perfom_corr(
-    #     n_mut_cutoff=2,
-    #     n_list=[384],
-    #     zs_path="results/zs_sum_5/none/zs_stat_scale2max.csv",
-    #     mlde_path="results/mlde/all_df_comb_onehot_2.csv",
-    #     corr_dir="results/corr_3",
-    #     ifplot=False,
-    # )
 
     """
 
@@ -77,7 +50,7 @@ if __name__ == "__main__":
         lib_stat_path: str = "results/fitness_distribution/max/all_lib_stats.csv",
         loc_opt_path: str = "results/local_optima/scale2max.csv",
         pwe_path: str = "results/pairwise_epistasis_vis/none/scale2max.csv",
-        zs_path: str = "results/zs_sum_5/none/zs_stat_scale2max.csv",
+        zs_path: str = "results/zs_sum/none/zs_stat_scale2max.csv",
         de_path: str = "results/de/DE-active/scale2max/all_landscape_de_summary.csv",
         merge_dir: str = "results/merged",
     )
@@ -108,7 +81,7 @@ if __name__ == "__main__":
         pwe_path: str = "results/pairwise_epistasis_vis/none/scale2max.csv",
         zs_path: str = "results/zs_sum/none/zs_stat_scale2max.csv",
         de_path: str = "results/de/DE-active/scale2max/all_landscape_de_summary.csv",
-        mlde_path: str = "results/mlde/all_df_comb_onehot_2.csv",
+        mlde_path: str = "results/mlde/all_df_comb_onehot.csv",
         corr_dir: str = "results/corr",
         n_mut_cutoff: int = 0,
         filter_active: float = 1,

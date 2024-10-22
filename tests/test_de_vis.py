@@ -18,9 +18,7 @@ if __name__ == "__main__":
 
     run_plot_de(
         scale_types = ["scale2max"],
-        de_opts = ["DE-active"], # "DE-0"
-        all_lib = False,
-        lib_list = ["T7"],
+        de_opts = ["DE-active"],
     )
 
     """

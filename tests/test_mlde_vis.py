@@ -22,35 +22,12 @@ if __name__ == "__main__":
     )
     sys.stdout = f
 
-    # MLDESum(
-    #     mlde_results_dir = "results/mlde_TrpB3F/saved",
-    #     mlde_vis_dir = "results/mlde_TrpB3F/vis"
-    # )
 
     MLDESum(
-        mlde_results_dir = "results/mlde_emb/saved",
-        mlde_vis_dir = "results/mlde_emb/vis"
+        mlde_results_dir = "results/mlde/saved",
+        mlde_vis_dir = "results/mlde/vis"
     )
 
-    # MLDESum(
-    #     mlde_results_dir = "results/mlde_ft3/saved",
-    #     mlde_vis_dir = "results/mlde_ft3/vis"
-    # )
-
-    # MLDESum(
-    #     mlde_results_dir = "results/mlde_3/saved",
-    #     mlde_vis_dir = "results/mlde_3/vis"
-    # )
-
-    # MLDESum(
-    #     mlde_results_dir = "results/mlde_hm2zs_3/saved",
-    #     mlde_vis_dir = "results/mlde_hm2zs_3/vis"
-    # )
-
-    # MLDESum(
-    #     mlde_results_dir = "results/mlde_twobest_2/saved",
-    #     mlde_vis_dir = "results/mlde_twobest_2/vis"
-    # )
 
     """
     MLDESum:

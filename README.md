@@ -67,6 +67,7 @@ conda env create -f MLDE_lite.yml
 ```
 python -m tests.test_preprocess
 ```
+with more detailed options specified within the test file
 * Processed with `fitness_process_vis`
 * Rename columns to be `AAs`, `AA1`, `AA2`, `AA3`, `AA4`, `fitness`, add `active` if not already there and add `muts` columns
 * Scale to `max` (with option to scale to `parent`)
@@ -80,6 +81,7 @@ python -m tests.test_preprocess
 ```
 python -m tests.local_optima
 ```
+with more detailed options specified within the test file
 * Calculate local optima with `calc_local_optima` function in `SSMuLA.local_optima`
 
 #### Pairwise epistasis
@@ -87,6 +89,7 @@ python -m tests.local_optima
 ```
 python -m tests.pairwise_epistasis
 ```
+with more detailed options specified within the test file
 * Calculate pairwise epistasis with `calc_all_pairwise_epistasis` function in `SSMuLA.pairwise_epistasis`
 * Start from all active variants scaled to max fitenss without post filtering
 * Initial results will be saved under the default path `results/pairwise_epistasis` folder (corresponding to the `active_start` subfolder in the zenodo repo)
@@ -102,7 +105,12 @@ python -m tests.pairwise_epistasis
 * Model parameters in the `.model` files are downloaded and renamed
 
 #### ESM
-* The orignal 
+* The logits will be generated and saved in the output folder
+* Run
+```
+python -m tests.test_ev_esm
+```
+with more detailed options specified within the test file
 
 #### Hamming distance 
 * Directly calculated from `n_mut`  
@@ -111,12 +119,14 @@ python -m tests.pairwise_epistasis
 python -m tests.hamming_distance
 ```
 to deploy `run_hd_avg_fit` and `run_hd_avg_metric` from `SSMuLA.calc_hd`
+with more detailed options specified within the test file
 
 #### ESM-IF
 * Run
 ```
 python -m tests.test_esmif
 ```
+with more detailed options specified within the test file
 * Genenerate the input fasta files with `get_all_mutfasta` from `SSMuLA.zs_data` to be used in ESM-IF
 * Set up the environment for [ESM-IF](https://github.com/facebookresearch/esm?tab=readme-ov-file#invf) to 
 ```
@@ -143,30 +153,72 @@ or use
 
 #### Triad
 * Prep mutation file in `.mut` format such as `A_1A+A_2A+A_3A+A_4A` with `TriadGenMutFile` class in `SSMuLA.triad_prepost` 
+* Run
+```
+python -m tests.test_triad_pre
+```
+with more detailed options specified within the test file
 * With `triad-2.1.3` local command line
 * Prepare structure with `2prep_structures.sh`
-* Ran `3getfixed.sh`
+* Run `3getfixed.sh`
 * Parse results with `ParseTriadResults` class in `SSMuLA.triad_prepost`
+
 
 #### Combine all zs
 * Run
 ```
 python -m tests.test_zs
 ```
+with more detailed options specified within the test file
 
 ### Simulations
 #### DE
 * Run `de_simulations` and visualise with `plot_de_simulations`
+* Run
+```
+python -m tests.test_de
+```
+and
+```
+python -m tests.test_de_vis
+```
+with more detailed options specified within the test file
+
 
 #### MLDE and ftMLDE
-* 
+* Use `MLDE_lite` environment
+* For using learned ESM embeddings, first run `gen_all_learned_emb` from `SSMuLA.gen_learned_emb`, else skip this step
+* Run
+```
+python -m tests.test_gen_learned_emb
+``` 
+* Run `run_all_mlde_parallelized` from `SSMuLA.mlde_lite` to run simulations
+* Run
+```
+python -m tests.test_mlde
+```
+* Important options including:
+    * `n_mut_cutoffs`: list of integers for Hamming distance cutoff options where `[0]` means none and `[2]` for Hamming distance of two for ensemble
+    * `zs_predictors`: list of strings for zero-shot predictors, i.e. `["none", "Triad", "ev", "esm"]` where `none` means not focused training and thus default MLDE runs; the list can be extended for none Hamming distance ensemble, including `["Triad-esmif", "Triad-ev", "Triad-esm", "two-best"]`
+    * `ft_lib_fracs`: list of floats for fraction of libraries to use for focused training, i.e. `[0.5, 0.25, 0.125]`
+    * `encoding`: list of strings for encoding options, i.e. `["one-hot"] + DEFAULT_LEARNED_EMB_COMBO`
+    * `model_classes`: list of strings for model classes, i.e. `["boosting", "ridge"]`
+    * `n_samples`: list of integers for number of traiing samples to use, i.e. `[96, 384]`
+    * `n_split`: integer for number of splits for cross-validation, i.e. `5`
+    * `n_replicate`: integer for number of replicates for each model, i.e. `50`
+    * `n_tops`: integer for number of variants to test the prediction, i.e. `[96, 384]`
+with more detailed options specified within the test file
+* Run `MLDESum` from `SSMuLA.mlde_analysis` to get the summary dataframe and optional visulization
+```
+python -m tests.test_mlde_vis
+```
 
 #### ADLE and ftALDE
 * See details in [alde4ssmula](https://github.com/fhalab/alde4ssmula) repository
+* `aggregate_alde_df` from `SSMuLA.alde_analysis` to get the summary dataframe
+```
+python -m tests.test_alde
+```
 
-### Analysis
-* 
-
-
-### Reproduce figures
+### Analysis and paper figures
 * All notebooks in `fig_notebooks` are used to reproduce figures in the paper with files downloaded from [Zenodo](10.5281/zenodo.13910506)

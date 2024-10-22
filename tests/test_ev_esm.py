@@ -24,8 +24,10 @@ if __name__ == "__main__":
 
     calc_all_zs(
         landscape_folder="data",
-        output_folder="results/zs-test",
+        output_folder="results/zs",
         ev_model_folder="data",
+        regen_esm = False,
+        rerun_zs = False
     )
 
     f.close()

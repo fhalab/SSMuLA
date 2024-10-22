@@ -7,7 +7,6 @@ import os
 
 from datetime import datetime
 
-# from SSMuLA.zs_analysis import run_zs_analysis
 from SSMuLA.alde_analysis import aggregate_alde_df
 from SSMuLA.util import checkNgen_folder
 
@@ -25,8 +24,8 @@ if __name__ == "__main__":
 
     aggregate_alde_df(
         eq_ns = [2, 3, 4], 
-        alde_dir = "results4upload/alde",
-        alde_df_path = "results4upload/alde/alde_all.csv",
+        alde_dir = "results/alde",
+        alde_df_path = "results/alde/alde_all.csv",
 
     )
 

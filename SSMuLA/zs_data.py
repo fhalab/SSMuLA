@@ -129,12 +129,6 @@ EV_META = {
         },
     },
     "TEV": {
-        # "chosen": {
-        #     "bitscore": 0.1,
-        #     "sequences": 163169,
-        #     "seqs_per_l": 1073,
-        #     "quality": 10,
-        # },
         "chosen": {
             "bitscore": 0.7,
             "sequences": 164,
@@ -446,17 +440,6 @@ class DataProcessor:
     def __init__(self):
         pass
 
-    def get_Meta(self, df):
-        """Get metadata from the data summary csv"""
-        # Check if end is xlsx or csv
-        if df.endswith(".xlsx"):
-            data = pd.read_excel(df, sheet_name=1)
-        elif df.endswith(".csv"):
-            data = pd.read_csv(df)
-
-        # append mut
-        return data
-
     def get_Seq(self, path):
         return SeqIO.read(path, "fasta").seq
 
@@ -567,7 +550,7 @@ class DataProcessor:
     def get_combo(self, mut, list=False):
         """
         Create sequential AA combo of the mutated sequences
-
+        
         Input: Mut Variants [WT][Pos][NewAA]]
         Output: Sequential AA combo
         """
@@ -626,7 +609,10 @@ class DataProcessor:
             df: dataframe with the sequences and the mutations
         """
 
-        data = pd.read_csv(path)
+        df = pd.read_csv(path)
+
+        # filter out stop codons
+        data = df[~df["AAs"].str.contains("\*")].reset_index(drop=True).copy()
 
         # Try to drop column "Unamed:0"
         try:
@@ -640,4 +626,3 @@ class DataProcessor:
         if _pos:
             data = self.store_pos_list(data)
         return data
-

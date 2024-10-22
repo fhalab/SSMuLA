@@ -3,6 +3,7 @@ A script for generating zs scores gratefully adapted from EmreGuersoy's work
 """
 
 # Import packages
+import os
 import numpy as np
 import pandas as pd
 from pathlib import Path
@@ -42,6 +43,8 @@ class ZeroShotPrediction:
     """
 
     def __init__(self, df, wt_seq):
+        # make sure no stopbonds are present
+         
         self.df = df
         self.wt_sequence = wt_seq
 
@@ -205,6 +208,7 @@ class EvMutation(ZeroShotPrediction):
             df_n.loc[:, "n_mut"] = i
             # score_n = pd.DataFrame(score_n, columns=['ev_score'])
 
+            # if fit or fitness
             if "fit" in df_n.columns:
                 fit_col = "fit"
             elif "fitness" in df_n.columns:
@@ -218,7 +222,7 @@ class EvMutation(ZeroShotPrediction):
 
 
 class ESM(ZeroShotPrediction):
-    def __init__(self, df, wt_seq):
+    def __init__(self, df, wt_seq, logits_path="", regen_esm=False):
         super().__init__(df, wt_seq)
         self.df = df
         self.wt_sequence = wt_seq
@@ -234,11 +238,19 @@ class ESM(ZeroShotPrediction):
             self.alphabet.eos_idx,
         )
         self.alphabet_size = len(self.alphabet)
-        self.logits = self._get_logits()
+
+        if logits_path != "" and os.path.exists(logits_path) and not(regen_esm):
+            print(f"{logits_path} exists and regen_esm = {regen_esm}. Loading...")
+            self.logits = np.load(logits_path)
+        else:
+            print(f"Generating {logits_path}...")
+            self.logits = self._get_logits()
 
     def _infer_model(self):
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        model, alphabet = esm.pretrained.esm1b_t33_650M_UR50S()
+        # model, alphabet = esm.pretrained.esm1b_t33_650M_UR50S()
+        # model, alphabet = esm.pretrained.esm1v_t33_650M_UR90S_1()
+        model, alphabet = esm.pretrained.esm2_t33_650M_UR50D()
         batch_converter = alphabet.get_batch_converter()
         model.eval()
         model = model.to(device)
@@ -261,16 +273,18 @@ class ESM(ZeroShotPrediction):
             with torch.no_grad():
                 token_probs = torch.log_softmax(
                     self.model(batch_tokens_masked)["logits"], dim=-1
-                )
+                ).cpu().numpy()
 
-            logits[i] = token_probs[0, i].cpu().numpy()
+            logits[i] = token_probs[0, i+1]
 
         return logits
 
     def _get_mutant_prob(self, mt, wt, pos):
         """Get the probability of the mutant given the wild type sequence at certain position."""
+        
         wt_idx = self.alphabet.get_idx(wt)
         mt_idx = self.alphabet.get_idx(mt)
+
         return self.logits[pos, mt_idx] - self.logits[pos, wt_idx]
 
     def run_esm(self, df, _sum=True):
@@ -304,8 +318,8 @@ class ESM(ZeroShotPrediction):
                             int(df["pos"].iloc[i][j]) - 1
                         )  # Position of the mutation with python indexing
                         wt = wt_sequence[pos]
-                        s[j] = self._get_mutant_prob(mt, wt, pos)
-
+                        s[j] = self._get_mutant_prob(mt=mt, wt=wt, pos=pos)
+                    
                     score[i] += s.sum()
 
         else:
@@ -322,15 +336,15 @@ class ESM(ZeroShotPrediction):
                     continue
 
                 else:
-
                     pos = int(df["pos"].iloc[i][0] - 1)
                     wt = wt_sequence[pos]
-                    score[i] = self._get_mutant_prob(mt, wt, pos)
+                    score[i] = self._get_mutant_prob(mt=mt, wt=wt, pos=pos)
 
         return score
 
     def _get_n_df(self, n: int = 1):
         """Get n data frame with n mutants"""
+
         return self.df[self.df["combo"].apply(lambda x: len(x) == n)].copy()
 
     def _get_n_score(self, n: list = [1]):
@@ -355,7 +369,7 @@ class ESM(ZeroShotPrediction):
             df_n.loc[:, "esm_score"] = score_n
             df_n.loc[:, "n_mut"] = i
             # score_n = pd.DataFrame(score_n, columns=['ev_score'])
-
+            # if fit or fitness
             if "fit" in df_n.columns:
                 fit_col = "fit"
             elif "fitness" in df_n.columns:
