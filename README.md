@@ -1,8 +1,9 @@
 # SSMuLA
 
 ## About
-* Code base termed "Site Saturation Mutagenesis Landscape Analysis (SSMuLA)" for paper titled "Evaluation of Machine Learning-Assisted Directed Evolution Across Diverse Combinatorial Landscapes"
-* Data and results can be found at [Zenodo](10.5281/zenodo.13910506)
+* Code base termed "Site Saturation Mutagenesis Landscape Analysis (SSMuLA)" for our [paper](https://doi.org/10.1101/2024.10.24.619774) titled "Evaluation of Machine Learning-Assisted Directed Evolution Across Diverse Combinatorial Landscapes"
+* Data and results can be found at [Zenodo](https://doi.org/10.5281/zenodo.13910506)
+![fig1](figs/1.png)
 
 ### Environment
 * For the overall environment `SSMuLA`
