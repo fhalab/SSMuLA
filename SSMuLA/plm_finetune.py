@@ -53,7 +53,7 @@ from SSMuLA.util import checkNgen_folder, get_file_name
 # os.environ["LOCAL_RANK"] = "0"
 # os.environ["WORLD_SIZE"] = "1"
 
-
+# os.environ["CUDA_VISIBLE_DEVICES"] = "1"
 # Deepspeed config for optimizer CPU offload
 
 ds_config = {
@@ -100,7 +100,7 @@ ds_config = {
     "wall_clock_breakdown": False,
 }
 
-device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
+# device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
 
 RAND_SEED_LIST = deepcopy([random.randint(0, 1000000) for _ in range(50)])
 
@@ -216,10 +216,11 @@ def train_per_protein(
     train_df,  # training data
     valid_df,  # validation data
     seed,  # random seed
+    device,  # device to use
     num_labels=1,  # 1 for regression, >1 for classification
     # effective training batch size is batch * accum
     # we recommend an effective batch size of 8
-    batch=8,  # for training
+    batch=4,  # for training
     accum=2,  # gradient accumulation
     val_batch=16,  # batch size for evaluation
     epochs=10,  # training epochs
@@ -302,14 +303,14 @@ def train_per_protein(
 def train_predict_per_protein(
     df_csv: str,  # csv file with landscape data
     rep: int,  # replicate number
+    device: str,  # device to use
     checkpoint: str = "facebook/esm2_t33_650M_UR50D",  # model checkpoint
     n_sample: int = 384,  # number of train+val
     zs_predictor: str = "none",  # zero-shot predictor
     ft_frac: float = 0.125,  # fraction of data for focused sampling
-    plot_dir: str = "results/finetuning/plot",  # directory to save the plot
-    model_dir: str = "results/finetuning/model",  # directory to save the model
-    pred_dir: str = "results/finetuning/predictions",  # directory to save the predictions
+    save_dir: str = "results/finetuning",  # directory to save the model, plot, and predictions
     train_kwargs: dict = {},  # additional training arguments
+    rerun = False,  # if True, the model will be trained again even if it already exists
 ):
     """ """
 
@@ -321,19 +322,35 @@ def train_predict_per_protein(
 
     if zs_predictor == "none":
         df_sorted = df.copy()
+        n = n_sample
     elif zs_predictor not in df.columns:
         print(f"{zs_predictor} not in the dataframe")
         df_sorted = df.copy()
+        n = n_sample
     else:
+        n_cutoff = int(len(df) * ft_frac)
         df_sorted = (
             df.sort_values(by=zs_predictor, ascending=False)
-            .copy()[: int(len(df) * ft_frac)]
+            .copy()[: n_cutoff]
             .copy()
         )
+        n = min(n_sample, n_cutoff)
 
+
+    # output_csv_path
+    output_csv_path = os.path.join(
+            checkNgen_folder(os.path.join(save_dir, "predictions", landscape)),
+            f"{landscape}_{str(n_sample)}_{str(rep)}.csv",
+        )
+
+    # check if the output already exists
+    if os.path.exists(output_csv_path) and not rerun:
+        print(f"Output already exists for {landscape} with n={n_sample} and rep={rep}")
+        return df
+    
     # randomly sample rows from the dataframe
     train_val_df = (
-        df_sorted.sample(n=n_sample, random_state=seed).reset_index(drop=True).copy()
+        df_sorted.sample(n=n, random_state=seed).reset_index(drop=True).copy()
     )
 
     # split the train_val_df into 90%training and 10% validation sets
@@ -343,14 +360,14 @@ def train_predict_per_protein(
     valid_df = train_val_df.drop(train_df.index).reset_index(drop=True).copy()
 
     tokenizer, model, history = train_per_protein(
-        checkpoint, train_df, valid_df, seed=seed, **train_kwargs
+        checkpoint, train_df, valid_df, seed=seed, device=device, **train_kwargs
     )
 
     # save the model
     save_model(
         model,
         os.path.join(
-            checkNgen_folder(os.path.join(model_dir, landscape)),
+            checkNgen_folder(os.path.join(save_dir, "model", landscape)),
             f"{landscape}_{str(rep)}.pth",
         ),
     )
@@ -361,19 +378,10 @@ def train_predict_per_protein(
     # save the plot
     fig.savefig(
         os.path.join(
-            checkNgen_folder(os.path.join(plot_dir, landscape)),
-            f"{landscape}_{str(rep)}.png",
+            checkNgen_folder(os.path.join(save_dir, "plot", landscape)),
+            f"{landscape}_{str(n_sample)}_{str(rep)}.png",
         )
     )
-
-    # # Evaluate the model on the test set
-    # #Use reloaded model
-    # model = model_reload
-    # del model_reload
-
-    # # Set the device to use
-    # device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
-    # model.to(device)
 
     # create Dataset
     test_set = create_dataset(tokenizer, list(df["seq"]), list(df["fitness"]))
@@ -402,11 +410,8 @@ def train_predict_per_protein(
     df["predictions"] = np.array(predictions).flatten()
 
     # save the dataframe
-    df.to_csv(
-        os.path.join(
-            checkNgen_folder(os.path.join(pred_dir, landscape)),
-            f"{landscape}_{str(rep)}.csv",
-        ),
+    df[["seq", "fitness", "predictions"]].to_csv(
+        ooutput_csv_path,
         index=False,
     )
 
