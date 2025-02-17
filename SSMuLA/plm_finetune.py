@@ -310,7 +310,7 @@ def train_predict_per_protein(
     ft_frac: float = 0.125,  # fraction of data for focused sampling
     save_dir: str = "results/finetuning",  # directory to save the model, plot, and predictions
     train_kwargs: dict = {},  # additional training arguments
-    rerun = False,  # if True, the model will be trained again even if it already exists
+    rerun=False,  # if True, the model will be trained again even if it already exists
 ):
     """ """
 
@@ -330,24 +330,21 @@ def train_predict_per_protein(
     else:
         n_cutoff = int(len(df) * ft_frac)
         df_sorted = (
-            df.sort_values(by=zs_predictor, ascending=False)
-            .copy()[: n_cutoff]
-            .copy()
+            df.sort_values(by=zs_predictor, ascending=False).copy()[:n_cutoff].copy()
         )
         n = min(n_sample, n_cutoff)
 
-
     # output_csv_path
     output_csv_path = os.path.join(
-            checkNgen_folder(os.path.join(save_dir, "predictions", landscape)),
-            f"{landscape}_{str(n_sample)}_{str(rep)}.csv",
-        )
+        checkNgen_folder(os.path.join(save_dir, "predictions", landscape)),
+        f"{landscape}_{str(n_sample)}_{str(rep)}.csv",
+    )
 
     # check if the output already exists
     if os.path.exists(output_csv_path) and not rerun:
         print(f"Output already exists for {landscape} with n={n_sample} and rep={rep}")
         return df
-    
+
     # randomly sample rows from the dataframe
     train_val_df = (
         df_sorted.sample(n=n, random_state=seed).reset_index(drop=True).copy()
@@ -411,7 +408,7 @@ def train_predict_per_protein(
 
     # save the dataframe
     df[["seq", "fitness", "predictions"]].to_csv(
-        ooutput_csv_path,
+        output_csv_path,
         index=False,
     )
 
