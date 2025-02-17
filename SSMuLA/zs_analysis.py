@@ -54,6 +54,8 @@ ZS_COMB_OPTS = [
     "Triad-ev_score",
     "Triad-esm_score",
     "Triad-esmif_score",
+    "coves-ev_score",
+    "coves-esm_score",
     "ev-esm_score",
     "ev-esm-esmif_score",
     "Triad-ev-esm-esmif_score",
@@ -81,6 +83,8 @@ ZS_OPTS_LEGEND = {
     "Triad-esmif_score": "Triad + ESM-IF",  # prev struc-comb
     "Triad-ev_score": "Triad + EVmutation",
     "Triad-esm_score": "Triad + ESM",
+    "coves-ev_score": "CoVES + EVmutation",
+    "coves-esm_score": "CoVES + ESM",
     "ev-esm_score": "EVmutation + ESM",  # prev msanoif-comb
     "two-best_score": "EVmutation + ESM-IF",
     "ev-esm-esmif_score": "EVmutation + ESM + ESM-IF",  # prev msa-comb
@@ -205,8 +209,11 @@ class ZS_Analysis(LibData):
         # some easy zs comb
         df["Triad-ev_score"] = -1 * (df["Triad_rank"] + df["ev_rank"])
         df["Triad-esm_score"] = -1 * (df["Triad_rank"] + df["esm_rank"])
-
         df["Triad-esmif_score"] = -1 * (df["Triad_rank"] + df["esmif_rank"])
+
+        df["coves-ev_score"] = -1 * (df["coves_rank"] + df["ev_rank"])
+        df["coves-esm_score"] = -1 * (df["coves_rank"] + df["esm_rank"])
+
         df["ev-esm-esmif_score"] = -1 * (
             df["ev_rank"] + df["esm_rank"] + df["esmif_rank"]
         )
@@ -221,6 +228,8 @@ class ZS_Analysis(LibData):
             "Triad-ev",
             "Triad-esm",
             "Triad-esmif",
+            "coves-ev",
+            "coves-esm",
             "ev-esm-esmif",
             "ev-esm",
             "Triad-ev-esm-esmif",

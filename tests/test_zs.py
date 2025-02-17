@@ -40,13 +40,22 @@ if __name__ == "__main__":
     #     zs_sum_dir = "results/zs_sum_2",
     # )
 
+    # run_zs_analysis(
+    #     scale_types=["max"], 
+    #     filter_min_by="none", 
+    #     ev_esm_folder = "ev_esm2",
+    #     zs_comb_dir = "results/zs_comb_6",
+    #     zs_vis_dir = "results/zs_vis_6",
+    #     zs_sum_dir = "results/zs_sum_6",
+    # )
+
     run_zs_analysis(
         scale_types=["max"], 
         filter_min_by="none", 
         ev_esm_folder = "ev_esm2",
-        zs_comb_dir = "results/zs_comb_6",
-        zs_vis_dir = "results/zs_vis_6",
-        zs_sum_dir = "results/zs_sum_6",
+        zs_comb_dir = "results_old/zs_comb_7",
+        zs_vis_dir = "results_old/zs_vis_7",
+        zs_sum_dir = "results_old/zs_sum_7",
     )
     
     f.close()

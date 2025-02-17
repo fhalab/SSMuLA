@@ -965,6 +965,14 @@ def get_mlde_avg_dict(
                 n_mut_cutoff="all", zs="Triad-esm_score", **mlde_kwargs
             )
 
+            avg_mlde_df_dict["CoVES + EVmutation"] = get_mlde_avg_sdf(
+                n_mut_cutoff="all", zs="coves-ev_score", **mlde_kwargs
+            )
+
+            avg_mlde_df_dict["CoVES + ESM"] = get_mlde_avg_sdf(
+                n_mut_cutoff="all", zs="coves-esm_score", **mlde_kwargs
+            )
+
             avg_mlde_df_dict["EVmutation + ESM-IF"] = get_mlde_avg_sdf(
                 n_mut_cutoff="all", zs="two-best_score", **mlde_kwargs
             )
@@ -1450,6 +1458,7 @@ def plot_ftmlde_ensemble(
         "ftMLDE: EVmutation",
         "ftMLDE: ESM",
         "ftMLDE: ESM-IF",
+        "ftMLDE: CoVES",
         "ftMLDE: Triad",
     ]
 
@@ -1457,10 +1466,12 @@ def plot_ftmlde_ensemble(
         "Triad + EVmutation",
         "Triad + ESM",
         "Triad + ESM-IF",
+        "CoVES + EVmutation",
+        "CoVES + ESM",
         "EVmutation + ESM-IF",
     ]
 
-    mlde_color_list = ["gray", "green", "purple", "yellow", "orange"]
+    mlde_color_list = ["gray", "green", "purple", "yellow", "brown", "orange", "blue"]
 
     if (not ifzoomy) or ("TrpB3A" in lib_list):
         y_mins = [0, 0]
@@ -1492,33 +1503,34 @@ def plot_ftmlde_ensemble(
                 color=FZL_PALETTE[mlde_color_list[i % len(mlde_color_list)]],
                 alpha=0.05,
             )
-            if i > 0:
 
-                # plot the double site same color but different linestyle and marker
-                mlde_df = avg_mlde_df_dict[ensemble_opts[i - 1]]
+            j = i+1 # no gray gray
 
-                ax.plot(
-                    TOTAL_N_LIST,
-                    mlde_df[f"{mlde_metric}_mean"],
-                    # label=mlde_opts.replace("Average ", ""),
-                    marker="o",
-                    # markersize=7.5,
-                    linestyle="dashed",
-                    linewidth=2,
-                    color=GRAY_COLORS[
-                        "gray-" + mlde_color_list[i % len(mlde_color_list)]
-                    ],
-                )
+            # plot the ensemble same color but different linestyle and marker
+            mlde_df = avg_mlde_df_dict[ensemble_opts[j-1]]
 
-                ax.fill_between(
-                    TOTAL_N_LIST,
-                    mlde_df[f"{mlde_metric}_mean"].values.flatten() - mlde_df[f"{mlde_metric}_std"].values.flatten(),
-                    mlde_df[f"{mlde_metric}_mean"].values.flatten() + mlde_df[f"{mlde_metric}_std"].values.flatten(),
-                    color=GRAY_COLORS[
-                        "gray-" + mlde_color_list[i % len(mlde_color_list)]
-                    ],
-                    alpha=0.05,
-                )
+            ax.plot(
+                TOTAL_N_LIST,
+                mlde_df[f"{mlde_metric}_mean"],
+                # label=mlde_opts.replace("Average ", ""),
+                marker="o",
+                # markersize=7.5,
+                linestyle="dashed",
+                linewidth=2,
+                color=GRAY_COLORS[
+                    "gray-" + mlde_color_list[j % len(mlde_color_list)]
+                ],
+            )
+
+            ax.fill_between(
+                TOTAL_N_LIST,
+                mlde_df[f"{mlde_metric}_mean"].values.flatten() - mlde_df[f"{mlde_metric}_std"].values.flatten(),
+                mlde_df[f"{mlde_metric}_mean"].values.flatten() + mlde_df[f"{mlde_metric}_std"].values.flatten(),
+                color=GRAY_COLORS[
+                    "gray-" + mlde_color_list[j % len(mlde_color_list)]
+                ],
+                alpha=0.05,
+            )
 
         ax.axvline(n_corr + n_top, color="gray", linewidth=0.5, linestyle="dotted")
         ax.axvline(96 + n_top, color="gray", linewidth=0.5, linestyle="dotted")
@@ -1542,8 +1554,11 @@ def plot_ftmlde_ensemble(
     }
     ds_color_dict = {
         l.replace("ftMLDE: ", "Triad + "): GRAY_COLORS["gray-" + c]
-        for (l, c) in zip(options[1:-1], mlde_color_list[1:-1])
+        for (l, c) in zip(options[1:4], mlde_color_list[1:4])
     }
+
+    ds_color_dict["CoVES + EVmutation"] = GRAY_COLORS["gray-" + mlde_color_list[-3]]
+    ds_color_dict["CoVES + ESM"] = GRAY_COLORS["gray-" + mlde_color_list[-2]]
 
     ds_color_dict["EVmutation + ESM-IF"] = GRAY_COLORS["gray-" + mlde_color_list[-1]]
     # Create legend for line colors using the color dictionary

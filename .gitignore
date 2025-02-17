@@ -28,6 +28,10 @@ results/
 results/*
 results.tar.gz
 
+results_rev
+results_rev/
+results_rev/*
+
 results_old
 results_old/
 results_old/*

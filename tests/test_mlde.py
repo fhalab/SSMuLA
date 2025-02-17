@@ -296,6 +296,51 @@ if __name__ == "__main__":
     # )
 
 
+    run_all_mlde_parallelized(
+        encodings=["one-hot"],
+        n_mut_cutoffs=[0],
+        zs_predictors=["coves-ev", "coves-esm"],
+        n_samples=[96, 384, 24, 48],
+        n_replicate=50,
+        n_job=96,
+        ft_lib_fracs=[0.125],
+        model_classes = ["boosting"],
+        all_libs=True,
+        ft_first=True,
+        zs_folder="results_old/zs_comb_7",
+        mlde_folder="results_rev/mlde_coves_ens",
+    )
+
+    run_all_mlde_parallelized(
+        encodings=["one-hot"],
+        n_mut_cutoffs=[0],
+        zs_predictors=["coves-ev", "coves-esm"],
+        n_samples=[192, 288, 480, 576],
+        n_replicate=50,
+        n_job=96,
+        ft_lib_fracs=[0.125],
+        model_classes = ["boosting"],
+        all_libs=True,
+        ft_first=True,
+        zs_folder="results_old/zs_comb_7",
+        mlde_folder="results_rev/mlde_coves_ens",
+    )
+
+    run_all_mlde_parallelized(
+        encodings=["one-hot"],
+        n_mut_cutoffs=[0],
+        zs_predictors=["coves-ev", "coves-esm"],
+        n_samples=[960, 1920],
+        n_replicate=50,
+        n_job=96,
+        ft_lib_fracs=[0.125],
+        model_classes = ["boosting"],
+        all_libs=True,
+        ft_first=True,
+        zs_folder="results_old/zs_comb_7",
+        mlde_folder="results_rev/mlde_coves_ens",
+    )
+
     # run_all_mlde_parallelized(
     #     encodings=["one-hot"],
     #     n_mut_cutoffs=[0],
