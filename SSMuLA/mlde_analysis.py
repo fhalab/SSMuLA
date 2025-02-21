@@ -131,6 +131,10 @@ MLDE_METRIC_MAP = {
     "if_truemaxs": "Fraction reaching the global optimum",
 }
 
+ALDE_MODEL_OPTS = ["Boosting Ensemble", "DNN Ensemble"]
+
+ALDE_ACQ_OPTS = ["GREEDY", "UCB", "TS"]
+
 
 def get_mlde_avg_df(
     mlde_all: pd.DateFrame,
@@ -1730,6 +1734,152 @@ def plot_ftalde(
     # Add the legends to the figure
     axes[0, 1].legend(
         handles=color_handles + gray_handles,
+        loc="upper left",
+        bbox_to_anchor=(1, 1.025),
+    )
+    axes[1, 1].legend(
+        handles=marker_handles, loc="upper left", bbox_to_anchor=(1, 1.025)
+    )
+
+    # Adjust the layout to prevent overlapping
+    plt.tight_layout()
+
+    if ifsave:
+        save_svg(fig, fig_name, fig_dir)
+
+
+def plot_alde_opt(
+    alde_dir: str,
+    lib_list: list,
+    fig_name: str,
+    n_top: int = 96,
+    n_corr: int = 384,
+    n_rounds: list[int] = [2, 3, 4],
+    ifzoomy: bool = False,
+    ifsave: bool = True,
+    fig_dir: str = "figs",
+):
+    """
+    Plot ALDE with different optimization strategies
+    """
+
+    line_styles = ["dashed", "solid"]*len(n_rounds)
+
+    selected_alde_colors = MLDE_ALDE_COLORS[:4] + MLDE_ALDE_COLORS[-2:]
+
+    avg_mlde_df_dict = {}
+
+    for n in n_rounds:
+        for alde_model in ALDE_MODEL_OPTS:
+            for alde_acq in ALDE_ACQ_OPTS:
+                avg_mlde_df_dict[f"{alde_model} {alde_acq} x {n}"] = avg_alde_df(
+                    eq_n=n,
+                    lib_list=lib_list,
+                    zs = "",
+                    alde_model = alde_model,
+                    alde_encoding = "onehot",
+                    alde_acq = alde_acq,
+                    alde_dir = alde_dir,
+                )
+            
+
+    fig, axes = plt.subplots(
+        3, 2, figsize=(10, 9.6), sharex=True
+    )  # Create a 2x2 grid of subplots
+
+    
+    # Define the data and labels for ALDE
+    opt_list = [f"{m} {a}" for a in ALDE_ACQ_OPTS for m in ALDE_MODEL_OPTS]
+
+    if not ifzoomy or "TrpB3A" in lib_list:
+        y_mins = [0, 0]
+    else:
+        y_mins = [0.5, 0]
+
+    # Loop over ALDE data
+    for r, rd in enumerate(n_rounds):
+        options = [f"{o} x {rd}" for o in opt_list]
+
+        for m, (mlde_metric, y_label, y_min) in enumerate(
+            zip(PLOT_MLDE_METRICS, PLOT_LINE_PERFORMANCE_YAXIS, y_mins)
+        ):
+            for i, mlde_opts in enumerate(options):
+                mlde_df = avg_mlde_df_dict[mlde_opts]
+
+                axes[r, m].plot(
+                    TOTAL_N_LIST,
+                    mlde_df[f"{mlde_metric}_mean"],
+                    label=mlde_opts.replace("Average ", ""),
+                    marker=ALDE_MARKER_STYLES[rd],
+                    linestyle=line_styles[i],
+                    linewidth=2,
+                    color=selected_alde_colors[i],
+                )
+
+                axes[r, m].fill_between(
+                    TOTAL_N_LIST,
+                    mlde_df[f"{mlde_metric}_mean"] - mlde_df[f"{mlde_metric}_std"],
+                    mlde_df[f"{mlde_metric}_mean"] + mlde_df[f"{mlde_metric}_std"],
+                    color=selected_alde_colors[i],
+                    alpha=0.05,
+                )
+
+            axes[r, m].axvline(
+                n_corr + n_top, color="gray", linewidth=0.5, linestyle="dotted"
+            )
+            axes[r, m].set_xlim(TOTAL_N_LIST[0], TOTAL_N_LIST[-1])
+            axes[r, m].set_ylim(y_min, 1.0)
+            axes[r, m].set_xscale("log")
+
+            # Use FuncFormatter to display the original values on the log-scaled axis
+            axes[r, m].xaxis.set_major_formatter(
+                FuncFormatter(lambda x, _: f"{int(x)}")
+            )
+            axes[r, m].xaxis.set_minor_locator(plt.NullLocator())
+
+            if r == 2:
+                # label the orignial xticks labels
+                axes[r, m].set_xticks(N_TICK_LIST)
+                axes[r, m].set_xlabel("Total number of variants")
+
+            axes[r, m].set_ylabel(y_label)
+
+    # add first legend to be different alde opts
+    # also reorg so that all the odd ones first then all the even ones
+    mlde_color_dict = {
+        l: c
+        for (l, c) in zip(opt_list, selected_alde_colors)
+    }
+    
+    # Create legend for line colors using the color dictionary
+    color_handles = [
+        Line2D([0], [0], color=color, lw=2, label=label, linestyle=line_styles[i])
+        for i, (label, color) in enumerate(mlde_color_dict.items())
+    ]
+
+    # sort color handles so that the odd ones are first
+    color_handles = sorted(color_handles, key=lambda x: (color_handles.index(x) % 2 == 1))
+
+    # Create alde legend rounds
+    marker_style_dict = {f"ALDE x {r}": s for r, s in ALDE_MARKER_STYLES.items()}
+
+    # Create legend for marker styles using the marker dictionary
+    marker_handles = [
+        Line2D(
+            [0],
+            [0],
+            marker=marker,
+            color="black",
+            linestyle="None",
+            markersize=7,
+            label=label,
+        )
+        for label, marker in marker_style_dict.items()
+    ]
+
+    # Add the legends to the figure
+    axes[0, 1].legend(
+        handles=color_handles,
         loc="upper left",
         bbox_to_anchor=(1, 1.025),
     )
