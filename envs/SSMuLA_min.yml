@@ -1,8 +1,8 @@
 # For the general environment:
 # Install or update using
-# conda env update --file SSMuLA.yml --prune
+# conda env update --file SSMuLA_min.yml --prune
 
-name: SSMuLA
+name: SSMuLA_min
 channels:
   - pytorch
   - pyg
@@ -18,16 +18,11 @@ dependencies:
   - biopandas
   - biopython
   - biotite
-  - bokeh
   - brokenaxes
   - cairosvg
   - colorcet
-  - firefox
   - flake8
-  - geckodriver
   - hdf5
-  - holoviews
-  - hvplot
   - ipykernel
   - ipympl
   - ipywidgets
@@ -42,7 +37,6 @@ dependencies:
   - numpy
   - openpyxl
   - pandas
-  - panel
   - param
   - pdbfixer
   - pip
@@ -57,21 +51,16 @@ dependencies:
   - scikit-learn            # might not be evcouplings compatible 
   - scipy
   - seaborn
-  - selenium
   - tensorflow
   - tqdm
   - versioneer
   - xarray
+  - xgboost
 
   - pip:
     - blackcellmagic
-    - chai_lab==0.0.1
-    - docko
     - fair-esm
-    - iqplot==0.3.1
-    - ninetysix
     - ordered-set
     - rdkit
-    - sequence-models
-    # https://github.com/debbiemarkslab/EVcouplings/archive/develop.zip install after the environment is created
+    # pip install https://github.com/debbiemarkslab/EVcouplings/archive/develop.zip install after the environment is created
 prefix: /disk2/fli/setup/miniconda3/

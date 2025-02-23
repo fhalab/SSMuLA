@@ -35,7 +35,7 @@ if __name__ == "__main__":
     # for 3-site  19 * 3 + 1 = 58 total or 19 * 3 + 97 = 154 '["DHFR", "ParD2", "ParD3", "T7", "TrpB3A", "TrpB3B", "TrpB3C", "TrpB3D", "TrpB3E", "TrpB3F", "TrpB3G", "TrpB3H", "TrpB3I"]'
     run_all_mlde_parallelized(
         encodings=["one-hot"], # modify to `DEFAULT_LEARNED_EMB_COMBO`` for all pregenerated encodings
-        n_mut_cutoffs=[0],
+        n_mut_cutoffs=[2],
         zs_predictors=["none", "ev", "coves", "esm", "esmif", "Triad", "two-best", "Triad-esmif", "Triad-ev", "Triad-esm", "coves-ev", "coves-esm"],
         n_samples=[58], # 154
         n_tops=[96],
@@ -53,7 +53,7 @@ if __name__ == "__main__":
     # for 3-site  19 * 3 + 1 = 58 total or 19 * 3 + 97 = 154 '["DHFR", "ParD2", "ParD3", "T7", "TrpB3A", "TrpB3B", "TrpB3C", "TrpB3D", "TrpB3E", "TrpB3F", "TrpB3G", "TrpB3H", "TrpB3I"]'
     run_all_mlde_parallelized(
         encodings=["one-hot"], # modify to `DEFAULT_LEARNED_EMB_COMBO`` for all pregenerated encodings
-        n_mut_cutoffs=[0],
+        n_mut_cutoffs=[2],
         zs_predictors=["none", "ev", "coves", "esm", "esmif", "Triad", "two-best", "Triad-esmif", "Triad-ev", "Triad-esm", "coves-ev", "coves-esm"],
         n_samples=[10, 106], # 58 # 154
         n_tops=[48],
@@ -70,7 +70,7 @@ if __name__ == "__main__":
     # for 3-site  19 * 3 + 1 = 58 total or 19 * 3 + 97 = 154 '["DHFR", "ParD2", "ParD3", "T7", "TrpB3A", "TrpB3B", "TrpB3C", "TrpB3D", "TrpB3E", "TrpB3F", "TrpB3G", "TrpB3H", "TrpB3I"]'
     run_all_mlde_parallelized(
         encodings=["one-hot"], # modify to `DEFAULT_LEARNED_EMB_COMBO`` for all pregenerated encodings
-        n_mut_cutoffs=[0],
+        n_mut_cutoffs=[2],
         zs_predictors=["none", "ev", "coves", "esm", "esmif", "Triad", "two-best", "Triad-esmif", "Triad-ev", "Triad-esm", "coves-ev", "coves-esm"],
         n_samples=[34, 130], # 154 and 58
         n_tops=[24],
@@ -88,7 +88,7 @@ if __name__ == "__main__":
     # for 4-site  19 * 4 + 1 = 77 total or 19 * 4 + 97 = 173 '["GB1", "TEV", "TrpB4"]'
     run_all_mlde_parallelized(
         encodings=["one-hot"], # modify to `DEFAULT_LEARNED_EMB_COMBO`` for all pregenerated encodings
-        n_mut_cutoffs=[0],
+        n_mut_cutoffs=[2],
         zs_predictors=["none", "ev", "coves", "esm", "esmif", "Triad", "two-best", "Triad-esmif", "Triad-ev", "Triad-esm", "coves-ev", "coves-esm"],
         n_samples=[77], # 173
         n_tops=[96],
@@ -106,7 +106,7 @@ if __name__ == "__main__":
     # for 4-site  19 * 4 + 1 = 77 total or 19 * 4 + 97 = 173 '["GB1", "TEV", "TrpB4"]'
     run_all_mlde_parallelized(
         encodings=["one-hot"], # modify to `DEFAULT_LEARNED_EMB_COMBO`` for all pregenerated encodings
-        n_mut_cutoffs=[0],
+        n_mut_cutoffs=[2],
         zs_predictors=["none", "ev", "coves", "esm", "esmif", "Triad", "two-best", "Triad-esmif", "Triad-ev", "Triad-esm", "coves-ev", "coves-esm"],
         n_samples=[29, 125], # 77, 173
         n_tops=[48],
@@ -124,7 +124,7 @@ if __name__ == "__main__":
     # for 4-site  19 * 4 + 1 = 77 total or 19 * 4 + 97 = 173 '["GB1", "TEV", "TrpB4"]'
     run_all_mlde_parallelized(
         encodings=["one-hot"], # modify to `DEFAULT_LEARNED_EMB_COMBO`` for all pregenerated encodings
-        n_mut_cutoffs=[0],
+        n_mut_cutoffs=[2],
         zs_predictors=["none", "ev", "coves", "esm", "esmif", "Triad", "two-best", "Triad-esmif", "Triad-ev", "Triad-esm", "coves-ev", "coves-esm"],
         n_samples=[53, 149], # 77, 173
         n_tops=[24],
