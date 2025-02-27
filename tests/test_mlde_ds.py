@@ -33,40 +33,40 @@ if __name__ == "__main__":
     # "two-best_score",
 
     # for 3-site  19 * 3 + 1 = 58 total or 19 * 3 + 97 = 154 '["DHFR", "ParD2", "ParD3", "T7", "TrpB3A", "TrpB3B", "TrpB3C", "TrpB3D", "TrpB3E", "TrpB3F", "TrpB3G", "TrpB3H", "TrpB3I"]'
-    run_all_mlde_parallelized(
-        encodings=["one-hot"], # modify to `DEFAULT_LEARNED_EMB_COMBO`` for all pregenerated encodings
-        n_mut_cutoffs=[2],
-        zs_predictors=["none", "ev", "coves", "esm", "esmif", "Triad", "two-best", "Triad-esmif", "Triad-ev", "Triad-esm", "coves-ev", "coves-esm"],
-        n_samples=[58], # 154
-        n_tops=[96],
-        n_replicate=50,
-        n_job=50,
-        ft_lib_fracs=[0.125],
-        model_classes = ["boosting"],
-        ft_first=True,
-        mlde_folder=mlde_folder,
-        zs_folder=zs_folder,
-        all_libs=False,
-        lib_list=["DHFR", "ParD2", "ParD3", "T7", "TrpB3A", "TrpB3B", "TrpB3C", "TrpB3D", "TrpB3E", "TrpB3F", "TrpB3G", "TrpB3H", "TrpB3I"],
-    )
+    # run_all_mlde_parallelized(
+    #     encodings=["one-hot"], # modify to `DEFAULT_LEARNED_EMB_COMBO`` for all pregenerated encodings
+    #     n_mut_cutoffs=[2],
+    #     zs_predictors=["none", "ev", "coves", "esm", "esmif", "Triad", "two-best", "Triad-esmif", "Triad-ev", "Triad-esm", "coves-ev", "coves-esm"],
+    #     n_samples=[58], # 154
+    #     n_tops=[96],
+    #     n_replicate=50,
+    #     n_job=16,
+    #     ft_lib_fracs=[0.125],
+    #     model_classes = ["boosting"],
+    #     ft_first=True,
+    #     mlde_folder=mlde_folder,
+    #     zs_folder=zs_folder,
+    #     all_libs=False,
+    #     lib_list=["DHFR", "ParD2", "ParD3", "T7", "TrpB3A", "TrpB3B", "TrpB3C", "TrpB3D", "TrpB3E", "TrpB3F", "TrpB3G", "TrpB3H", "TrpB3I"],
+    # )
     
-    # for 3-site  19 * 3 + 1 = 58 total or 19 * 3 + 97 = 154 '["DHFR", "ParD2", "ParD3", "T7", "TrpB3A", "TrpB3B", "TrpB3C", "TrpB3D", "TrpB3E", "TrpB3F", "TrpB3G", "TrpB3H", "TrpB3I"]'
-    run_all_mlde_parallelized(
-        encodings=["one-hot"], # modify to `DEFAULT_LEARNED_EMB_COMBO`` for all pregenerated encodings
-        n_mut_cutoffs=[2],
-        zs_predictors=["none", "ev", "coves", "esm", "esmif", "Triad", "two-best", "Triad-esmif", "Triad-ev", "Triad-esm", "coves-ev", "coves-esm"],
-        n_samples=[10, 106], # 58 # 154
-        n_tops=[48],
-        n_replicate=50,
-        n_job=50,
-        ft_lib_fracs=[0.125],
-        model_classes = ["boosting"],
-        ft_first=True,
-        mlde_folder=mlde_folder,
-        zs_folder=zs_folder,
-        all_libs=False,
-        lib_list=["DHFR", "ParD2", "ParD3", "T7", "TrpB3A", "TrpB3B", "TrpB3C", "TrpB3D", "TrpB3E", "TrpB3F", "TrpB3G", "TrpB3H", "TrpB3I"],
-    )
+    # # for 3-site  19 * 3 + 1 = 58 total or 19 * 3 + 97 = 154 '["DHFR", "ParD2", "ParD3", "T7", "TrpB3A", "TrpB3B", "TrpB3C", "TrpB3D", "TrpB3E", "TrpB3F", "TrpB3G", "TrpB3H", "TrpB3I"]'
+    # run_all_mlde_parallelized(
+    #     encodings=["one-hot"], # modify to `DEFAULT_LEARNED_EMB_COMBO`` for all pregenerated encodings
+    #     n_mut_cutoffs=[2],
+    #     zs_predictors=["none", "ev", "coves", "esm", "esmif", "Triad", "two-best", "Triad-esmif", "Triad-ev", "Triad-esm", "coves-ev", "coves-esm"],
+    #     n_samples=[10, 106], # 58 # 154
+    #     n_tops=[48],
+    #     n_replicate=50,
+    #     n_job=16,
+    #     ft_lib_fracs=[0.125],
+    #     model_classes = ["boosting"],
+    #     ft_first=True,
+    #     mlde_folder=mlde_folder,
+    #     zs_folder=zs_folder,
+    #     all_libs=False,
+    #     lib_list=["DHFR", "ParD2", "ParD3", "T7", "TrpB3A", "TrpB3B", "TrpB3C", "TrpB3D", "TrpB3E", "TrpB3F", "TrpB3G", "TrpB3H", "TrpB3I"],
+    # )
     # for 3-site  19 * 3 + 1 = 58 total or 19 * 3 + 97 = 154 '["DHFR", "ParD2", "ParD3", "T7", "TrpB3A", "TrpB3B", "TrpB3C", "TrpB3D", "TrpB3E", "TrpB3F", "TrpB3G", "TrpB3H", "TrpB3I"]'
     run_all_mlde_parallelized(
         encodings=["one-hot"], # modify to `DEFAULT_LEARNED_EMB_COMBO`` for all pregenerated encodings
@@ -75,7 +75,7 @@ if __name__ == "__main__":
         n_samples=[34, 130], # 154 and 58
         n_tops=[24],
         n_replicate=50,
-        n_job=50,
+        n_job=2,
         ft_lib_fracs=[0.125],
         model_classes = ["boosting"],
         ft_first=True,
@@ -93,7 +93,7 @@ if __name__ == "__main__":
         n_samples=[77], # 173
         n_tops=[96],
         n_replicate=50,
-        n_job=50,
+        n_job=2,
         ft_lib_fracs=[0.125],
         model_classes = ["boosting"],
         ft_first=True,
@@ -111,7 +111,7 @@ if __name__ == "__main__":
         n_samples=[29, 125], # 77, 173
         n_tops=[48],
         n_replicate=50,
-        n_job=50,
+        n_job=2,
         ft_lib_fracs=[0.125],
         model_classes = ["boosting"],
         ft_first=True,
@@ -129,7 +129,7 @@ if __name__ == "__main__":
         n_samples=[53, 149], # 77, 173
         n_tops=[24],
         n_replicate=50,
-        n_job=50,
+        n_job=2,
         ft_lib_fracs=[0.125],
         model_classes = ["boosting"],
         ft_first=True,

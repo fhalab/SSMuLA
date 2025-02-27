@@ -23,11 +23,14 @@ if __name__ == "__main__":
     sys.stdout = f
 
 
+    # MLDESum(
+    #     mlde_results_dir = "results_rev/mlde_coves_ens/saved",
+    #     mlde_vis_dir = "results_rev/mlde_coves_ens/vis"
+    # )
     MLDESum(
-        mlde_results_dir = "results_rev/mlde_coves_ens/saved",
-        mlde_vis_dir = "results_rev/mlde_coves_ens/vis"
+        mlde_results_dir = "results_rev/mlde_lown/saved",
+        mlde_vis_dir = "results_rev/mlde_lown/vis"
     )
-
 
     """
     MLDESum:

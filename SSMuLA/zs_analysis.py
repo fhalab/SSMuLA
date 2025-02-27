@@ -67,7 +67,7 @@ SIMPLE_ZS_OPT_LEGNED = {
     "ed_score": "Hamming distance",
     "Triad_score": "Triad",
     "ev_score": "EVmutation",
-    "esm_score": "ESM",
+    "esm_score": "ESM-2",
     "esmif_score": "ESM-IF",
     "coves_score": "CoVES",
 }
@@ -77,18 +77,18 @@ ZS_OPTS_LEGEND = {
     "ed_score": "Hamming distance",
     "Triad_score": "Triad",
     "ev_score": "EVmutation",
-    "esm_score": "ESM",
+    "esm_score": "ESM-2",
     "esmif_score": "ESM-IF",
     "coves_score": "CoVES",
     "Triad-esmif_score": "Triad + ESM-IF",  # prev struc-comb
     "Triad-ev_score": "Triad + EVmutation",
-    "Triad-esm_score": "Triad + ESM",
+    "Triad-esm_score": "Triad + ESM-2",
     "coves-ev_score": "CoVES + EVmutation",
-    "coves-esm_score": "CoVES + ESM",
-    "ev-esm_score": "EVmutation + ESM",  # prev msanoif-comb
+    "coves-esm_score": "CoVES + ESM-2",
+    "ev-esm_score": "EVmutation + ESM-2",  # prev msanoif-comb
     "two-best_score": "EVmutation + ESM-IF",
-    "ev-esm-esmif_score": "EVmutation + ESM + ESM-IF",  # prev msa-comb
-    "Triad-ev-esm-esmif_score": "Triad + EVmutation + ESM + ESM-IF",  # prev structnev-esm-esmif
+    "ev-esm-esmif_score": "EVmutation + ESM-2 + ESM-IF",  # prev msa-comb
+    "Triad-ev-esm-esmif_score": "Triad + EVmutation + ESM-2 + ESM-IF",  # prev structnev-esm-esmif
 }
 
 ZS_METRICS = ["rho", "ndcg", "rocauc"]
@@ -119,7 +119,6 @@ SIX_ZS_COLORS = {
     "coves_score": FZL_PALETTE["brown"],
     "Triad_score": FZL_PALETTE["orange"],
 }
-
 
 
 class ZS_Analysis(LibData):
@@ -750,6 +749,7 @@ def plot_zs_corr(
     save_dir="figs",
     fig_id="3d",
     ifsave=True,
+    addtitle=False
 ):
     """
     Plot the ZS correlations
@@ -762,6 +762,7 @@ def plot_zs_corr(
     - save_dir, str: the folder to save the figure
     - fig_id, str: the figure id
     - ifsave, bool: if save the figure
+    - addtitle, bool: if add title to the figure
     """
 
     lib_stat = pd.read_csv(lib_stat_csv)
@@ -811,7 +812,8 @@ def plot_zs_corr(
     ax.set_xlabel("ZS predictor")
     ax.set_ylabel("ZS predictor")
     # Add titles and labels as necessary
-    plt.title(f"ZS correlations for {n_mut_cutoff}", fontweight="bold")
+    if addtitle:
+        plt.title(f"ZS correlations for {n_mut_cutoff}", fontweight="bold")
     plt.show()
     if ifsave:
         save_dir = checkNgen_folder(save_dir)

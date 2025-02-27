@@ -1,8 +1,8 @@
 # For the general environment:
 # Install or update using
-# conda env update --file SSMuLA_min.yml --prune
+# conda env update --file SSMuLA.yml --prune
 
-name: SSMuLA_min
+name: SSMuLA
 channels:
   - pytorch
   - pyg
@@ -18,11 +18,17 @@ dependencies:
   - biopandas
   - biopython
   - biotite
+  - bokeh
   - brokenaxes
   - cairosvg
   - colorcet
+  - datashader
+  - firefox
   - flake8
+  - geckodriver
   - hdf5
+  - holoviews
+  - hvplot
   - ipykernel
   - ipympl
   - ipywidgets
@@ -37,6 +43,7 @@ dependencies:
   - numpy
   - openpyxl
   - pandas
+  - panel
   - param
   - pdbfixer
   - pip

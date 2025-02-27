@@ -15,7 +15,6 @@ import pandas as pd
 
 from scipy.stats import stats, spearmanr, ttest_ind
 from itertools import combinations
-from statsmodels.stats.multicomp import pairwise_tukeyhsd
 
 import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
@@ -23,13 +22,9 @@ from matplotlib.ticker import FuncFormatter, FormatStrFormatter
 
 import seaborn as sns
 
-# Basic plotting
-import holoviews as hv
-
 from SSMuLA.aa_global import DEFAULT_LEARNED_EMB_COMBO
 from SSMuLA.landscape_global import (
     n_mut_cutoff_dict,
-    LIB_NAMES,
     LIB_INFO_DICT,
     N_SAMPLE_LIST,
 )
@@ -38,17 +33,13 @@ from SSMuLA.zs_analysis import ZS_OPTS, ZS_OPTS_LEGEND
 from SSMuLA.alde_analysis import avg_alde_df
 from SSMuLA.vis import (
     save_bokeh_hv,
-    one_decimal_x,
-    one_decimal_y,
-    fixmargins,
+    plot_zs_violin,
     FZL_PALETTE,
     GRAY_COLORS,
     save_svg,
     glasbey_category10,
 )
 from SSMuLA.util import checkNgen_folder, get_file_name
-
-hv.extension("bokeh")
 
 # Suppress all warnings
 warnings.filterwarnings("ignore")
@@ -82,9 +73,9 @@ ENCODING_STYLE = {
 
 ENCODING_DETS = {
     "one-hot": "One-hot",
-    "esm2_t33_650M_UR50D-flatten_site": "ESM2 flatten over mutation sites",
-    "esm2_t33_650M_UR50D-mean_site": "ESM2 mean pooling over sites",
-    "esm2_t33_650M_UR50D-mean_all": "ESM2 mean pooling over full sequence",
+    "esm2_t33_650M_UR50D-flatten_site": "ESM-2 flatten over mutation sites",
+    "esm2_t33_650M_UR50D-mean_site": "ESM-2 mean pooling over sites",
+    "esm2_t33_650M_UR50D-mean_all": "ESM-2 mean pooling over full sequence",
 }
 
 ENCODING_COLOR = {
@@ -620,7 +611,7 @@ class MLDESum:
         """
 
         if len(encoding_list) > 1:
-            encoding = "ESM2"
+            encoding = "ESM-2"
         else:
             encoding = encoding_list[0]
 
@@ -629,44 +620,19 @@ class MLDESum:
         )
 
         save_bokeh_hv(
-            hv.Violin(
-                self._all_df[
-                    (self._all_df["zs"] == zs)
-                    & (self._all_df["encoding"].isin(encoding_list))
-                    & (self._all_df["model"] == model)
-                    & (self._all_df["n_sample"] == n_sample)
-                    & (self._all_df["n_top"] == n_top)
-                ]
-                .sort_values(["lib", "n_mut_cutoff"], ascending=[True, False])
-                .copy(),
-                kdims=["lib", "n_mut_cutoff"],
-                vdims=[metric],
-            ).opts(
-                width=1200,
-                height=400,
-                violin_color="n_mut_cutoff",
-                show_legend=True,
-                legend_position="top",
-                legend_offset=(0, 5),
-                title=plot_name,
-                ylim=(0, 1),
-                hooks=[one_decimal_x, one_decimal_y, fixmargins, lib_ncut_hook],
+            plot_zs_violin(
+                all_df=self._all_df,
+                zs=zs,
+                encoding_list=encoding_list,
+                model=model,
+                n_sample=n_sample,
+                n_top=n_top,
+                metric=metric,
+                plot_name=plot_name,
             ),
             plot_name=plot_name,
             plot_path=plot_path,
         )
-
-
-def lib_ncut_hook(plot, element):
-
-    plot.handles["plot"].x_range.factors = [
-        (lib, n_mut) for lib in LIB_NAMES for n_mut in ["single", "double", "all"]
-    ]
-    plot.handles["xaxis"].major_label_text_font_size = "0pt"
-    # plot.handles['xaxis'].group_text_font_size = '0pt'
-    # plot.handles['yaxis'].axis_label_text_font_size = '10pt'
-    # plot.handles['yaxis'].axis_label_text_font_style = 'normal'
-    # plot.handles['xaxis'].axis_label_text_font_style = 'normal'
 
 
 def comb_mlde_dfs(
@@ -850,8 +816,10 @@ def plot_mlde_dict(
             )
             ax.fill_between(
                 TOTAL_N_LIST,
-                mlde_df[f"{mlde_metric}_mean"].values.flatten() - mlde_df[f"{mlde_metric}_std"].values.flatten(),
-                mlde_df[f"{mlde_metric}_mean"].values.flatten() + mlde_df[f"{mlde_metric}_std"].values.flatten(),
+                mlde_df[f"{mlde_metric}_mean"].values.flatten()
+                - mlde_df[f"{mlde_metric}_std"].values.flatten(),
+                mlde_df[f"{mlde_metric}_mean"].values.flatten()
+                + mlde_df[f"{mlde_metric}_std"].values.flatten(),
                 color=MLDE_ALDE_COLORS[i],
                 alpha=0.05,
             )
@@ -961,7 +929,7 @@ def get_mlde_avg_dict(
                 n_mut_cutoff="all", zs="Triad-ev_score", **mlde_kwargs
             )
 
-            avg_mlde_df_dict["Triad + ESM"] = get_mlde_avg_sdf(
+            avg_mlde_df_dict["Triad + ESM-2"] = get_mlde_avg_sdf(
                 n_mut_cutoff="all", zs="Triad-esm_score", **mlde_kwargs
             )
 
@@ -973,7 +941,7 @@ def get_mlde_avg_dict(
                 n_mut_cutoff="all", zs="coves-ev_score", **mlde_kwargs
             )
 
-            avg_mlde_df_dict["CoVES + ESM"] = get_mlde_avg_sdf(
+            avg_mlde_df_dict["CoVES + ESM-2"] = get_mlde_avg_sdf(
                 n_mut_cutoff="all", zs="coves-esm_score", **mlde_kwargs
             )
 
@@ -1112,11 +1080,13 @@ def plot_de_vs_mlde(
                 linewidth=2,
                 color=MLDE_ALDE_COLORS[i],
             )
-     
+
             ax.fill_between(
                 TOTAL_N_LIST,
-                mlde_df[f"{mlde_metric}_mean"].values.flatten() - mlde_df[f"{mlde_metric}_std"].values.flatten(),
-                mlde_df[f"{mlde_metric}_mean"].values.flatten() + mlde_df[f"{mlde_metric}_std"].values.flatten(),
+                mlde_df[f"{mlde_metric}_mean"].values.flatten()
+                - mlde_df[f"{mlde_metric}_std"].values.flatten(),
+                mlde_df[f"{mlde_metric}_mean"].values.flatten()
+                + mlde_df[f"{mlde_metric}_std"].values.flatten(),
                 color=MLDE_ALDE_COLORS[i],
                 alpha=0.05,
             )
@@ -1132,6 +1102,7 @@ def plot_de_vs_mlde(
                 linestyle=de_ls[d],
                 linewidth=2,
             )
+
             ax.fill_between(
                 TOTAL_N_LIST,  # N_SAMPLE_LIST,
                 de_avg.loc[de, f"{de_metric}_mean"]
@@ -1141,6 +1112,28 @@ def plot_de_vs_mlde(
                 color=de_colors[d + 1],
                 alpha=0.05,
             )
+
+            # annotate
+            if de == "top96_SSM":
+                # add "^" at x = 19*3 + 96 and the correpsonding y
+                # no line just one dot
+                ax.scatter(
+                    19*3 + n_top,
+                    de_avg.loc[de, f"{de_metric}_mean"],
+                    marker="^",
+                    color=de_colors[d + 1],
+                    s=36,
+                    label=f"3-site {DE_LEGEND_MAP[de]}",
+                )
+                # add "D" at x = 19*4 + 96 and the correpsonding y
+                ax.scatter(
+                    19*4 + n_top,
+                    de_avg.loc[de, f"{de_metric}_mean"],
+                    marker="d",
+                    color=de_colors[d + 1],
+                    s=36,
+                    label=f"4-site {DE_LEGEND_MAP[de]}",
+                )
 
         # add vline
         ax.axvline(n_corr + n_top, color="gray", linewidth=0.5, linestyle="dotted")
@@ -1202,7 +1195,7 @@ def plot_ftmlde_simple(
         "MLDE",
         "ftMLDE: Hamming distance",
         "ftMLDE: EVmutation",
-        "ftMLDE: ESM",
+        "ftMLDE: ESM-2",
         "ftMLDE: ESM-IF",
         "ftMLDE: CoVES",
         "ftMLDE: Triad",
@@ -1237,8 +1230,10 @@ def plot_ftmlde_simple(
 
             ax.fill_between(
                 TOTAL_N_LIST,
-                mlde_df[f"{mlde_metric}_mean"].values.flatten() - mlde_df[f"{mlde_metric}_std"].values.flatten(),
-                mlde_df[f"{mlde_metric}_mean"].values.flatten() + mlde_df[f"{mlde_metric}_std"].values.flatten(),
+                mlde_df[f"{mlde_metric}_mean"].values.flatten()
+                - mlde_df[f"{mlde_metric}_std"].values.flatten(),
+                mlde_df[f"{mlde_metric}_mean"].values.flatten()
+                + mlde_df[f"{mlde_metric}_std"].values.flatten(),
                 color=FZL_PALETTE[mlde_color_list[i % len(mlde_color_list)]],
                 alpha=0.05,
             )
@@ -1319,7 +1314,7 @@ def plot_ftmlde_doubles(
         "MLDE",
         "ftMLDE: Hamming distance",
         "ftMLDE: EVmutation",
-        "ftMLDE: ESM",
+        "ftMLDE: ESM-2",
         "ftMLDE: ESM-IF",
         "ftMLDE: CoVES",
         "ftMLDE: Triad",
@@ -1350,8 +1345,10 @@ def plot_ftmlde_doubles(
 
             ax.fill_between(
                 TOTAL_N_LIST,
-                mlde_df[f"{mlde_metric}_mean"].values.flatten() - mlde_df[f"{mlde_metric}_std"].values.flatten(),
-                mlde_df[f"{mlde_metric}_mean"].values.flatten() + mlde_df[f"{mlde_metric}_std"].values.flatten(),
+                mlde_df[f"{mlde_metric}_mean"].values.flatten()
+                - mlde_df[f"{mlde_metric}_std"].values.flatten(),
+                mlde_df[f"{mlde_metric}_mean"].values.flatten()
+                + mlde_df[f"{mlde_metric}_std"].values.flatten(),
                 color=FZL_PALETTE[FTMLDE_COLOR_LIST[i % len(FTMLDE_COLOR_LIST)]],
                 alpha=0.05,
             )
@@ -1374,8 +1371,10 @@ def plot_ftmlde_doubles(
 
                 ax.fill_between(
                     TOTAL_N_LIST,
-                    mlde_df[f"{mlde_metric}_mean"].values.flatten() - mlde_df[f"{mlde_metric}_std"].values.flatten(),
-                    mlde_df[f"{mlde_metric}_mean"].values.flatten() + mlde_df[f"{mlde_metric}_std"].values.flatten(),
+                    mlde_df[f"{mlde_metric}_mean"].values.flatten()
+                    - mlde_df[f"{mlde_metric}_std"].values.flatten(),
+                    mlde_df[f"{mlde_metric}_mean"].values.flatten()
+                    + mlde_df[f"{mlde_metric}_std"].values.flatten(),
                     color=GRAY_COLORS[
                         "gray-" + FTMLDE_COLOR_LIST[i % len(FTMLDE_COLOR_LIST)]
                     ],
@@ -1460,7 +1459,7 @@ def plot_ftmlde_ensemble(
     options = [
         "MLDE",
         "ftMLDE: EVmutation",
-        "ftMLDE: ESM",
+        "ftMLDE: ESM-2",
         "ftMLDE: ESM-IF",
         "ftMLDE: CoVES",
         "ftMLDE: Triad",
@@ -1468,10 +1467,10 @@ def plot_ftmlde_ensemble(
 
     ensemble_opts = [
         "Triad + EVmutation",
-        "Triad + ESM",
+        "Triad + ESM-2",
         "Triad + ESM-IF",
         "CoVES + EVmutation",
-        "CoVES + ESM",
+        "CoVES + ESM-2",
         "EVmutation + ESM-IF",
     ]
 
@@ -1502,16 +1501,18 @@ def plot_ftmlde_ensemble(
 
             ax.fill_between(
                 TOTAL_N_LIST,
-                mlde_df[f"{mlde_metric}_mean"].values.flatten() - mlde_df[f"{mlde_metric}_std"].values.flatten(),
-                mlde_df[f"{mlde_metric}_mean"].values.flatten() + mlde_df[f"{mlde_metric}_std"].values.flatten(),
+                mlde_df[f"{mlde_metric}_mean"].values.flatten()
+                - mlde_df[f"{mlde_metric}_std"].values.flatten(),
+                mlde_df[f"{mlde_metric}_mean"].values.flatten()
+                + mlde_df[f"{mlde_metric}_std"].values.flatten(),
                 color=FZL_PALETTE[mlde_color_list[i % len(mlde_color_list)]],
                 alpha=0.05,
             )
 
-            j = i+1 # no gray gray
+            j = i + 1  # no gray gray
 
             # plot the ensemble same color but different linestyle and marker
-            mlde_df = avg_mlde_df_dict[ensemble_opts[j-1]]
+            mlde_df = avg_mlde_df_dict[ensemble_opts[j - 1]]
 
             ax.plot(
                 TOTAL_N_LIST,
@@ -1521,18 +1522,16 @@ def plot_ftmlde_ensemble(
                 # markersize=7.5,
                 linestyle="dashed",
                 linewidth=2,
-                color=GRAY_COLORS[
-                    "gray-" + mlde_color_list[j % len(mlde_color_list)]
-                ],
+                color=GRAY_COLORS["gray-" + mlde_color_list[j % len(mlde_color_list)]],
             )
 
             ax.fill_between(
                 TOTAL_N_LIST,
-                mlde_df[f"{mlde_metric}_mean"].values.flatten() - mlde_df[f"{mlde_metric}_std"].values.flatten(),
-                mlde_df[f"{mlde_metric}_mean"].values.flatten() + mlde_df[f"{mlde_metric}_std"].values.flatten(),
-                color=GRAY_COLORS[
-                    "gray-" + mlde_color_list[j % len(mlde_color_list)]
-                ],
+                mlde_df[f"{mlde_metric}_mean"].values.flatten()
+                - mlde_df[f"{mlde_metric}_std"].values.flatten(),
+                mlde_df[f"{mlde_metric}_mean"].values.flatten()
+                + mlde_df[f"{mlde_metric}_std"].values.flatten(),
+                color=GRAY_COLORS["gray-" + mlde_color_list[j % len(mlde_color_list)]],
                 alpha=0.05,
             )
 
@@ -1562,7 +1561,7 @@ def plot_ftmlde_ensemble(
     }
 
     ds_color_dict["CoVES + EVmutation"] = GRAY_COLORS["gray-" + mlde_color_list[-3]]
-    ds_color_dict["CoVES + ESM"] = GRAY_COLORS["gray-" + mlde_color_list[-2]]
+    ds_color_dict["CoVES + ESM-2"] = GRAY_COLORS["gray-" + mlde_color_list[-2]]
 
     ds_color_dict["EVmutation + ESM-IF"] = GRAY_COLORS["gray-" + mlde_color_list[-1]]
     # Create legend for line colors using the color dictionary
@@ -1667,8 +1666,10 @@ def plot_ftalde(
 
                     axes[r, m].fill_between(
                         TOTAL_N_LIST,
-                        mlde_df[f"{mlde_metric}_mean"].values.flatten() - mlde_df[f"{mlde_metric}_std"].values.flatten(),
-                        mlde_df[f"{mlde_metric}_mean"].values.flatten() + mlde_df[f"{mlde_metric}_std"].values.flatten(),
+                        mlde_df[f"{mlde_metric}_mean"].values.flatten()
+                        - mlde_df[f"{mlde_metric}_std"].values.flatten(),
+                        mlde_df[f"{mlde_metric}_mean"].values.flatten()
+                        + mlde_df[f"{mlde_metric}_std"].values.flatten(),
                         color=GRAY_COLORS[
                             "gray-" + FTMLDE_COLOR_LIST[i % len(FTMLDE_COLOR_LIST)]
                         ],
@@ -1763,7 +1764,7 @@ def plot_alde_opt(
     Plot ALDE with different optimization strategies
     """
 
-    line_styles = ["dashed", "solid"]*len(n_rounds)
+    line_styles = ["dashed", "solid"] * len(n_rounds)
 
     selected_alde_colors = MLDE_ALDE_COLORS[:4] + MLDE_ALDE_COLORS[-2:]
 
@@ -1775,19 +1776,17 @@ def plot_alde_opt(
                 avg_mlde_df_dict[f"{alde_model} {alde_acq} x {n}"] = avg_alde_df(
                     eq_n=n,
                     lib_list=lib_list,
-                    zs = "",
-                    alde_model = alde_model,
-                    alde_encoding = "onehot",
-                    alde_acq = alde_acq,
-                    alde_dir = alde_dir,
+                    zs="",
+                    alde_model=alde_model,
+                    alde_encoding="onehot",
+                    alde_acq=alde_acq,
+                    alde_dir=alde_dir,
                 )
-            
 
     fig, axes = plt.subplots(
         3, 2, figsize=(10, 9.6), sharex=True
     )  # Create a 2x2 grid of subplots
 
-    
     # Define the data and labels for ALDE
     opt_list = [f"{m} {a}" for a in ALDE_ACQ_OPTS for m in ALDE_MODEL_OPTS]
 
@@ -1846,11 +1845,8 @@ def plot_alde_opt(
 
     # add first legend to be different alde opts
     # also reorg so that all the odd ones first then all the even ones
-    mlde_color_dict = {
-        l: c
-        for (l, c) in zip(opt_list, selected_alde_colors)
-    }
-    
+    mlde_color_dict = {l: c for (l, c) in zip(opt_list, selected_alde_colors)}
+
     # Create legend for line colors using the color dictionary
     color_handles = [
         Line2D([0], [0], color=color, lw=2, label=label, linestyle=line_styles[i])
@@ -1858,7 +1854,9 @@ def plot_alde_opt(
     ]
 
     # sort color handles so that the odd ones are first
-    color_handles = sorted(color_handles, key=lambda x: (color_handles.index(x) % 2 == 1))
+    color_handles = sorted(
+        color_handles, key=lambda x: (color_handles.index(x) % 2 == 1)
+    )
 
     # Create alde legend rounds
     marker_style_dict = {f"ALDE x {r}": s for r, s in ALDE_MARKER_STYLES.items()}
@@ -2068,10 +2066,7 @@ def plot_mlde_attribute_corr(
     fig, ax = plt.subplots(2, 3, figsize=(12, 7.2), sharey=True)
 
     # Define y and y2 values
-    y = (
-        merge_mldedf["top_maxes"].values
-        - single_step_de.values
-    )
+    y = merge_mldedf["top_maxes"].values - single_step_de.values
     y2 = pooled_ft.values - single_step_de.values
     clist = glasbey_category10[: len(lib_list)]
 
@@ -2149,7 +2144,7 @@ def plot_mlde_attribute_corr(
             handles=legend_list,
             loc="upper left",
             title="Landscapes",
-            bbox_to_anchor=(1, 1.0325),
+            bbox_to_anchor=(1, 1.0425),
         )
 
     ax[0, 2].legend(
@@ -2164,7 +2159,6 @@ def plot_mlde_attribute_corr(
 
     if ifsave:
         save_svg(fig, fig_name, fig_dir)
-
 
 
 def slice_alde_ftalde(n: int, alde_all: pd.DataFrame) -> pd.DataFrame:
@@ -2405,7 +2399,7 @@ def get_fold_stats(
     models: list = ["boosting"],
     n_sample: int = 384,
     n_top: int = 96,
-):  
+):
     merge_mldedf = get_ftmlde_stat(
         mlde_csv=mlde_csv,
         lib_list=lib_list,
@@ -2427,12 +2421,14 @@ def get_fold_stats(
     )
 
     single_step_de = landscape_attribute_df["single_step_DE_mean_all"]
-    
+
     # Combine arrays into a DataFrame
-    fold_df = pd.DataFrame({
-        "MLDE": merge_mldedf["top_maxes"].values / single_step_de.values,
-        "ftMLDE": pooled_ft.values / single_step_de.values
-    })
+    fold_df = pd.DataFrame(
+        {
+            "MLDE": merge_mldedf["top_maxes"].values / single_step_de.values,
+            "ftMLDE": pooled_ft.values / single_step_de.values,
+        }
+    )
 
     # Add row index (if needed)
     fold_df.index = merge_mldedf["lib"]
@@ -2450,14 +2446,16 @@ def get_fold_stats(
 
     merge_df = alde_n[alde_n["lib"].isin(lib_list)].sort_values("lib")
 
-    alde_fold_df = pd.DataFrame({
-        "ALDE": merge_df["top_max_2"] / single_step_de.values,
-        "ftALDE": merge_df["zs_top_max_2"] / single_step_de.values,
-        "ALDE x 3": merge_df["top_max_3"] / single_step_de.values,
-        "ftALDE x 3": merge_df["zs_top_max_3"] / single_step_de.values,
-        "ALDE x 4": merge_df["top_max_4"] / single_step_de.values,
-        "ftALDE x 4": merge_df["zs_top_max_4"] / single_step_de.values
-    })
+    alde_fold_df = pd.DataFrame(
+        {
+            "ALDE": merge_df["top_max_2"] / single_step_de.values,
+            "ftALDE": merge_df["zs_top_max_2"] / single_step_de.values,
+            "ALDE x 3": merge_df["top_max_3"] / single_step_de.values,
+            "ftALDE x 3": merge_df["zs_top_max_3"] / single_step_de.values,
+            "ALDE x 4": merge_df["top_max_4"] / single_step_de.values,
+            "ftALDE x 4": merge_df["zs_top_max_4"] / single_step_de.values,
+        }
+    )
 
     alde_fold_df.index = merge_df["lib"]
 
@@ -2738,7 +2736,7 @@ def plot_mlde_type_split(
         n_top=n_top,
     )
 
-    for i , x in enumerate(PLOT_MLDE_METRICS):
+    for i, x in enumerate(PLOT_MLDE_METRICS):
         fig, axes = plt.subplots(1, 7, figsize=(7, 3.6))
 
         rand_df = (
@@ -2747,12 +2745,7 @@ def plot_mlde_type_split(
             .copy()
         )
 
-        for z, zs in enumerate(
-            ZS_OPTS
-            + [
-                "ds-ev"
-            ]
-        ):
+        for z, zs in enumerate(ZS_OPTS + ["ds-ev"]):
 
             ax = axes[z]
             bar_type_df = (
@@ -2775,12 +2768,13 @@ def plot_mlde_type_split(
                 bar_width = 0.6
 
             sns.boxplot(
-                x="type", y="delta", 
-                data=merg_df, 
-                width=bar_width, 
+                x="type",
+                y="delta",
+                data=merg_df,
+                width=bar_width,
                 ax=ax,
                 order=bar_order,
-                boxprops={'facecolor': 'None', 'edgecolor': FZL_PALETTE["gray"]},
+                boxprops={"facecolor": "None", "edgecolor": FZL_PALETTE["gray"]},
             )
             sns.stripplot(
                 x="type",
@@ -2788,27 +2782,30 @@ def plot_mlde_type_split(
                 data=merg_df,
                 order=bar_order,
                 hue="lib",
-                hue_order=merg_df['lib'].unique(),
+                hue_order=merg_df["lib"].unique(),
                 jitter=True,
                 size=7.5,
                 palette=glasbey_category10[:12],
                 marker="o",
                 alpha=0.8,
-                ax=ax
+                ax=ax,
             )
 
-            labels = [label.get_text().replace('Enzyme activity', 'Enzyme\nactivity') for label in ax.get_xticklabels()]
-            
+            labels = [
+                label.get_text().replace("Enzyme activity", "Enzyme\nactivity")
+                for label in ax.get_xticklabels()
+            ]
+
             if i == 0:
                 ymax = ymax1
                 ax.set_ylim(ymin1, ymax1)
-                
+
             else:
                 ymax = ymax2
                 ax.set_ylim(ymin2, ymax2)
                 ax.set_yticks([-0.5, 0, 0.5, 1])
-                
-            if z==0:
+
+            if z == 0:
                 ax.set_ylabel(PLOT_LINE_PERFORMANCE_YAXIS[i])
             else:
                 ax.set_ylabel("")
@@ -2823,23 +2820,26 @@ def plot_mlde_type_split(
                 )
             else:
                 ax_title = ZS_OPTS_LEGEND[zs]
-            ax.set_title(ax_title.replace(" ", "\n"),fontdict={
-                'fontsize': 10,
-            })
+            ax.set_title(
+                ax_title.replace(" ", "\n"),
+                fontdict={
+                    "fontsize": 10,
+                },
+            )
             ax.set_xticklabels(labels, rotation=90, ha="center")
             ax.yaxis.set_label_coords(-0.64, 0.55)
 
             # # Hide the top and right spine
-            ax.spines['top'].set_visible(False)
-            ax.spines['right'].set_visible(False)
+            ax.spines["top"].set_visible(False)
+            ax.spines["right"].set_visible(False)
 
-            ax.axhline(0, color='gray', lw=1, ls="dotted")
-            
+            ax.axhline(0, color="gray", lw=1, ls="dotted")
+
             if do_ttest:
 
                 t_val, p_value = ttest_ind(
-                    list(bar_type_df[bar_type_df["type"]=="Binding"][x]),
-                    list(bar_type_df[bar_type_df["type"]=="Enzyme activity"][x]),
+                    list(bar_type_df[bar_type_df["type"] == "Binding"][x]),
+                    list(bar_type_df[bar_type_df["type"] == "Enzyme activity"][x]),
                     equal_var=False,
                 )
 
@@ -2851,7 +2851,14 @@ def plot_mlde_type_split(
                 annot_y = ymax
                 if p_value < 0.05:
                     # ax.plot([p+0.5*(q-p), q-0.5*(q-p)], [annot_y, annot_y], color='gray', lw=1.5)
-                    ax.text((p+q)*.5, annot_y, "*", ha='center', va='bottom', color='gray')
+                    ax.text(
+                        (p + q) * 0.5,
+                        annot_y,
+                        "*",
+                        ha="center",
+                        va="bottom",
+                        color="gray",
+                    )
         # axes[0,0].yaxis.set_label_coords(-0.8, 0.55)
         # axes[1,0].yaxis.set_label_coords(-0.8, 0.42)
         axes[6].legend(loc="upper left", bbox_to_anchor=(1.01, 1.075))
@@ -3164,7 +3171,6 @@ def comp_de_mlde_alde_lib(
 
     fig, axes = plt.subplots(1, 2, figsize=(10, 3.6))
 
-
     order = [
         "DE",
         "MLDE",
@@ -3182,7 +3188,7 @@ def comp_de_mlde_alde_lib(
     ].replace("single_step_DE", "DE")
 
     for i, m in enumerate(PLOT_MLDE_METRICS):
- 
+
         ax = axes[i]
 
         sns.boxplot(
