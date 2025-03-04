@@ -52,6 +52,14 @@ warnings.filterwarnings("ignore", category=FutureWarning)
 # order of de simluation from simple to complex
 DE_TYPES = deepcopy(["recomb_SSM", "single_step_DE", "top96_SSM"])
 
+DE_N_TEST = deepcopy(
+    {
+        "recomb_SSM": 1,
+        "single_step_DE": 0,
+        "top96_SSM": 96,
+    }
+)
+
 DE_COLORS = deepcopy(
     {
         "recomb_SSM": FZL_PALETTE["light_brown"],

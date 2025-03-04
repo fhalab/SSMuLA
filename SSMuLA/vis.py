@@ -400,3 +400,35 @@ def lib_ncut_hook(plot, element):
     # plot.handles['yaxis'].axis_label_text_font_size = '10pt'
     # plot.handles['yaxis'].axis_label_text_font_style = 'normal'
     # plot.handles['xaxis'].axis_label_text_font_style = 'normal'
+
+
+def generate_related_color(reference_idx, base_idx, target_idx, palette="colorblind"):
+    """
+    Generate a color that has the same relationship to palette[target_idx]
+    as palette[base_idx] has to palette[reference_idx].
+    
+    Parameters:
+    - reference_idx: Index of the reference color in the palette.
+    - base_idx: Index of the color that is related to reference_idx.
+    - target_idx: Index of the color to which the transformation is applied.
+    - palette: Name of the Seaborn palette (default: "colorblind").
+    
+    Returns:
+    - A tuple representing the new RGB color.
+    """
+    import seaborn as sns
+    import numpy as np
+
+    # Get the palette
+    colors = sns.color_palette(palette)
+
+    # Compute transformation
+    color_shift = np.array(colors[base_idx]) - np.array(colors[reference_idx])
+
+    # Apply the transformation
+    new_color = np.array(colors[target_idx]) + color_shift
+
+    # Clip to valid RGB range [0,1]
+    new_color = np.clip(new_color, 0, 1)
+
+    return tuple(new_color)

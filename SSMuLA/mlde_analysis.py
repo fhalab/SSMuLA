@@ -28,9 +28,10 @@ from SSMuLA.landscape_global import (
     LIB_INFO_DICT,
     N_SAMPLE_LIST,
 )
-from SSMuLA.de_simulations import DE_TYPES, DE_LEGEND_MAP, get_de_avg
+from SSMuLA.de_simulations import DE_TYPES, DE_N_TEST, DE_LEGEND_MAP, get_de_avg
 from SSMuLA.zs_analysis import ZS_OPTS, ZS_OPTS_LEGEND
 from SSMuLA.alde_analysis import avg_alde_df
+from SSMuLA.finetune_analysis import parse_finetune_df, avg_finetune_df
 from SSMuLA.vis import (
     save_bokeh_hv,
     plot_zs_violin,
@@ -38,6 +39,7 @@ from SSMuLA.vis import (
     GRAY_COLORS,
     save_svg,
     glasbey_category10,
+    generate_related_color,
 )
 from SSMuLA.util import checkNgen_folder, get_file_name
 
@@ -96,6 +98,11 @@ MLDE_ALDE_COLORS = [
     sns.color_palette("colorblind")[3],
 ]
 
+FINETUNE_COLORS = [
+    generate_related_color(3, 1, 2),
+    sns.color_palette("colorblind")[2],
+]
+
 FTMLDE_COLOR_LIST = ["gray", "blue", "green", "purple", "yellow", "brown", "orange"]
 
 
@@ -132,26 +139,26 @@ def get_mlde_avg_df(
     n_top: int,
     n_mut_cutoff: str,
     zs: str,
-    active_lib_list: list,
+    lib_list: list,
     model_list: list = ["boosting"],
     encoding_list: list = ["one-hot"],
 ) -> pd.DataFrame:
     """
-    Get average mlde df for a given n_top, n_mut_cutoff, zs, and active_lib_list
+    Get average mlde df for a given n_top, n_mut_cutoff, zs, and lib_list
 
     Args:
     - mlde_all: pd.DataFrame, mlde df to parse
     - n_top: int, n_top
     - n_mut_cutoff: str, n_mut_cutoff
     - zs: str, zs
-    - active_lib_list: list, active_lib_list
+    - lib_list: list, lib_list
     - model_list: list, model_list
     - encoding_list: list, encoding_list
     """
 
     avg_mlde = (
         mlde_all[
-            (mlde_all["lib"].isin(active_lib_list))
+            (mlde_all["lib"].isin(lib_list))
             & (mlde_all["zs"] == zs)
             & (mlde_all["n_top"] == n_top)
             & (mlde_all["n_mut_cutoff"] == n_mut_cutoff)
@@ -177,7 +184,7 @@ def get_mlde_avg_sdf(
     n_top: int,
     n_mut_cutoff: str,
     zs: str,
-    active_lib_list: list,
+    lib_list: list,
     model_list: list = ["boosting"],
     encoding_list: list = ["one-hot"],
     ft_frac: float = 0.125,
@@ -190,13 +197,13 @@ def get_mlde_avg_sdf(
     - n_top, int: Number of top mutations to consider
     - n_mut_cutoff, str: Mutation cutoff to consider
     - zs, str: ZS value to consider
-    - active_lib_list, list: List of active libraries to consider
+    - lib_list, list: List of libraries to consider
     - model_list, list: List of models to consider
     - ft_frac, float: fraction of the focused training set
     """
 
     slice_mlde = mlde_all[
-        (mlde_all["lib"].isin(active_lib_list))
+        (mlde_all["lib"].isin(lib_list))
         & (mlde_all["zs"] == zs)
         & (mlde_all["n_top"] == n_top)
         & (mlde_all["n_mut_cutoff"] == n_mut_cutoff)
@@ -209,7 +216,7 @@ def get_mlde_avg_sdf(
 
     if zs != "none":
         lib_dfs = []
-        for lib in active_lib_list:
+        for lib in lib_list:
             lib_df = slice_mlde[slice_mlde["lib"] == lib].copy()
 
             n_site = len(LIB_INFO_DICT[lib]["positions"])
@@ -689,7 +696,7 @@ def plot_mlde_emb(
                 n_mut_cutoff="all",
                 zs=zs,
                 encoding_list=[emb_opt],
-                active_lib_list=lib_list,
+                lib_list=lib_list,
             )
 
             ax.plot(
@@ -754,7 +761,7 @@ def get_model_comp_dict(
         n_top,
         n_mut_cutoff="all",
         zs="none",
-        active_lib_list=lib_list,
+        lib_list=lib_list,
         model_list=["boosting"],
         ft_frac=0.125,
     )
@@ -764,7 +771,7 @@ def get_model_comp_dict(
         n_top,
         n_mut_cutoff="all",
         zs="none",
-        active_lib_list=lib_list,
+        lib_list=lib_list,
         model_list=["ridge"],
         ft_frac=0.125,
     )
@@ -889,7 +896,7 @@ def get_mlde_avg_dict(
         mlde_kwargs = dict(
             mlde_all=mlde_all,
             n_top=n_top,
-            active_lib_list=lib_list,
+            lib_list=lib_list,
             ft_frac=0.125,
         )
 
@@ -1112,27 +1119,50 @@ def plot_de_vs_mlde(
                 color=de_colors[d + 1],
                 alpha=0.05,
             )
+            # annotate full coverage screen
+            ax.scatter(
+                3 * 96 + DE_N_TEST[de],
+                de_avg.loc[de, f"{de_metric}_mean"],
+                marker="^",
+                color=de_colors[d + 1],
+                s=40,
+                # label="3-site full-coverage",
+            )
+            ax.scatter(
+                4 * 96 + DE_N_TEST[de],
+                de_avg.loc[de, f"{de_metric}_mean"],
+                marker="d",
+                color=de_colors[d + 1],
+                s=40,
+                # label="4-site full-coverage",
+            )
 
             # annotate
             if de == "top96_SSM":
                 # add "^" at x = 19*3 + 96 and the correpsonding y
                 # no line just one dot
                 ax.scatter(
-                    19*3 + n_top,
+                    19 * 3 + n_top,
                     de_avg.loc[de, f"{de_metric}_mean"],
                     marker="^",
+                    facecolors="none",
+                    edgecolors=de_colors[d + 1],
+                    linewidth=1.2,
                     color=de_colors[d + 1],
                     s=36,
-                    label=f"3-site {DE_LEGEND_MAP[de]}",
+                    # label="3-site unique",
                 )
                 # add "D" at x = 19*4 + 96 and the correpsonding y
                 ax.scatter(
-                    19*4 + n_top,
+                    19 * 4 + n_top,
                     de_avg.loc[de, f"{de_metric}_mean"],
                     marker="d",
+                    facecolors="none",
+                    edgecolors=de_colors[d + 1],
+                    linewidth=1.2,
                     color=de_colors[d + 1],
                     s=36,
-                    label=f"4-site {DE_LEGEND_MAP[de]}",
+                    # label="4-site unique",
                 )
 
         # add vline
@@ -1163,6 +1193,60 @@ def plot_de_vs_mlde(
                 for index, value in enumerate(line_styles)
                 if value == "dashed"
             ]
+            # Manually create legend handles with assigned colors
+            handles.extend(
+                [
+                    Line2D(
+                        [0],
+                        [0],
+                        marker="^",
+                        color="none",
+                        markeredgecolor="black",
+                        markerfacecolor="none",
+                        markersize=6,
+                        label="3-site unique",
+                    ),
+                    Line2D(
+                        [0],
+                        [0],
+                        marker="d",
+                        color="none",
+                        markeredgecolor="black",
+                        markerfacecolor="none",
+                        markersize=6,
+                        label="4-site unique",
+                    ),
+                    Line2D(
+                        [0],
+                        [0],
+                        marker="^",
+                        color="none",
+                        markerfacecolor="black",
+                        markersize=6,
+                        label="3-site full-coverage",
+                    ),
+                    Line2D(
+                        [0],
+                        [0],
+                        marker="d",
+                        color="none",
+                        markerfacecolor="black",
+                        markersize=6,
+                        label="4-site full-coverage",
+                    ),
+                ]
+            )
+
+            # Manually create legend labels
+            labels.extend(
+                [
+                    "3-site unique",
+                    "4-site unique",
+                    "3-site full-coverage",
+                    "4-site full-coverage",
+                ]
+            )
+
             ax.legend(handles=handles, loc="upper left", bbox_to_anchor=(1, 1.025))
 
     if ifsave:
@@ -1887,6 +1971,205 @@ def plot_alde_opt(
 
     # Adjust the layout to prevent overlapping
     plt.tight_layout()
+
+    if ifsave:
+        save_svg(fig, fig_name, fig_dir)
+
+
+def plot_finetune(
+    mlde_csv: str,
+    alde_dir: str,
+    finetune_dir: str,
+    lib_list: list,
+    fig_name: str,
+    zs: str = "ev_score",
+    n_top: int = 96,
+    n_corr: int = 384,
+    ifzoomy: bool = False,
+    ifsave: bool = True,
+    fig_dir: str = "figs",
+):
+    """
+    Plot finetune results together with
+    MLDE, ftMLDE: EVmutation, (boosting, one-hot)
+    ALDE x 2, ftALDE x 2: EVmutation, (boosting, one-hot, greedy)
+    ALDE x 3, ftALDE x 3: EVmutation,
+    ALDE x 4, ftALDE x 4: EVmutation,
+    Fine-tuning, ftFine-tuning: EVmutation
+
+    Args:
+        mlde_csv (str): Path to the MLDE CSV file.
+        alde_dir (str): Path to the ALDE directory.
+        finetune_dir (str): Path to the fine-tuning directory.
+            Assume containing `ev` and `none` subfolder
+        lib_list (list): List of libraries.
+        n_sample (int): Number of samples.
+        fig_name (str): Name of the figure to save.
+        models (list, optional): List of models. Defaults to ["boosting"].
+        n_top (int, optional): Number of top mutations. Defaults to 96.
+        zs (str, optional): ZS option. Defaults to "ev_score".
+        ifsave (bool, optional): Whether to save the figure. Defaults to True.
+    """
+
+    avg_mlde_df_dict = {}
+
+    if mlde_csv != "":
+
+        mlde_all = pd.read_csv(mlde_csv)
+
+        mlde_kwargs = dict(
+            mlde_all=mlde_all,
+            n_top=n_top,
+            lib_list=lib_list,
+            ft_frac=0.125,
+        )
+
+        # just mlde
+        avg_mlde_df_dict["MLDE"] = get_mlde_avg_sdf(
+            n_mut_cutoff="all", zs="none", **mlde_kwargs
+        )
+
+        avg_mlde_df_dict[f"ftMLDE: {ZS_OPTS_LEGEND[zs]}"] = get_mlde_avg_sdf(
+            n_mut_cutoff="all", zs=zs, **mlde_kwargs
+        )
+
+    if alde_dir != "":
+        # now add alde
+        alde_kwags = dict(
+            lib_list=lib_list,
+            alde_model="Boosting Ensemble",
+            alde_encoding="onehot",
+            alde_acq="GREEDY",
+            alde_dir=alde_dir,
+        )
+
+        for eq_n in [2, 3, 4]:
+
+            avg_mlde_df_dict[f"ALDE x {eq_n}"] = avg_alde_df(eq_n, **alde_kwags)
+
+            # add ev
+            avg_mlde_df_dict[f"ftALDE x {eq_n}: {ZS_OPTS_LEGEND[zs]}"] = avg_alde_df(
+                eq_n, zs=zs.replace("_score", ""), **alde_kwags
+            )
+
+    # get finetune df
+    if finetune_dir != "":
+        finetune_kwargs = dict(
+            lib_list=lib_list,
+            n_top=n_top,
+        )
+
+        avg_mlde_df_dict["Fine-tuning"] = avg_finetune_df(
+            parse_finetune_df(
+                finetune_dir=os.path.join(
+                    finetune_dir, "none"
+                ),  # ie results/finetuning/ev or none
+                **finetune_kwargs,
+            ),
+            N_SAMPLE_LIST,
+        )
+
+        avg_mlde_df_dict[f"ftFine-tuning: {ZS_OPTS_LEGEND[zs]}"] = avg_finetune_df(
+            parse_finetune_df(
+                finetune_dir=os.path.join(
+                    finetune_dir, zs.replace("_score", "")
+                ),  # ie results/finetuning/ev or none
+                **finetune_kwargs,
+            ),
+            N_SAMPLE_LIST,
+        )
+
+    fig, axes = plt.subplots(1, 2, figsize=(10.5, 4), sharex=True)
+
+    mlde_color_list = MLDE_ALDE_COLORS + FINETUNE_COLORS
+
+    # Define the data and labels for MLDE and ALDE cases
+    options = [
+        "MLDE",
+        "ftMLDE: EVmutation",
+        "ALDE x 2",
+        "ftALDE x 2: EVmutation",
+        "ALDE x 3",
+        "ftALDE x 3: EVmutation",
+        "ALDE x 4",
+        "ftALDE x 4: EVmutation",
+        "Fine-tuning",
+        f"ftFine-tuning: {ZS_OPTS_LEGEND[zs]}",
+    ]
+
+    line_styles = (
+        [
+            "dashed",
+            "solid",
+        ]
+        + [
+            "dashed",
+            "solid",
+        ]
+        * 3
+        + ["dashed", "solid"]
+    )
+
+    if ifzoomy:
+        y_mins = [0.5, 0]
+    else:
+        y_mins = [0, 0]
+
+    # Loop over
+
+    for ax, mlde_metric, y_label, y_min in zip(
+        axes, PLOT_MLDE_METRICS, PLOT_LINE_PERFORMANCE_YAXIS, y_mins
+    ):
+
+        for i, mlde_opts in enumerate(options):
+            mlde_df = avg_mlde_df_dict[mlde_opts]
+
+            ax.plot(
+                TOTAL_N_LIST,
+                mlde_df[f"{mlde_metric}_mean"],
+                label=mlde_opts.replace("Average ", ""),
+                marker="o",
+                linewidth=2,
+                linestyle=line_styles[i],
+                color=mlde_color_list[i],
+            )
+
+            ax.fill_between(
+                TOTAL_N_LIST,
+                mlde_df[f"{mlde_metric}_mean"].values.flatten()
+                - mlde_df[f"{mlde_metric}_std"].values.flatten(),
+                mlde_df[f"{mlde_metric}_mean"].values.flatten()
+                + mlde_df[f"{mlde_metric}_std"].values.flatten(),
+                color=mlde_color_list[i],
+                alpha=0.05,
+            )
+
+        ax.axvline(n_corr + n_top, color="gray", linewidth=0.5, linestyle="dotted")
+        ax.set_xlim(TOTAL_N_LIST[0], TOTAL_N_LIST[-1])
+        ax.set_ylim(y_min, 1.0)
+        ax.set_xscale("log")
+        # label the orignial xticks labels
+        ax.set_xticks(N_TICK_LIST)
+
+        # Use FuncFormatter to display the original values on the log-scaled axis
+        ax.xaxis.set_major_formatter(FuncFormatter(lambda x, _: f"{int(x)}"))
+        ax.xaxis.set_minor_locator(plt.NullLocator())
+        ax.set_xlabel("Total number of variants")
+        ax.set_ylabel(y_label)
+
+        if ax == axes[1]:
+            # Get the handles and labels from the legend
+            handles, labels = ax.get_legend_handles_labels()
+            # fix the dash handle
+            [
+                handles[index].set_dashes([6, 2])
+                for index, value in enumerate(line_styles)
+                if value == "dashed"
+            ]
+            ax.legend(handles=handles, loc="upper left", bbox_to_anchor=(1, 1.025))
+
+    # Adjust the layout to prevent overlapping
+    plt.tight_layout(h_pad=1.5)
 
     if ifsave:
         save_svg(fig, fig_name, fig_dir)

@@ -365,7 +365,7 @@ def train_predict_per_protein(
         model,
         os.path.join(
             checkNgen_folder(os.path.join(save_dir, "model", landscape)),
-            f"{landscape}_{str(rep)}.pth",
+            f"{landscape}_{str(n_sample)}_{str(rep)}.pth",
         ),
     )
 

@@ -32,9 +32,9 @@ results_rev
 results_rev/
 results_rev/*
 
-results_old
-results_old/
-results_old/*
+results_raw
+results_raw/
+results_raw/*
 
 results4upload
 results4upload/
