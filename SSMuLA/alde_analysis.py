@@ -72,14 +72,20 @@ def avg_alde_df(
             ]
             # for each Protein take the max of the timestep
 
-            # print(slice_df)
+            if len(lib_list) == 1:
+                top_maxes_std = slice_df["Std"].mean()
+                if_truemaxs_std = 0
+            else:
+                top_maxes_std = slice_df["Mean"].std()
+                if_truemaxs_std = slice_df["Frac"].std()
+
             df = df._append(
                 {
                     "n_sample": n,
                     "top_maxes_mean": slice_df["Mean"].mean(),
-                    "top_maxes_std": slice_df["Mean"].std(),
+                    "top_maxes_std": top_maxes_std,
                     "if_truemaxs_mean": slice_df["Frac"].mean(),
-                    "if_truemaxs_std": slice_df["Frac"].std(),
+                    "if_truemaxs_std": if_truemaxs_std,
                 },
                 ignore_index=True,
             )
