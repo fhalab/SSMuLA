@@ -10,6 +10,7 @@ import numpy as np
 
 
 from SSMuLA.landscape_global import N_SAMPLE_LIST
+from SSMuLA.zs_analysis import ZS_OPTS, map_zs_labels
 
 
 def avg_alde_df(
@@ -212,6 +213,68 @@ def aggregate_alde_df(
     alde_all.to_csv(alde_df_path, index=False)
 
     return alde_all
+
+
+def get_ftalde_libavg(
+    alde_csv: str,
+    lib_list: list,
+    n_total: int,
+    n_round: int,
+    models: list = ["Boosting Ensemble"],
+    acquisition: list = ["GREEDY"],
+):
+
+    """
+    Get the FT-ALDE data for each of the library, number of rounds, models, and acquisition method.
+    Args:
+        alde_csv (str): Path to the FT-ALDE CSV file.
+        lib_list (list): List of libraries to filter.
+        n_total (int): Total number of samples.
+        n_round (int): Number of rounds.
+        models (list): List of models to filter.
+        acquisition (list): List of acquisition methods to filter.
+    Returns:
+        pd.DataFrame: Filtered DataFrame containing FT-ALDE data.
+    """
+    # have all none zs and zs opt for MLDE, ALDE different rounds
+    alde_all = pd.read_csv(alde_csv)
+    # Replace NaN values in column 'zs' with the string "none"
+    alde_all["zs"] = alde_all["zs"].fillna("none")
+
+    slice_df = alde_all[
+        (alde_all["rounds"] == n_round)
+        & (alde_all["Encoding"] == "onehot")
+        & (alde_all["Model"].isin(models))
+        & (alde_all["Acquisition"].isin(acquisition))
+        & (alde_all["n_samples"] == n_total)
+        & (alde_all["Protein"].isin(lib_list))
+        # & (alde_all["n_mut_cutoff"] == "all")
+    ].copy()
+
+    # Convert 'Category' column to categorical with defined order
+    slice_df["zs"] = pd.Categorical(
+        slice_df["zs"],
+        categories=["none"]
+        + [o.replace("_score", "") for o in ZS_OPTS]
+        + [
+            "ds-esmif",
+            "ds-ev",
+            "ds-coves",
+            "ds-Triad",
+            "ds-esm",
+        ],
+        ordered=True,
+    )
+
+    slice_df = slice_df.sort_values(by=["zs", "Protein"])
+
+    slice_df["zs"] = slice_df["zs"].apply(map_zs_labels)
+
+    return (
+        slice_df[["Protein", "zs", "Mean", "Frac"]]
+        .rename(columns={"Protein": "lib", "Mean": "top_maxes", "Frac": "if_truemaxs"})
+        .copy()
+    )
 
 
 def clean_alde_df(

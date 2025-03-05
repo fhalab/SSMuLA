@@ -33,13 +33,14 @@ from SSMuLA.vis import (
     save_bokeh_hv,
     FZL_PALETTE,
     glasbey_category10,
-    save_svg
+    save_svg,
 )
 from SSMuLA.zs_data import MSA_DF
 from SSMuLA.util import ndcg_scale, checkNgen_folder
 
 hv.extension("bokeh")
 hv.renderer("bokeh").theme = JSON_THEME
+
 
 ZS_OPTS = [
     "ed_score",
@@ -110,7 +111,6 @@ ZS_METRIC_BASELINE = {
 
 ZS_N_MUTS = ["all", "double", "single"]
 
-
 SIX_ZS_COLORS = {
     "ed_score": FZL_PALETTE["blue"],
     "ev_score": FZL_PALETTE["green"],
@@ -119,6 +119,42 @@ SIX_ZS_COLORS = {
     "coves_score": FZL_PALETTE["brown"],
     "Triad_score": FZL_PALETTE["orange"],
 }
+
+
+def get_dszs_label(zs: str) -> str:
+    """
+    Returns the legend label for a given zs key, handling 'ds-' prefixed cases.
+
+    Args:
+        zs (str): Key representing the zero-shot option.
+
+    Returns:
+        str: Mapped label from ZS_OPTS_LEGEND.
+    """
+    base_key = zs.replace("ds-", "") + "_score" if "ds-" in zs else zs
+    return (
+        "Hamming\ndistance\n" + ZS_OPTS_LEGEND.get(base_key, "Unknown")
+        if "ds-" in zs
+        else ZS_OPTS_LEGEND.get(base_key, "Unknown")
+    )
+
+
+def map_zs_labels(zs: str) -> str:
+    """
+    Maps a zs key to its corresponding label from ZS_OPTS_LEGEND,
+    handling 'ds-' prefixed cases by appending 'Hamming distance'.
+
+    Args:
+        zs (str): Key representing the zero-shot option.
+
+    Returns:
+        str: Mapped label from ZS_OPTS_LEGEND.
+    """
+    if ("_score" not in zs) and (zs != "none") and ("ds-" not in zs):
+        zs += "_score"
+    base_key = zs.replace("ds-", "") + "_score" if "ds-" in zs else zs
+    mapped_label = ZS_OPTS_LEGEND.get(base_key, zs)  # Default to original if not found
+    return f"Hamming distance\n+ {mapped_label}" if "ds-" in zs else mapped_label
 
 
 class ZS_Analysis(LibData):
@@ -749,7 +785,7 @@ def plot_zs_corr(
     save_dir="figs",
     fig_id="3d",
     ifsave=True,
-    addtitle=False
+    addtitle=False,
 ):
     """
     Plot the ZS correlations
@@ -821,6 +857,7 @@ def plot_zs_corr(
             f"{save_dir}/{fig_id}.svg", dpi=300, bbox_inches="tight", format="svg"
         )
 
+
 def parse_zs(
     zs_sum_csv: str = "results/zs_sum/none/zs_stat_scale2max.csv",
     zs_parse_csv: str = "results/zs_sum/none/zs_stat_parsed.csv",
@@ -866,7 +903,7 @@ def parse_zs(
     )
 
     zs_append_msa = pd.merge(zs_parsed_df, MSA_DF, on="lib")
-    
+
     zs_append_msa.to_csv(zs_parse_csv, index=False)
 
     return zs_append_msa
@@ -876,10 +913,10 @@ def plot_app_type_zs(
     metric: str,
     n_mut: str,
     slice_zs: pd.DataFrame,
-    fig_name = "4b",
-    y_min = None,
-    y_max = None,
-    y_annotation = None,
+    fig_name="4b",
+    y_min=None,
+    y_max=None,
+    y_annotation=None,
     save_dir: str = "figs",
     if_save: bool = True,
 ):
@@ -946,7 +983,7 @@ def plot_app_type_zs(
             if y_annotation is None:
                 y_annotation = 0.6
 
-        elif metric == "rocauc" :
+        elif metric == "rocauc":
             if y_annotation is None:
                 y_annotation = 1
 
@@ -987,7 +1024,9 @@ def plot_app_type_zs(
             q = 1
             annot_y = y_annotation
             if p_value < 0.05:
-                ax.text((p + q) * 0.5, annot_y, "*", ha="center", va="bottom", color="gray")
+                ax.text(
+                    (p + q) * 0.5, annot_y, "*", ha="center", va="bottom", color="gray"
+                )
 
     plt.tight_layout(pad=0, h_pad=-0.0, w_pad=0.5)
 

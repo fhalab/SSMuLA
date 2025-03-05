@@ -29,8 +29,8 @@ from SSMuLA.landscape_global import (
     N_SAMPLE_LIST,
 )
 from SSMuLA.de_simulations import DE_TYPES, DE_N_TEST, DE_LEGEND_MAP, get_de_lib, get_de_avg
-from SSMuLA.zs_analysis import ZS_OPTS, ZS_OPTS_LEGEND
-from SSMuLA.alde_analysis import avg_alde_df
+from SSMuLA.zs_analysis import ZS_OPTS, ZS_OPTS_LEGEND, map_zs_labels
+from SSMuLA.alde_analysis import avg_alde_df, get_ftalde_libavg
 from SSMuLA.finetune_analysis import parse_finetune_df, avg_finetune_df
 from SSMuLA.vis import (
     save_bokeh_hv,
@@ -252,6 +252,120 @@ def get_mlde_avg_sdf(
     avg_mlde.columns = ["{}_{}".format(i, j) for i, j in avg_mlde.columns]
     avg_mlde = avg_mlde.rename(columns={"n_sample_": "n_sample"}).set_index("n_sample")
     return avg_mlde
+
+
+def get_ftmlde_libavg(
+    mlde_csv: str,
+    lib_list: list,
+    n_sample: int,
+    models: list = ["boosting"],
+    n_top: int = 96,
+    add_ensemble: bool = True,
+) -> pd.DataFrame:
+
+    """
+    Get the ftMLDE data for each of the library, number of rounds, models, and acquisition method.
+
+    Args:
+        mlde_csv (str): Path to the FT-MLDE CSV file.
+        lib_list (list): List of libraries to filter.
+        n_sample (int): Number of samples.
+        models (list): List of models to filter.
+        n_top (int): Number of top samples.
+        add_ensemble (bool): Whether to include ensemble models.
+
+    Returns:
+        pd.DataFrame: Filtered DataFrame containing FT-MLDE data.
+    """
+
+    mlde_df = pd.read_csv(mlde_csv)
+
+    if lib_list is None:
+        lib_list = deepcopy(mlde_df["lib"].unique().tolist())
+
+    common_slice = mlde_df[
+        (mlde_df["encoding"] == "one-hot")
+        & (mlde_df["model"].isin(models))
+        & (mlde_df["n_sample"] == n_sample)
+        & (mlde_df["n_top"] == n_top)
+        & (mlde_df["lib"].isin(lib_list))
+    ]
+
+    noft_df = common_slice[
+        (common_slice["zs"] == "none") & (common_slice["n_mut_cutoff"] == "all")
+    ]
+
+    if not add_ensemble:
+        ftzs = ZS_OPTS[1:]
+    else:
+        ftzs = ZS_OPTS[1:] + [
+            "Triad-ev_score",
+            "Triad-esm_score",
+            "Triad-esmif_score",
+            "coves-ev_score",
+            "coves-esm_score",
+            "two-best_score",
+        ]
+
+    no_combo_df = common_slice[
+        (common_slice["n_mut_cutoff"] == "all")
+        & (common_slice["zs"].isin(ftzs))
+        & (common_slice["ft_lib"].isin([0.125 * 20 ** 3, 0.125 * 20 ** 4]))
+    ].copy()
+
+    ds_only_df = common_slice[
+        (common_slice["n_mut_cutoff"] == "double") & (common_slice["zs"] == "none")
+    ].copy()
+    ds_only_df["zs"] = ds_only_df["zs"].replace({"none": "ed_score"})
+
+    ds_comb_df = common_slice[
+        (common_slice["n_mut_cutoff"] == "double")
+        & (common_slice["zs"].isin(ZS_OPTS[1:]))
+        & (common_slice["ft_lib"].isin([0.125 * 3 * 20 ** 2, 0.125 * 6 * 20 ** 2]))
+    ].copy()
+
+    ds_comb_df["zs"] = ds_comb_df["zs"].replace(
+        {
+            "ev_score": "ds-ev",
+            "esmif_score": "ds-esmif",
+            "esm_score": "ds-esm",
+            "coves_score": "ds-coves",
+            "Triad_score": "ds-Triad",
+        }
+    )
+
+    slice_df = pd.concat(
+        [noft_df, ds_only_df, no_combo_df, ds_comb_df], ignore_index=True
+    )
+
+    # Convert 'Category' column to categorical with defined order
+    slice_df["zs"] = pd.Categorical(
+        slice_df["zs"],
+        categories=["none"]
+        + [ZS_OPTS[0]]
+        + ftzs
+        + [
+            "ds-ev",
+            "ds-esmif",
+            "ds-esm",
+            "ds-coves",
+            "ds-Triad",
+        ],
+        ordered=True,
+    )
+
+    slice_df = (
+        slice_df[["lib", "zs", "top_maxes", "if_truemaxs"]]
+        .groupby(["lib", "zs"])
+        .mean()
+        .reset_index()
+        .sort_values(by=["zs", "lib"])
+    )
+
+    # map zs labels
+    slice_df["zs"] = slice_df["zs"].apply(map_zs_labels)
+
+    return slice_df.reset_index(drop=True).copy()
 
 
 class MLDEParser:
@@ -1064,6 +1178,73 @@ def get_mlde_avg_dict(
                 ] = avg_alde_df(eq_n, zs="ds-" + zs.replace("_score", ""), **alde_kwags)
 
     return avg_mlde_df_dict
+
+
+def get_ftmlal_libavg(
+    mlde_csv: str,
+    alde_csv: str,
+    lib_list: list,
+    n_sample: int,
+    mlde_models: list = ["boosting"],
+    alde_models: list = ["Boosting Ensemble"],
+    alde_acquisition: list = ["GREEDY"],
+    n_top: int = 96,
+    add_ensemble: bool = True,
+) -> pd.DataFrame:
+
+    """
+    Get the ftMLDE and ftALDE data for each of the library, number of rounds, models, and acquisition method.
+    
+    Args:
+        mlde_csv (str): Path to the FT-MLDE CSV file.
+        alde_csv (str): Path to the FT-ALDE CSV file.
+        lib_list (list): List of libraries to filter.
+        n_sample (int): Number of samples.
+        mlde_models (list): List of MLDE models to filter.
+        alde_models (list): List of ALDE models to filter.
+        alde_acquisition (list): List of acquisition methods to filter.
+        n_top (int): Number of top samples.
+        add_ensemble (bool): Whether to include ensemble models.
+    
+    Returns:
+        pd.DataFrame: Filtered DataFrame containing FT-MLDE and FT-ALDE data.
+    """
+
+    ftmlde_libdf = get_ftmlde_libavg(
+        mlde_csv=mlde_csv,
+        lib_list=lib_list,
+        n_sample=n_sample,
+        models=mlde_models,
+        n_top=n_top,
+        add_ensemble=add_ensemble,
+    )
+
+    if lib_list is None:
+        lib_list = deepcopy(ftmlde_libdf["lib"].unique().tolist())
+
+    ftalde_libs = []
+
+    for n in [2, 3, 4]:
+        ftalde_libs.append(
+            get_ftalde_libavg(
+                alde_csv=alde_csv,
+                lib_list=lib_list,
+                n_total=n_sample + n_top,
+                n_round=n,
+                models=alde_models,
+                acquisition=alde_acquisition,
+            )
+        )
+
+    ftalde_libdf = (
+        pd.concat(ftalde_libs, ignore_index=True).reset_index(drop=True).copy()
+    )
+
+    return (
+        pd.concat([ftmlde_libdf, ftalde_libdf], ignore_index=True)
+        .reset_index(drop=True)
+        .copy()
+    )
 
 
 def plot_single_mlde_vs_de(
@@ -4047,6 +4228,7 @@ def get_demlal_libavg(
     lib_list: list | None = None,
     models: list = ["boosting"],
     n_top: int = 96,
+    ifmapde: bool = False
 ):
     
     mlde_df = pd.read_csv(mlde_csv)
@@ -4125,6 +4307,10 @@ def get_demlal_libavg(
     )
 
     de_all = pd.read_csv(de_csv)
+
+    if ifmapde:
+        # rename column de_type with DE_LEGEND_MAP if they are in the map and keep the rest what it is
+        de_all["de_type"] = de_all["de_type"].map(DE_LEGEND_MAP)
 
     merge_demlal = pd.concat(
         [

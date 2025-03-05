@@ -7,9 +7,12 @@ https://colab.research.google.com/drive/1RAWb22-PFNI-X1gPVzc927SGUdfr6nsR?usp=sh
 
 from __future__ import annotations
 
+from tqdm import tqdm
+from copy import deepcopy
+
+import random
 import numpy as np
 import pandas as pd
-from tqdm import tqdm
 
 import seaborn as sns
 import matplotlib.pyplot as plt
@@ -17,15 +20,35 @@ from collections import defaultdict
 
 from SSMuLA.mlde_analysis import (
     get_demlal_libavg,
+    get_ftmlal_libavg,
     PLOT_MLDE_METRICS,
     PLOT_LINE_PERFORMANCE_YAXIS,
 )
-from SSMuLA.de_simulations import DE_LEGEND_MAP
 from SSMuLA.vis import save_svg
 
 
+RAND_SEED = 42
+
+random.seed(RAND_SEED)
+np.random.seed(RAND_SEED)
+
+# Function to generate a list of seeded random integers
+def get_random_states(size=1000, seed=42):
+    """
+    Generate a list of random integers with a fixed seed.
+
+    Args:
+        size (int): Number of random integers to generate.
+        seed (int): Seed value for reproducibility.
+    Returns:
+        list: List of random integers.
+    """
+    random.seed(seed)
+    return deepcopy([random.randint(0, 1000000) for _ in range(size)])
+
+
 def process_landscape_method_comparisons(
-    df: pd.DataFrame, libs: list, methods: list, metric: str
+    df: pd.DataFrame, libs: list, methods: list, method_col: str, metric: str
 ):
     """
     Process the landscape method comparisons.
@@ -34,6 +57,7 @@ def process_landscape_method_comparisons(
         df (pd.DataFrame): DataFrame containing the data.
         libs (list): List of libraries to compare.
         methods (list): List of methods to compare.
+        method_col (str): Column name for the method.
         metric (str): Metric to use for comparison.
 
     Returns:
@@ -47,8 +71,8 @@ def process_landscape_method_comparisons(
             for j, method_b in enumerate(methods):
                 if i >= j:
                     continue
-                score_a = df_subset[df_subset["method"] == method_a][metric].mean()
-                score_b = df_subset[df_subset["method"] == method_b][metric].mean()
+                score_a = df_subset[df_subset[method_col] == method_a][metric].mean()
+                score_b = df_subset[df_subset[method_col] == method_b][metric].mean()
                 if score_a > score_b:
                     winner = "method_a"
                 elif score_b > score_a:
@@ -106,7 +130,7 @@ def compute_elo(
 
 
 # Bootstrapping function
-def get_bootstrap_result(
+def get_bootstrap_elo(
     battles: pd.DataFrame, compute_elo: callable, bootstrap_round: int = 1000
 ):
 
@@ -121,31 +145,54 @@ def get_bootstrap_result(
         pd.DataFrame: DataFrame containing the bootstrapped Elo ratings.
     """
 
+    random_states = get_random_states(size=bootstrap_round, seed=RAND_SEED)
+
     rows = []
     for i in tqdm(range(bootstrap_round), desc="bootstrap"):
-        rows.append(compute_elo(battles.sample(frac=1.0, replace=True)))
+        rows.append(
+            compute_elo(
+                battles.sample(frac=1.0, replace=True, random_state=random_states[i])
+            )
+        )
     df = pd.DataFrame(rows)
     return df[df.median().sort_values(ascending=False).index]
 
 
-# def bootstrap_elo(bootstrap_elo_lu):
+# Stratified Bootstrapping function
+def get_stratified_bootstrap_elo(
+    battles: pd.DataFrame, compute_elo: callable, bootstrap_round=1000
+):
 
-#     """
+    """
+    Perform stratified bootstrapping to balance methods with fewer entries.
 
-#     """
+    Args:
+        battles (pd.DataFrame): DataFrame containing the battles.
+        compute_elo (function): Function to compute Elo ratings.
+        bootstrap_round (int): Number of bootstrap rounds.
+    Returns:
+        pd.DataFrame: DataFrame containing the bootstrapped Elo ratings.
+    """
 
-#     # bootstrap_elo_lu = get_bootstrap_result(battles, compute_elo, bootstrap_round)
-#     bootstrap_lu_median = (
-#         bootstrap_elo_lu.median()
-#         .reset_index()
-#         .set_axis(["methods", "Elo rating"], axis=1)
-#     )
+    random_states = get_random_states(size=bootstrap_round, seed=RAND_SEED)
 
-#     bootstrap_lu_median["Elo rating"] = (
-#         bootstrap_lu_median["Elo rating"] + 0.5
-#     ).astype(int)
+    rows = []
+    for i in tqdm(range(bootstrap_round), desc="Stratified Bootstrapping"):
+        # Ensure each method is fairly represented in bootstrapped samples
+        sampled_battles = battles.groupby("method_a", group_keys=False).apply(
+            lambda x: x.sample(frac=1.0, replace=True, random_state=random_states[i])
+            if len(x) > 0
+            else x
+        )
+        sampled_battles = sampled_battles.groupby("method_b", group_keys=False).apply(
+            lambda x: x.sample(frac=1.0, replace=True, random_state=random_states[i])
+            if len(x) > 0
+            else x
+        )
+        rows.append(compute_elo(sampled_battles))
 
-#     return bootstrap_lu_median
+    df = pd.DataFrame(rows)
+    return df[df.median().sort_values(ascending=False).index]
 
 
 # Visualization function (Split Violin Plot)
@@ -186,14 +233,14 @@ def visualize_split_violin(
         inner="quartile",
         ax=ax,
     )
-    ax.set_xticklabels(df_combined["Strategy"].unique(), rotation=90, ha="right")
+    ax.set_xticklabels(df_combined["Strategy"].unique(), rotation=90, ha="center")
     ax.set_xlabel("Strategy")
     ax.set_ylabel("Elo rating")
     ax.spines["top"].set_visible(False)
     ax.spines["right"].set_visible(False)
     if iftitle:
         ax.set_title(fig_name)
-    plt.legend(title="Metric")
+    plt.legend(title="Metric", loc="lower left")
 
     if if_save:
         save_svg(fig, plot_title=fig_name, path2folder=fig_dir)
@@ -315,17 +362,94 @@ def plot_demlal_elo(
         n_sample=n_sample,
         models=mlde_models,
         n_top=n_top,
+        ifmapde=True,
     )
 
     # get the bootstrap result
     elo_df_dict = {}
 
     for metric in PLOT_MLDE_METRICS:
-        elo_df_dict[metric] = get_bootstrap_result(
+        elo_df_dict[metric] = get_bootstrap_elo(
             process_landscape_method_comparisons(
                 df=merge_demlal_avg,
                 libs=merge_demlal_avg.lib.unique().tolist(),
                 methods=merge_demlal_avg.method.unique().tolist(),
+                method_col="method",
+                metric=metric,
+            ),
+            compute_elo,
+            bootstrap_round,
+        )
+
+    visualize_split_violin(
+        elo_df_dict[PLOT_MLDE_METRICS[0]],
+        elo_df_dict[PLOT_MLDE_METRICS[1]],
+        fig_name=fig_name,
+        iftitle=False,
+        if_save=if_save,
+        fig_dir=fig_dir,
+    )
+
+
+def plot_ftmlal_elo(
+    mlde_csv: str,
+    alde_csv: str,
+    fig_name: str,
+    lib_list: list | None = None,
+    n_top: int = 96,
+    n_sample: int = 384,
+    mlde_models: list = ["boosting"],
+    alde_models: list = ["Boosting Ensemble"],
+    alde_acquisition: list = ["GREEDY"],
+    bootstrap_round: int = 1000,
+    add_ensemble=True,
+    if_save: bool = True,
+    fig_dir: str = "figs",
+):
+    """
+    Plot the Elo ratings for different strategies.
+
+    Args:
+        mlde_csv (str): Path to the MLDE CSV file.
+        alde_csv (str): Path to the ALDE CSV file.
+        de_csv (str): Path to the DE CSV file.
+        lib_list (list): List of libraries to compare.
+        n_top (int): Number of top strategies to consider.
+        n_sample (int): Number of samples to consider.
+        mlde_models (list): List of MLDE models to consider.
+        bootstrap_round (int): Number of bootstrap rounds.
+        if_save (bool): Whether to save the plot.
+        fig_dir (str): Directory to save the plot.
+    """
+
+    # get the data
+    ftmlde_libdf = get_ftmlal_libavg(
+        mlde_csv=mlde_csv,
+        alde_csv=alde_csv,
+        lib_list=lib_list,
+        n_sample=n_sample,
+        mlde_models=mlde_models,
+        alde_models=alde_models,
+        alde_acquisition=alde_acquisition,
+        n_top=n_top,
+        add_ensemble=add_ensemble,
+    )
+
+    if add_ensemble:
+        booststrap_func = get_stratified_bootstrap_elo
+    else:
+        booststrap_func = get_bootstrap_elo
+
+    # get the bootstrap result
+    elo_df_dict = {}
+
+    for metric in PLOT_MLDE_METRICS:
+        elo_df_dict[metric] = booststrap_func(
+            process_landscape_method_comparisons(
+                df=ftmlde_libdf,
+                libs=ftmlde_libdf["lib"].unique().tolist(),
+                methods=ftmlde_libdf["zs"].unique().tolist(),
+                method_col="zs",
                 metric=metric,
             ),
             compute_elo,
