@@ -105,7 +105,6 @@ FINETUNE_COLORS = [
 
 FTMLDE_COLOR_LIST = ["gray", "blue", "green", "purple", "yellow", "brown", "orange"]
 
-
 PLOT_MLDE_METRICS = ["top_maxes", "if_truemaxs"]
 
 PLOT_DE_METRICS = ["mean_all", "fraction_max"]
@@ -119,6 +118,41 @@ PERFORMANCE_YAXIS_DICT = {
     "top_maxes": "Average max fitness achieved",
     "if_truemaxs": "Fraction reaching the global optimum",
 }
+
+DE_MLAL_ORDER = [
+        "MLDE",
+        "ftMLDE",
+        "ALDE",
+        "ftALDE",
+        "ALDE x 3",
+        "ftALDE x 3",
+        "ALDE x 4",
+        "ftALDE x 4",
+        "DE: Recomb",
+        "DE: Single step",
+        "DE: Top96 recomb",
+    ]
+
+ALL_FT_ORDER = [
+        "Random",
+        "Hamming distance",
+        "EVmutation",
+        "ESM-2",
+        "ESM-IF",
+        "CoVES",
+        "Triad",
+        "Hamming distance + EVmutation",
+        "Hamming distance + ESM-2",
+        "Hamming distance + ESM-IF",
+        "Hamming distance + CoVES",
+        "Hamming distance + Triad",
+        "Triad + EVmutation",
+        "Triad + ESM-2",
+        "Triad + ESM-IF",
+        "CoVES + EVmutation",
+        "CoVES + ESM-2",
+        "EVmutation + ESM-IF",
+    ]
 
 ALDE_MARKER_STYLES = {2: "o", 3: "s", 4: "X"}
 
@@ -1032,6 +1066,7 @@ def get_mlde_avg_dict(
     alde_dir: str,
     lib_list: list,
     n_top: int = 96,
+    alde_rounds: list = [2, 3, 4],
     add_ensemble: bool = False,
 ):
 
@@ -1120,13 +1155,14 @@ def get_mlde_avg_dict(
         col_names = [avg_mlde_df_dict["MLDE"].columns]
     else:
         
-        # col_names = [
-        #     "top_maxes_mean",
-        #     "top_maxes_std",
-        #     "if_truemaxs_mean",
-        #     "if_truemaxs_std",
-        # ]
-        col_names = [avg_mlde_df_dict["MLDE"].columns]
+        col_names = [
+            # "n_sample",
+            "top_maxes_mean",
+            "top_maxes_std",
+            "if_truemaxs_mean",
+            "if_truemaxs_std",
+        ]
+        # col_names = [avg_mlde_df_dict["MLDE"].columns]
 
     if alde_dir != "":
         # now add alde
@@ -1138,7 +1174,7 @@ def get_mlde_avg_dict(
             alde_dir=alde_dir,
         )
 
-        for eq_n in [2, 3, 4]:
+        for eq_n in alde_rounds:
 
             avg_mlde_df_dict[f"ALDE x {eq_n}"] = avg_alde_df(eq_n, **alde_kwags)
 
@@ -1161,7 +1197,7 @@ def get_mlde_avg_dict(
                     axis=0,
                 ),
                 index=np.array(N_SAMPLE_LIST).flatten().ravel(),
-                columns=avg_mlde_df_dict["MLDE"].columns,  # make all column nameas are the same
+                columns=col_names# avg_mlde_df_dict["MLDE"].columns,  # make all column nameas are the same
             )
             
             # add name to the index
@@ -2551,6 +2587,180 @@ def plot_ftmlde_ensemble(
 
     if ifsave:
         save_svg(fig, fig_name, fig_dir)
+
+
+def plot_single_ftalde(
+    alde_dir: str,
+    lib_list: list,
+    metric_idx: int,
+    rd: int = 4,
+    fig_name: str | None = None,
+    iflegend: bool = True,
+    ifzoomy: bool = False,
+    n_top: int = 96,
+    n_corr: int = 384,
+    ax=None,
+):
+    """
+    Plot a single FTALDE comparison on a given subplot axis.
+    
+    Args:
+        metric_idx (int): Index for metric selection.
+        ax (matplotlib.axes): Axis to plot on.
+    """
+
+    avg_mlde_df_dict = get_mlde_avg_dict(
+        mlde_csv="", alde_dir=alde_dir, lib_list=lib_list, n_top=n_top
+    )
+
+    mlde_metric = PLOT_MLDE_METRICS[metric_idx]
+    y_label = PLOT_LINE_PERFORMANCE_YAXIS[metric_idx]
+
+    opt_list = [""] + [ZS_OPTS_LEGEND[z] for z in ZS_OPTS]
+
+    if not ifzoomy or "TrpB3A" in lib_list:
+        y_min = 0
+    else:
+        y_min = 0.5
+
+    options = [f"ALDE x {rd}"] + [f"ftALDE x {rd}: {o}" for o in opt_list[1:]]
+
+    for i, mlde_opts in enumerate(options):
+        mlde_df = avg_mlde_df_dict[mlde_opts]
+
+        ax.plot(
+            TOTAL_N_LIST,
+            mlde_df[f"{mlde_metric}_mean"],
+            label=mlde_opts.replace("Average ", ""),
+            marker=ALDE_MARKER_STYLES[rd],
+            linewidth=2,
+            color=FZL_PALETTE[FTMLDE_COLOR_LIST[i % len(FTMLDE_COLOR_LIST)]],
+        )
+
+        if metric_idx == 0:
+            ax.fill_between(
+                TOTAL_N_LIST,
+                mlde_df[f"{mlde_metric}_mean"] - mlde_df[f"{mlde_metric}_std"],
+                mlde_df[f"{mlde_metric}_mean"] + mlde_df[f"{mlde_metric}_std"],
+                color=FZL_PALETTE[FTMLDE_COLOR_LIST[i % len(FTMLDE_COLOR_LIST)]],
+                alpha=0.05,
+            )
+
+        if i > 1:
+            mlde_df = avg_mlde_df_dict["ds-" + mlde_opts]
+
+            ax.plot(
+                TOTAL_N_LIST,
+                mlde_df[f"{mlde_metric}_mean"],
+                marker=ALDE_MARKER_STYLES[rd],
+                linestyle="dashed",
+                linewidth=2,
+                color=GRAY_COLORS["gray-" + FTMLDE_COLOR_LIST[i % len(FTMLDE_COLOR_LIST)]],
+            )
+
+            if metric_idx == 0:
+                ax.fill_between(
+                    TOTAL_N_LIST,
+                    mlde_df[f"{mlde_metric}_mean"] - mlde_df[f"{mlde_metric}_std"],
+                    mlde_df[f"{mlde_metric}_mean"] + mlde_df[f"{mlde_metric}_std"],
+                    color=GRAY_COLORS["gray-" + FTMLDE_COLOR_LIST[i % len(FTMLDE_COLOR_LIST)]],
+                    alpha=0.05,
+                )
+
+    ax.axvline(n_corr + n_top, color="gray", linewidth=0.5, linestyle="dotted")
+    ax.set_xlim(TOTAL_N_LIST[0], TOTAL_N_LIST[-1])
+    ax.set_ylim(y_min, 1.0)
+    ax.set_xscale("log")
+    ax.set_xticks(N_TICK_LIST)
+    ax.xaxis.set_major_formatter(FuncFormatter(lambda x, _: f"{int(x)}"))
+    ax.xaxis.set_minor_locator(plt.NullLocator())
+    ax.set_xlabel("Total number of variants")
+    ax.set_ylabel(y_label)
+
+    if iflegend:
+        mlde_color_dict = {
+            (l if l else "Random sampling"): FZL_PALETTE[c]
+            for (l, c) in zip(opt_list, FTMLDE_COLOR_LIST)
+        }
+        ds_color_dict = {
+            "Hamming distance + " + l.replace(" ALDE x 4", ""): GRAY_COLORS["gray-" + c]
+            for (l, c) in zip(opt_list[2:], FTMLDE_COLOR_LIST[2:])
+        }
+
+        color_handles = [
+            Line2D([0], [0], color=color, lw=2, label=label)
+            for label, color in mlde_color_dict.items()
+        ]
+        gray_handles = [
+            Line2D([0], [0], color=color, lw=2, label=label, linestyle="dashed")
+            for label, color in ds_color_dict.items()
+        ]
+        for h in gray_handles:
+            h.set_dashes([6, 2])
+
+        ax.legend(
+            handles=color_handles + gray_handles,
+            loc="upper left",
+            bbox_to_anchor=(1, 1.025),
+        )
+
+    if fig_name is not None:
+        ax.set_title(fig_name)
+
+    return ax
+
+
+def plot_agg_ftalde(
+    alde_dir: str,
+    lib_stat_csv: str,
+    epistasis_csv: str,
+    loc_csv: str,
+    fig_names: list[str],
+    lib_list: list | None = None,
+    n_top: int = 96,
+    n_corr: int = 384,
+    fig_dir: str = "figs",
+    ifsave: bool = True,
+):
+    """
+    Plot aggregated FTALDE across multiple libraries.
+    """
+
+    if lib_list is None:
+        lib_list = get_heuristic_lib_order(
+            lib_stat_csv=lib_stat_csv,
+            epistasis_csv=epistasis_csv,
+            loc_csv=loc_csv,
+        )
+
+    for metric_idx, fig_name in enumerate(fig_names):
+
+        fig, axs = plt.subplots(4, 4, figsize=(18, 16), sharex=True, sharey=True)
+
+        for i, ax in enumerate(axs.flatten()):
+            lib_name = lib_list[i]
+
+            iflegend = i == 7  # Show legend only in one subplot
+
+            plot_single_ftalde(
+                alde_dir=alde_dir,
+                lib_list=[lib_name],
+                metric_idx=metric_idx,
+                fig_name=lib_name,
+                iflegend=iflegend,
+                ifzoomy=False,
+                n_top=n_top,
+                n_corr=n_corr,
+                ax=ax
+            )
+
+            if i % 4 != 0:
+                ax.set_ylabel("")
+            if i < 12:
+                ax.set_xlabel("")
+
+        if ifsave:
+            save_svg(fig, fig_name, fig_dir)
 
 
 def plot_ftalde(
@@ -4512,3 +4722,124 @@ def comp_de_mlde_alde_lib(
 
     if ifsave:
         save_svg(fig, fig_name, fig_dir)
+
+
+def get_prospective_libavg(
+    mlde_csv: str, alde_csv: str, n_top: int, n_sample: int, n_cutoff: int = 480
+):
+    """
+    Filters and processes datasets based on given n_top and n_sample values.
+
+    Args:
+        n_top (int): Number of top variants.
+        n_sample (int): Number of sampled variants.
+
+    Returns:
+        pd.DataFrame: Processed and averaged results grouped by 'lib'.
+    """
+
+    # Load datasets
+    mlde_all = pd.read_csv(mlde_csv)
+    alde_all = pd.read_csv(alde_csv)
+    alde_all["zs"] = alde_all["zs"].fillna("none")
+
+    n_total = n_top + n_sample
+
+    # Define filters for different libraries
+    if n_total <= n_cutoff:
+        n_mut_cutff = "double"
+        alde_ds_zs = "ed"
+        alde_ds_pre = "ds-"
+    else:
+        n_mut_cutff = "all"
+        alde_ds_zs = "none"
+        alde_ds_pre = ""
+
+    hm_ev = mlde_all[
+        (
+            mlde_all["lib"].isin(
+                ["DHFR"] + [f"TrpB3{chr(i)}" for i in range(ord("A"), ord("I") + 1)]
+            )
+        )
+        & (mlde_all["n_mut_cutoff"] == n_mut_cutff)
+        & (mlde_all["n_top"] == n_top)
+        & (mlde_all["zs"] == "ev_score")
+        & (mlde_all["encoding"] == "one-hot")
+        & (mlde_all["model"] == "boosting")
+        & (mlde_all["n_sample"] == n_sample)
+    ][["lib", "top_maxes", "if_truemaxs"]].reset_index(drop=True)
+
+    gb1 = (
+        alde_all[
+            (alde_all["Protein"] == "GB1")
+            & (alde_all["n_mut_cutoff"] == n_mut_cutff)
+            & (alde_all["zs"] == alde_ds_pre + "esmif")
+            & (alde_all["rounds"] == 4)
+            & (alde_all["n_samples"] == n_total)
+            & (alde_all["Encoding"] == "onehot")
+            & (alde_all["Model"] == "Boosting Ensemble")
+            & (alde_all["Acquisition"] == "GREEDY")
+        ][["Protein", "Mean", "Frac"]]
+        .rename(columns={"Protein": "lib", "Mean": "top_maxes", "Frac": "if_truemaxs"})
+        .reset_index(drop=True)
+    )
+
+    pards = mlde_all[
+        (mlde_all["lib"].isin(["ParD2", "ParD3"]))
+        & (mlde_all["n_mut_cutoff"] == "all")
+        & (mlde_all["n_top"] == n_top)
+        & (mlde_all["zs"] == "none")
+        & (mlde_all["encoding"] == "one-hot")
+        & (mlde_all["model"] == "boosting")
+        & (mlde_all["n_sample"] == n_sample)
+    ][["lib", "top_maxes", "if_truemaxs"]].reset_index(drop=True)
+
+    t7 = mlde_all[
+        (mlde_all["lib"] == "T7")
+        & (mlde_all["n_mut_cutoff"] == n_mut_cutff)
+        & (mlde_all["n_top"] == n_top)
+        & (mlde_all["zs"] == "none")
+        & (mlde_all["encoding"] == "one-hot")
+        & (mlde_all["model"] == "boosting")
+        & (mlde_all["n_sample"] == n_sample)
+    ][["lib", "top_maxes", "if_truemaxs"]].reset_index(drop=True)
+
+    tev = (
+        alde_all[
+            (alde_all["Protein"] == "TEV")
+            & (alde_all["n_mut_cutoff"] == "all")
+            & (alde_all["zs"] == alde_ds_zs)
+            & (alde_all["rounds"] == 4)
+            & (alde_all["n_samples"] == n_total)
+            & (alde_all["Encoding"] == "onehot")
+            & (alde_all["Model"] == "Boosting Ensemble")
+            & (alde_all["Acquisition"] == "GREEDY")
+        ][["Protein", "Mean", "Frac"]]
+        .rename(columns={"Protein": "lib", "Mean": "top_maxes", "Frac": "if_truemaxs"})
+        .reset_index(drop=True)
+    )
+
+    trpb4 = (
+        alde_all[
+            (alde_all["Protein"] == "TrpB4")
+            & (alde_all["n_mut_cutoff"] == n_mut_cutff)
+            & (alde_all["zs"] == alde_ds_pre + "ev")
+            & (alde_all["rounds"] == 4)
+            & (alde_all["n_samples"] == n_total)
+            & (alde_all["Encoding"] == "onehot")
+            & (alde_all["Model"] == "Boosting Ensemble")
+            & (alde_all["Acquisition"] == "GREEDY")
+        ][["Protein", "Mean", "Frac"]]
+        .rename(columns={"Protein": "lib", "Mean": "top_maxes", "Frac": "if_truemaxs"})
+        .reset_index(drop=True)
+    )
+
+    # Combine all filtered data
+    all_lib_chosen = pd.concat([hm_ev, gb1, pards, t7, tev, trpb4]).reset_index(
+        drop=True
+    )
+
+    # Compute mean for each library and round to 2 decimal places
+    all_lib_avg = all_lib_chosen.groupby("lib").mean().round(2)
+
+    return all_lib_avg
