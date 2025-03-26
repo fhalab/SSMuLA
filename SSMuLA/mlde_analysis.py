@@ -119,15 +119,29 @@ PERFORMANCE_YAXIS_DICT = {
     "if_truemaxs": "Fraction reaching the global optimum",
 }
 
-DE_MLAL_ORDER = [
-        "MLDE",
-        "ftMLDE",
-        "ALDE",
-        "ftALDE",
-        "ALDE x 3",
-        "ftALDE x 3",
-        "ALDE x 4",
-        "ftALDE x 4",
+ATTRIBUTE_MAPPING = {
+    "percent_active": "Percent active",
+    "frac_loc_opt_total": "Fraction of local optima",
+    "fraction_non-magnitude": "Fraction of non-magnitude epistasis",
+    "loc": "Cauchy peak location",
+    "kurt": "Kurtosis (tailedness)",
+    "numb_kde_peak": "Number of KDE peaks"
+}
+
+ATTRIBUTE_LIST = deepcopy(list(ATTRIBUTE_MAPPING.values()))
+
+MLAL_ORDER = [
+    "MLDE",
+    "ftMLDE",
+    "ALDE",
+    "ftALDE",
+    "ALDE x 3",
+    "ftALDE x 3",
+    "ALDE x 4",
+    "ftALDE x 4",
+]
+
+DE_MLAL_ORDER = MLAL_ORDER + [
         "DE: Recomb",
         "DE: Single step",
         "DE: Top96 recomb",
@@ -1156,13 +1170,11 @@ def get_mlde_avg_dict(
     else:
         
         col_names = [
-            # "n_sample",
             "top_maxes_mean",
             "top_maxes_std",
             "if_truemaxs_mean",
             "if_truemaxs_std",
         ]
-        # col_names = [avg_mlde_df_dict["MLDE"].columns]
 
     if alde_dir != "":
         # now add alde
@@ -1199,11 +1211,15 @@ def get_mlde_avg_dict(
                 index=np.array(N_SAMPLE_LIST).flatten().ravel(),
                 columns=col_names# avg_mlde_df_dict["MLDE"].columns,  # make all column nameas are the same
             )
-            
-            # add name to the index
-            avg_ftalde_df.index.name = "n_sample"
-            # reset and rename the index
-            avg_ftalde_df = avg_ftalde_df.reset_index().set_index("n_sample")
+
+            # TODO: make this nicer 
+            try:
+                # add name to the index
+                avg_ftalde_df.index.name = "n_sample"
+                # reset and rename the index
+                avg_ftalde_df = avg_ftalde_df.reset_index().set_index("n_sample")
+            except:
+                pass
 
             avg_mlde_df_dict[f"Average ftALDE x {eq_n}"] = avg_ftalde_df
             
@@ -3389,6 +3405,46 @@ def scatter_plot(
         ax.set_ylabel(y_label)
 
 
+# Helper function to create scatter plots with common settings
+def scatter_plot2(
+    ax, x_data, y_data, y_data2, y_data3, x_label, y_label, title_label, clist, xlabel_scale=None
+):
+    ax.scatter(
+        x_data,
+        y_data,
+        c=clist,
+        marker="x",
+        s=100,
+        alpha=0.8,
+        linewidth=1.2,
+    )
+
+    ax.scatter(
+        x_data,
+        y_data2,
+        marker="o",
+        edgecolors=clist,
+        facecolors="none",
+        s=100,
+        alpha=0.8,
+        linewidth=1.2,
+    )
+    ax.scatter(
+        x_data,
+        y_data3,
+        c=clist,
+        marker="X",
+        linewidth=1.2,
+        s=100,
+    )
+    ax.set_xlabel(x_label)
+    if xlabel_scale:
+        ax.set_xscale(xlabel_scale)
+    ax.set_title(title_label)
+    if y_label != "":
+        ax.set_ylabel(y_label)
+
+
 # Helper function to create the title with spearman correlation
 def create_spearman_title(data1, data2, y_data, y_data2, label):
     return r"$\rho_{{DE}}$: {:.2f}, $\rho_{{MLDE}}$: {:.2f}, $\rho_{{ftMLDE}}$: {:.2f}".format(
@@ -3462,6 +3518,7 @@ def plot_mlde_attribute_corr(
         scatter_plot(
             ax[row, col],
             landscape_attribute_df[x_col],
+            # single_step_de,
             y,
             y2,
             x_label,
@@ -3487,6 +3544,16 @@ def plot_mlde_attribute_corr(
     ]
 
     legend_list2 = [
+        # Line2D(
+        #     [0],
+        #     [0],
+        #     marker="x",
+        #     linestyle="none",
+        #     alpha=0.8,
+        #     label="Single-step DE",
+        #     markeredgecolor="black",
+        #     markerfacecolor="black",
+        # ),
         Line2D(
             [0],
             [0],
@@ -3762,7 +3829,193 @@ def plot_alde_attribute_corr(
         save_svg(fig, fig_name, fig_dir)
 
 
+def get_demlalft_attribute_stats(
+    mlde_csv: str,
+    alde_csv: str,
+    attribute_csv: str,
+    lib_list: list,
+    models: list = ["boosting"],
+    n_sample: int = 384,
+    n_top: int = 96,
+) -> pd.DataFrame:
+    
+    """
+    Prep for getting correlation and fold stats
+    """
+
+    mlde_df = get_ftmlde_stat(
+        mlde_csv=mlde_csv,
+        lib_list=lib_list,
+        models=models,
+        n_sample=n_sample,
+        n_top=n_top,
+    ).sort_values("lib")
+
+    pooled_ft = mlde_df[mlde_df["lib"].isin(lib_list)][
+        ["top_maxes_" + zs.replace("_score", "") for zs in ZS_OPTS]
+    ].mean(axis=1, skipna=True)
+
+    # Load and filter data
+    all_landscape_attribute = pd.read_csv(attribute_csv)
+    landscape_attribute_df = (
+        all_landscape_attribute[all_landscape_attribute["lib"].isin(lib_list)]
+        .reset_index(drop=True)
+        .sort_values("lib")
+    )
+
+    # merge landscape_attribute_df with mlde_df and pooled_ft
+    mlft_df = mlde_df[["lib", "top_maxes"]].rename(
+        columns={"top_maxes": "MLDE"})
+    # add ftmlde
+    mlft_df["ftMLDE"] = pooled_ft.values
+
+    # merge with landscape_attribute_df
+    merged_df = pd.merge(
+        landscape_attribute_df,
+        mlft_df,
+        on="lib",
+        how="outer",
+    )
+
+    # now add alde
+    alde_all = pd.read_csv(alde_csv)
+
+    # prep merge alde
+    alde_dfs = [slice_alde_ftalde(n=i, alde_all=alde_all) for i in [4, 3, 2]]
+
+    # Perform the merge step-by-step
+    alde_n = landscape_attribute_df
+    for df in alde_dfs:
+        alde_n = pd.merge(alde_n, df, on="lib")
+
+    # Ensure columns are properly filtered and renamed
+    merge_aldedf = alde_n[alde_n["lib"].isin(lib_list)].sort_values("lib")
+
+    # Select only "top_max" columns and "lib"
+    selected_columns = [c for c in merge_aldedf.columns if "top_max" in c or c == "lib"]
+
+    # Apply selection to the DataFrame
+    merge_aldedf = merge_aldedf[selected_columns].rename(columns={
+        "top_max_2": "ALDE",
+        "zs_top_max_2": "ftALDE",
+        "top_max_3": "ALDE x 3",
+        "zs_top_max_3": "ftALDE x 3",
+        "top_max_4": "ALDE x 4",
+        "zs_top_max_4": "ftALDE x 4",
+    })[["lib", "ALDE", "ftALDE", "ALDE x 3", "ftALDE x 3", "ALDE x 4", "ftALDE x 4"]]
+
+    # merge all dataframes
+    return pd.merge(
+        merged_df,
+        merge_aldedf,
+        on="lib",
+        how="outer",
+    ).sort_values("lib").reset_index(drop=True).rename(
+        columns={
+            "lib": "Landscape",
+            "n_site": "Number of sites",
+            "single_step_DE_mean_all": "Single-step DE",
+            **ATTRIBUTE_MAPPING
+            })
+
+
+def get_attribute_corr(
+    mlde_csv: str | None = None,
+    alde_csv: str | None = None,
+    attribute_csv: str | None = None,
+    lib_list: list| None = None,
+    df: pd.DataFrame | None = None,
+    models: list = ["boosting"],
+    n_sample: int = 384,
+    n_top: int = 96,
+) -> pd.DataFrame:
+    
+    """
+    Get the correlation stats for each landscape given number of samples
+    """
+
+    if df is None:
+        assert mlde_csv is not None and alde_csv is not None and attribute_csv is not None and lib_list is not None, "Either df or all other arguments must be provided"
+        df = get_demlalft_attribute_stats(
+            mlde_csv=mlde_csv,
+            alde_csv=alde_csv,
+            attribute_csv=attribute_csv,
+            lib_list=lib_list,
+            models=models,
+            n_sample=n_sample,
+            n_top=n_top,
+        ).set_index("Landscape").copy()
+
+    # Get the correlation stats
+    # each row for 
+    # Percent active, Fraction of local optima
+    # Fraction of non-magnitude epistasis, Cauchy peak location, 
+    # Kurtosis (tailedness), Number of KDE peaks
+    # each column for Single-step DE	MLDE	ftMLDE	ALDE	ftALDE	ALDE x 3	ftALDE x 3	ALDE x 4	ftALDE x 4
+    # Get the correlation stats
+
+    # Initialize an empty dictionary to store correlations
+    corr_dict = {col: [] for col in ATTRIBUTE_LIST}
+    method_list = ["Single-step DE", "MLDE", "ftMLDE", "ALDE", "ftALDE", 
+               "ALDE x 3", "ftALDE x 3", "ALDE x 4", "ftALDE x 4"]
+
+    method_rename = []
+
+    # Compute Spearman correlation for each attribute against each method
+    for col2 in method_list:
+    
+        if col2 != "Single-step DE":
+            val2 = df[col2].values - df["Single-step DE"].values
+            method_rename.append(col2 + " over DE")
+        else:
+            val2 = df[col2].values
+            method_rename.append(col2)
+        
+        for col in ATTRIBUTE_LIST:   
+            corr_dict[col].append(spearmanr(df[col].values, val2)[0])
+            
+    # Convert dictionary to DataFrame
+    return pd.DataFrame(corr_dict, index=method_rename).T.round(2)
+
+
 def get_fold_stats(
+    mlde_csv: str | None = None,
+    alde_csv: str | None = None,
+    attribute_csv: str | None = None,
+    lib_list: list | None = None,
+    df: pd.DataFrame | None = None,
+    models: list = ["boosting"],
+    n_sample: int = 384,
+    n_top: int = 96,
+) -> pd.DataFrame:
+    """
+    Compute fold changes for MLDE, ALDE, and focused training strategies.
+    """
+
+    if df is None:
+
+        assert mlde_csv is not None and alde_csv is not None and attribute_csv is not None and lib_list is not None, "Either stats_df or all other arguments must be provided"
+        
+        # Get preprocessed statistics
+        df = get_demlalft_attribute_stats(
+            mlde_csv=mlde_csv,
+            alde_csv=alde_csv,
+            attribute_csv=attribute_csv,
+            lib_list=lib_list,
+            models=models,
+            n_sample=n_sample,
+            n_top=n_top,
+        )
+    
+    df = df.set_index("Landscape").copy()
+
+    # Extract necessary columns
+    single_step_de = df["Single-step DE"]
+
+    return df[MLAL_ORDER].div(single_step_de, axis=0).round(2)
+
+
+def get_fold_stats_complext(
     mlde_csv: str,
     alde_csv: str,
     attribute_csv: str,
@@ -4843,3 +5096,73 @@ def get_prospective_libavg(
     all_lib_avg = all_lib_chosen.groupby("lib").mean().round(2)
 
     return all_lib_avg
+
+
+def get_demlft_improvement_tables(
+    de_avg: dict,
+    avg_mlde_df_dict: dict,
+    n_sample_list: list = N_SAMPLE_LIST,
+    de_types: list = DE_TYPES,
+    plot_de_metrics: list = PLOT_DE_METRICS,
+    plot_mlde_metrics: list = PLOT_MLDE_METRICS,
+    plot_line_performance_yaxis: list = PLOT_LINE_PERFORMANCE_YAXIS,
+    de_legend_map: dict = DE_LEGEND_MAP,
+) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """
+    Computes two percent improvement tables:
+    1. Improvement of MLDE over DE.
+    2. Improvement of Average ftMLDE over MLDE.
+
+    Parameters:
+        de_avg (pd.DataFrame): DataFrame containing the average DE metrics.
+        avg_mlde_df_dict (dict): Dictionary containing MLDE metric dataframes.
+        n_sample_list (list): List of training sample sizes.
+        de_types (list): List of DE types.
+        plot_de_metrics (list): List of DE metric names.
+        plot_mlde_metrics (list): List of corresponding MLDE metric names.
+        plot_line_performance_yaxis (list): Labels for performance metrics.
+        de_legend_map (dict): Mapping of DE types to their legends.
+
+    Returns:
+        tuple: Two pandas DataFrames for percent improvements.
+    """
+    # First Table: MLDE improvement over DE
+    sum_de_mlde = pd.DataFrame(index=n_sample_list)
+    sum_de_mlde.index.name = "Number of training sample"
+
+    for de in de_types:
+        for i, (de_metric, mlde_metric) in enumerate(
+            zip(plot_de_metrics, plot_mlde_metrics)
+        ):
+            improve_stat = (
+                (
+                    avg_mlde_df_dict["MLDE"][f"{mlde_metric}_mean"]
+                    - de_avg.loc[de, f"{de_metric}_mean"]
+                )
+                / de_avg.loc[de, f"{de_metric}_mean"]
+                * 100
+            )
+
+            col_info = {n: v for n, v in zip(n_sample_list, improve_stat)}
+
+            sum_de_mlde = sum_de_mlde.merge(
+                pd.Series(
+                    col_info,
+                    index=n_sample_list,
+                    name=f"{plot_line_performance_yaxis[i]} percent improvement from DE: {de_legend_map[de]}",
+                ).to_frame(),
+                left_index=True,
+                right_index=True,
+                how="left",
+            )
+
+    sum_de_mlde = sum_de_mlde.applymap(lambda x: round(x, 2))
+
+    # Second Table: Average ftMLDE improvement over MLDE
+    avg_ftmlde_improvement = (
+        (avg_mlde_df_dict["Average ftMLDE"] - avg_mlde_df_dict["MLDE"])
+        / avg_mlde_df_dict["MLDE"]
+        * 100
+    )[["top_maxes_mean", "if_truemaxs_mean"]].applymap(lambda x: round(x, 2))
+
+    return sum_de_mlde, avg_ftmlde_improvement

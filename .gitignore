@@ -40,6 +40,9 @@ results4upload
 results4upload/
 results4upload/*
 
+figs/
+figs/*
+
 runs
 runs/
 runs/*

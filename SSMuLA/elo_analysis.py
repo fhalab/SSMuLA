@@ -542,7 +542,9 @@ def vis_demlal_n_elo(
         # Formatting
         ax.set_xscale("log")
         ax.set_xlabel("Total number of variants")
-        ax.set_ylabel(y_label)
+        ax.set_ylabel(f"Elo rating for {y_label.lower()}")
+        # make the ylable a bit lower
+        ax.yaxis.set_label_coords(-0.175, 0.495)
         # set y range
         ax.set_ylim(750, 1250)
         ax.set_xticks(N_TICK_LIST)
@@ -704,7 +706,9 @@ def vis_dsmlal_n_elo(
         ax.xaxis.set_major_formatter(FuncFormatter(lambda x, _: f"{int(x)}"))
         ax.xaxis.set_minor_locator(plt.NullLocator())
         ax.set_xlabel("Total number of variants")
-        ax.set_ylabel(y_label)
+        ax.set_ylabel(f"Elo rating for {y_label.lower()}")
+        # make the ylable a bit lower
+        ax.yaxis.set_label_coords(-0.175, 0.495)
 
         if ax == axes[-1]:  # Ensure the legend is correctly placed in the last subplot
             
@@ -804,7 +808,9 @@ def vis_ensemblemlal_n_elo(
         ax.xaxis.set_major_formatter(FuncFormatter(lambda x, _: f"{int(x)}"))
         ax.xaxis.set_minor_locator(plt.NullLocator())
         ax.set_xlabel("Total number of variants")
-        ax.set_ylabel(y_label)
+        ax.set_ylabel(f"Elo rating for {y_label.lower()}")
+        # make the ylable a bit lower
+        ax.yaxis.set_label_coords(-0.175, 0.495)
 
         if ax == axes[-1]:  # Ensure the legend is correctly placed in the last subplot
             
