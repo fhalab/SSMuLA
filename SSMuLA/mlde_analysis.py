@@ -35,7 +35,7 @@ from SSMuLA.de_simulations import (
     get_de_lib,
     get_de_avg,
 )
-from SSMuLA.zs_analysis import ZS_OPTS, ZS_OPTS_LEGEND, map_zs_labels
+from SSMuLA.zs_analysis import ZS_OPTS, ZS_OPTS_LEGEND, SIMPLE_ZS_OPT_LEGNED, map_zs_labels
 from SSMuLA.alde_analysis import avg_alde_df, get_ftalde_libavg
 from SSMuLA.finetune_analysis import parse_finetune_df, avg_finetune_df
 from SSMuLA.vis import (
@@ -5145,21 +5145,28 @@ def get_prospective_libavg(
 
 
 def get_demlft_improvement_tables(
-    de_avg: dict,
-    avg_mlde_df_dict: dict,
+    mlde_csv: str | None = None,
+    de_csv: str | None = None,
+    alde_dir: str | None = None,
+    lib_list: list | None = None,
+    de_avg: dict | None = None,
+    avg_mlde_df_dict: dict | None = None,
+    n_top: int = 96,
     n_sample_list: list = N_SAMPLE_LIST,
     de_types: list = DE_TYPES,
     plot_de_metrics: list = PLOT_DE_METRICS,
     plot_mlde_metrics: list = PLOT_MLDE_METRICS,
     plot_line_performance_yaxis: list = PLOT_LINE_PERFORMANCE_YAXIS,
     de_legend_map: dict = DE_LEGEND_MAP,
-) -> tuple[pd.DataFrame, pd.DataFrame]:
+) -> pd.DataFrame:
     """
-    Computes two percent improvement tables:
-    1. Improvement of MLDE over DE.
-    2. Improvement of Average ftMLDE over MLDE.
+    Computes percent improvement table for improvement of MLDE over DE.
 
     Parameters:
+        mlde_csv (str): Path to the MLDE CSV file.
+        de_csv (str): Path to the DE CSV file.
+        alde_dir (str): Path to the ALDE directory.
+        lib_list (list): List of libraries.
         de_avg (pd.DataFrame): DataFrame containing the average DE metrics.
         avg_mlde_df_dict (dict): Dictionary containing MLDE metric dataframes.
         n_sample_list (list): List of training sample sizes.
@@ -5170,8 +5177,19 @@ def get_demlft_improvement_tables(
         de_legend_map (dict): Mapping of DE types to their legends.
 
     Returns:
-        tuple: Two pandas DataFrames for percent improvements.
+        pd.DataFrame: Percent improvement table.
     """
+
+    if de_avg is None:
+        assert de_csv is not None and lib_list is not None, "de_csv and lib_list must be provided."
+        de_avg = get_de_avg(de_csv, lib_list)
+
+    if avg_mlde_df_dict is None:
+        assert mlde_csv is not None and alde_dir is not None and lib_list is not None, "mlde_csv, alde_dir, and lib_list must be provided."
+        avg_mlde_df_dict = get_mlde_avg_dict(
+            mlde_csv=mlde_csv, alde_dir=alde_dir, lib_list=lib_list, n_top=n_top
+        )
+
     # First Table: MLDE improvement over DE
     sum_de_mlde = pd.DataFrame(index=n_sample_list)
     sum_de_mlde.index.name = "Number of training sample"
@@ -5202,13 +5220,95 @@ def get_demlft_improvement_tables(
                 how="left",
             )
 
-    sum_de_mlde = sum_de_mlde.applymap(lambda x: round(x, 2))
+    return sum_de_mlde.applymap(lambda x: round(x, 2))
 
-    # Second Table: Average ftMLDE improvement over MLDE
-    avg_ftmlde_improvement = (
-        (avg_mlde_df_dict["Average ftMLDE"] - avg_mlde_df_dict["MLDE"])
-        / avg_mlde_df_dict["MLDE"]
-        * 100
-    )[["top_maxes_mean", "if_truemaxs_mean"]].applymap(lambda x: round(x, 2))
 
-    return sum_de_mlde, avg_ftmlde_improvement
+def get_ft_improvement_tables(
+    mlde_csv: str | None = None,
+    alde_dir: str | None = None,
+    lib_list: list | None = None,
+    avg_mlde_df_dict: dict | None = None,
+    n_top: int = 96,
+    list_of_tables: list = ["MLDE", "ALDE x 4"]
+) -> pd.DataFrame:
+
+    """
+    Computes percent improvement tables for improvement of ftA/MLDE over A/MLDE.
+
+    Parameters:
+        mlde_csv (str): Path to the MLDE CSV file.
+        alde_dir (str): Path to the ALDE directory.
+        lib_list (list): List of libraries.
+        de_avg (pd.DataFrame): DataFrame containing the average DE metrics.
+        avg_mlde_df_dict (dict): Dictionary containing MLDE metric dataframes.
+        n_top (int): Number of top variants.
+
+    Returns:
+        tuple: Two pandas DataFrames for percent improvements.
+    """
+
+    avg_mlde_df_dict = get_mlde_avg_dict(
+            mlde_csv=mlde_csv, alde_dir=alde_dir, lib_list=lib_list, n_top=n_top
+        )
+
+    output_df_dict = {}
+    
+    ft_keys = [k for k in avg_mlde_df_dict.keys() if "Average" in k]
+    baseline_keys = [k.replace("Average ft", "") for k in ft_keys]
+    labels = [f"{k} from {k.replace('Average ft', '')}" for k in ft_keys]
+
+    output_df_dict["Average focused training improvement"] = compute_relative_improvements_table(avg_mlde_df_dict, ft_keys, baseline_keys, labels)
+
+    for t in list_of_tables:
+
+        zs_keys = [f"ft{t}: {SIMPLE_ZS_OPT_LEGNED[v]}" for v in ZS_OPTS if SIMPLE_ZS_OPT_LEGNED[v] != "Random"]
+        baseline_zs_keys = [t] * len(zs_keys)
+        zs_labels = [SIMPLE_ZS_OPT_LEGNED[v] for v in ZS_OPTS if SIMPLE_ZS_OPT_LEGNED[v] != "Random"]
+
+        output_df_dict[f"ft{t} improvement"] = compute_relative_improvements_table(avg_mlde_df_dict, zs_keys, baseline_zs_keys, zs_labels)
+
+    return output_df_dict
+
+    
+def compute_relative_improvements_table(
+    df_dict,
+    ft_keys,
+    baseline_keys,
+    labels,
+    columns_map={
+        "top_maxes_mean": "Average max fitness achieved",
+        "if_truemaxs_mean": "Fraction reaching the global optimum",
+    }
+):
+    """
+    Computes relative improvements between ft_keys and baseline_keys and returns a formatted table.
+
+    Parameters:
+        df_dict (dict): Dictionary of DataFrames keyed by method names.
+        ft_keys (list): List of keys (strings) for ft-models in df_dict.
+        baseline_keys (list): List of keys (strings) for corresponding baselines.
+        labels (list): List of column group labels for output table.
+        columns_map (dict): Mapping of internal column names to display names.
+
+    Returns:
+        pd.DataFrame: Combined improvement table with labeled MultiIndex columns.
+    """
+    assert len(ft_keys) == len(baseline_keys) == len(labels), "Keys and labels must be same length"
+
+    merged_data = {}
+
+    for ft_key, base_key, label in zip(ft_keys, baseline_keys, labels):
+        improvement_df = (
+            (
+                (df_dict[ft_key] - df_dict[base_key])
+                / df_dict[base_key]
+                * 100
+            )[list(columns_map.keys())]
+            .rename(columns=columns_map)
+            .applymap(lambda x: round(x, 2))
+        )
+        merged_data[label] = improvement_df
+
+    final_df = pd.concat(merged_data.values(), axis=1, keys=merged_data.keys())
+    final_df.index.name = "Number of training samples"
+    return final_df

@@ -15,6 +15,7 @@ from scipy.stats import spearmanr, ttest_ind
 from sklearn.metrics import roc_curve, auc
 
 import matplotlib.pyplot as plt
+import matplotlib.patches as mpatches
 import seaborn as sns
 
 # Basic plotting
@@ -909,11 +910,277 @@ def parse_zs(
     return zs_append_msa
 
 
+def include_zs_bartype(
+    lib_list: list,
+    zs_parse_csv: str = "results/zs_sum/zs_stat_parsed.csv",
+):
+    """
+    Parse the parsed ZS dataframe to get the bar type (binding or enzyme)
+    """
+
+    zs_df = pd.read_csv(zs_parse_csv)
+    slice_zs = zs_df[zs_df["lib"].isin(lib_list)].copy()
+
+    avg_bar_type_df_list = []
+
+    for m in ["rho", "rocauc"]:
+        for x in ZS_OPTS:
+            x = "all_" + x.split("_")[0] + "_" + m
+            bar_type_df = slice_zs[["lib", "type", x]].copy()
+            bar_type_df = (
+                bar_type_df[["type", x]]
+                .groupby("type")
+                .agg(["mean", "std"])
+                .reset_index()
+            )
+
+            bar_type_df.columns = ["{}_{}".format(i, j) for i, j in bar_type_df.columns]
+
+            bar_m_df = bar_type_df.melt(
+                id_vars="type_", var_name="zs", value_name="value"
+            )
+
+            bar_m_df["metric"] = m
+            avg_bar_type_df_list.append(bar_m_df)
+            avg_bar_type_df_list.append(
+                pd.DataFrame(
+                    {
+                        "type_": "Both",
+                        "zs": x + "_mean",
+                        "value": bar_type_df[x + "_mean"].mean(),
+                        "metric": m,
+                    },
+                    index=[0],
+                )
+            )
+            avg_bar_type_df_list.append(
+                pd.DataFrame(
+                    {
+                        "type_": "Both",
+                        "zs": x + "_std",
+                        "value": bar_type_df[x + "_std"].mean(),
+                        "metric": m,
+                    },
+                    index=[0],
+                )
+            )
+
+    avg_bar_type_df = pd.concat(avg_bar_type_df_list, axis=0)
+    avg_bar_type_df["calc"] = avg_bar_type_df["zs"].apply(lambda x: x.split("_")[-1])
+    avg_bar_type_df["zs"] = (
+        avg_bar_type_df["zs"]
+        .apply(lambda x: x.split("_")[1] + "_score")
+        .map(ZS_OPTS_LEGEND)
+    )
+
+    avg_bar_type_df["metric"] = avg_bar_type_df["metric"].map(ZS_METRIC_MAP_TITLE)
+    avg_bar_type_df = avg_bar_type_df.replace({"Binding": "Binding interaction"})
+
+    return avg_bar_type_df
+
+
+def get_zs_msa_corr(
+    lib_list: list,
+    zs_parse_csv: str = "results/zs_sum/zs_stat_parsed.csv",
+):
+    """
+    Parse the parsed ZS dataframe to get the MSA rho and p-value
+    """
+
+    zs_df = pd.read_csv(zs_parse_csv)
+    slice_zs = zs_df[zs_df["lib"].isin(lib_list)].copy()
+
+    df_msa = pd.DataFrame()
+
+    for zs in ZS_OPTS:
+        for m in ["rho", "rocauc"]:
+            zs_col = "all_" + zs.replace("score", m)
+            zs_rho_both, zs_p_both = spearmanr(slice_zs[zs_col], slice_zs["msa"])
+            df_msa = df_msa._append(
+                {
+                    "type": "Both",
+                    "zs": zs,
+                    "metric": m,
+                    "value": zs_rho_both,
+                    "p": zs_p_both,
+                },
+                ignore_index=True,
+            )
+
+    df_msa["zs"] = df_msa["zs"].map(ZS_OPTS_LEGEND)
+    df_msa["metric"] = df_msa["metric"].map(ZS_METRIC_MAP_TITLE)
+    df_msa = df_msa.replace({"Binding": "Binding interaction"})
+
+    return df_msa
+
+
+def plot_zs_metric_msa(
+    lib_list: list,
+    fig_name: str,
+    zs_parse_csv: str = "results/zs_sum/zs_stat_parsed.csv",
+    ifsave: bool = True,
+    save_dir: str = "figs",
+):
+    """
+    Plot boxplots for the ZS metrics across the different types
+    and bar plots for the MSA
+    """
+
+    zs_df = pd.read_csv(zs_parse_csv)
+    slice_zs = zs_df[zs_df["lib"].isin(lib_list)].copy()
+
+    avg_bar_type_df = include_zs_bartype(lib_list, zs_parse_csv)
+    df_msa = get_zs_msa_corr(lib_list, zs_parse_csv)
+
+    # Plotting
+    fig, axes = plt.subplots(1, 3, figsize=(9, 4))  # Adjusted to 1x3 grid
+
+    # First two plots
+    for m, ax in zip(
+        avg_bar_type_df["metric"].unique(), axes[:2]
+    ):  # Use the first two axes
+
+        # given value of a dict find the key
+        metric_short = next((k for k, v in ZS_METRIC_MAP_TITLE.items() if v == m), None)
+
+        xs = ["all_" + x.split("_")[0] + "_" + metric_short for x in ZS_OPTS]
+        zs_map = {x: ZS_OPTS_LEGEND[x.split("_")[1] + "_score"] for x in xs}
+
+        # Extract data for each ZS predictor
+        boxdf = slice_zs[xs].rename(columns=zs_map).melt(var_name="zs")
+
+        boxdata = [
+            boxdf[boxdf["zs"] == zs]["value"].dropna().astype(float).tolist()
+            for zs in boxdf["zs"].unique()
+        ]
+
+        # Create a boxplot
+        box = ax.boxplot(
+            boxdata,
+            widths=0.8,
+            positions=range(len(ZS_OPTS)),  # Ensures proper alignment on x-axis
+            patch_artist=True,  # Allows box coloring
+            medianprops=dict(color="gray"),  # Median line color
+            capprops=dict(color="gray"),  # Caps color
+            whiskerprops=dict(color="gray"),  # Whiskers color
+            flierprops=dict(
+                marker="o", markeredgecolor="gray", markersize=5, markeredgewidth=1
+            ),  # Outliers color
+            boxprops=dict(color="gray"),  # Box color
+        )
+
+        # Add mean as X
+        means = [np.mean(data) for data in boxdata]
+        ax.plot(
+            range(len(ZS_OPTS)),
+            means,
+            linestyle="None",
+            marker="x",
+            markersize=5,
+            color="gray",
+            markeredgewidth=1,
+            zorder=10,
+        )
+        # ax.scatter(
+        #     range(len(ZS_OPTS)), means, color="gray", marker="x", s=20, zorder=10
+        # )
+
+        # Assign colors to each box
+        colors = [SIX_ZS_COLORS[c] for c in ZS_OPTS]  # Get colors in order
+        for patch, color in zip(box["boxes"], colors):
+            patch.set_facecolor(color)  # Set each box color
+        # Set x-ticks to category names
+        ax.set_xticks(range(len(ZS_OPTS)))
+        ax.set_xticklabels([ZS_OPTS_LEGEND[c] for c in ZS_OPTS], rotation=90)
+
+        # Add line for classifcation
+        if "classification" in m:
+            ax.axhline(0.5, color="gray", linestyle="dotted", lw=1.2)
+
+        ax.spines["top"].set_visible(False)
+        ax.spines["right"].set_visible(False)
+        ax.xaxis.grid(False)
+        ax.yaxis.grid(False)  # Disable the y-axis grid lines
+        ax.set_ylim([0, 1])
+        ax.tick_params(axis="x", rotation=90)
+        ax.set_title(m)
+        ax.set_xlabel("ZS predictor")
+
+    axes[0].set_ylabel("Fitness prediction metric")
+    # hide the y-axis label for the second plot
+    axes[1].set_ylabel("")
+    # remove y axis ticks label for the second plot
+    axes[1].set_yticklabels([])
+    # Third plot (from the second part of your code)
+    ax = axes[2]  # Use the third axis
+
+    # Filter for the specific metric and type (for the first subplot only)
+    m = df_msa["metric"].unique()[0]  # Only get the first metric
+    slice_m = df_msa[(df_msa["metric"] == m) & (df_msa["type"] == "Both")].copy()
+
+    # Plot vertical bars for the third subplot
+    bars = ax.bar(
+        [ZS_OPTS_LEGEND[zs] for zs in ZS_OPTS],
+        slice_m["value"],
+        color=[SIX_ZS_COLORS[c] for c in ZS_OPTS],
+        width=0.8,
+    )
+
+    # Annotate p-values on the bars
+    for j, bar in enumerate(bars):
+        p_val = slice_m["p"].values[j]  # Assuming the p-values are in the "p" column
+        rho_val = slice_m["value"].values[j]  # Corresponding rho value
+
+        print(f"{m} {ZS_OPTS[j]}: rho={rho_val:.3f}, p={p_val:.3f}")
+
+        if p_val < 0.05:
+            print("is significant!")
+            ax.text(
+                bar.get_x() + bar.get_width() / 2,
+                bar.get_height() + 0.05,
+                "*",
+                ha="center",
+                va="bottom",
+                color="black",
+                fontsize=12,
+            )
+
+    # Hide the top and right spines
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
+    ax.xaxis.grid(False)
+    ax.yaxis.grid(False)  # Disable the y-axis grid lines
+    ax.tick_params(axis="x", rotation=90)
+    ax.set_xlabel("ZS predictor")
+    ax.set_ylabel("Fitness ranking prediction\nSpearman's ρ with MSA depth")
+
+    # Add a horizontal line at 0
+    ax.axhline(0, color="gray", lw=1.2, ls="dotted")
+
+    # Create custom handles for the legend
+    handles = [
+        mpatches.Patch(color=SIX_ZS_COLORS[zs], label=ZS_OPTS_LEGEND[zs])
+        for zs in ZS_OPTS
+    ]
+
+    # Create a figure-wide legend
+    fig.legend(handles=handles, loc="upper left", bbox_to_anchor=(1, 0.925))
+    # Adjust spacing to move the second plot closer to the first
+    # plt.subplots_adjust(wspace=100)  # Decrease wspace to bring subplots closer
+
+    plt.tight_layout(pad=0.0, h_pad=-0.0, w_pad=1.5)
+
+    if ifsave:
+        save_svg(fig, fig_name, save_dir)
+
+
 def plot_app_type_zs(
     metric: str,
     n_mut: str,
-    slice_zs: pd.DataFrame,
-    fig_name="4b",
+    fig_name: str,
+    lib_list: list | None = None,
+    parse_csv: str | None = None,
+    slice_zs: pd.DataFrame | None = None,
     y_min=None,
     y_max=None,
     y_annotation=None,
@@ -931,6 +1198,14 @@ def plot_app_type_zs(
     - save_dir, str: the folder to save the figure
     - fig_name, str: the figure name
     """
+
+    # make sure either slice_zs or lib_list and parse_csv is provided
+    if slice_zs is None:
+        assert lib_list is not None
+        assert parse_csv is not None
+        slice_zs = pd.read_csv(parse_csv)
+        slice_zs = slice_zs[slice_zs["lib"].isin(lib_list)].copy()
+
     fig, axes = plt.subplots(1, 6, figsize=(6, 3.6), sharey=True)
 
     for z, zs in enumerate(ZS_OPTS):
