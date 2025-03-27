@@ -35,12 +35,9 @@ from SSMuLA.mlde_analysis import (
     N_TICK_LIST,
     TOTAL_N_LIST,
     DE_MLAL_ORDER,
-    ALL_FT_ORDER
+    ALL_FT_ORDER,
 )
-from SSMuLA.vis import (
-    FZL_PALETTE,
-    GRAY_COLORS
-)
+from SSMuLA.vis import FZL_PALETTE, GRAY_COLORS
 from SSMuLA.vis import save_svg
 
 
@@ -320,7 +317,7 @@ def get_ftmlal_n_elo(
     alde_models: list = ["Boosting Ensemble"],
     alde_acquisition: list = ["GREEDY"],
     bootstrap_round: int = 1000,
-    add_ensemble: bool=True,
+    add_ensemble: bool = True,
 ) -> dict:
     """
     Get Elo ratings for different numbers of samples for ftMLDE and ftALDE double-site predictors.
@@ -370,7 +367,7 @@ def get_ftmlal_n_elo(
     return elo_df_dict
 
 
-def process_n_elo_df(elo_df_dict: dict, metric: str) -> pd.DataFrame:
+def process_n_elo_df(elo_df_dict: dict, metric: str):
     """
     Process the Elo ratings DataFrame.
 
@@ -379,26 +376,39 @@ def process_n_elo_df(elo_df_dict: dict, metric: str) -> pd.DataFrame:
         metric (str): Metric to process.
 
     Returns:
-        pd.DataFrame: DataFrame containing the processed Elo ratings.
+        pd.DataFrame: DataFrame containing the median of Elo ratings.
+        pd.DataFrame: DataFrame containing the standard dev of Elo ratings.
     """
 
     data_dict = elo_df_dict[metric]
 
     # Create an empty list to store processed data
-    processed_data = []
+    processed_median = []
+
+    # Store the std of Elo ratings for each number of samples
+    processed_std = []
 
     # Iterate through the dictionary
     for key, df in data_dict.items():
+
         # Compute the median of each column
         median_values = df.median().to_dict()
         # Add the key as an index
         median_values["Total number of variants"] = key
         # Append to the list
-        processed_data.append(median_values)
+        processed_median.append(median_values)
+
+        # Compute the std of each column
+        std_values = df.std().to_dict()
+        # Add the key as an index
+        std_values["Total number of variants"] = key
+        # Append to the list
+        processed_std.append(std_values)
 
     # Convert list to DataFrame
-    return pd.DataFrame(processed_data).set_index("Total number of variants")
-
+    return pd.DataFrame(processed_median).set_index(
+        "Total number of variants"
+    ), pd.DataFrame(processed_std).set_index("Total number of variants")
 
 
 def vis_demlal_n_elo(
@@ -422,14 +432,16 @@ def vis_demlal_n_elo(
     - None
     """
 
-    fig, axes = plt.subplots(1, len(PLOT_MLDE_METRICS), figsize=(5 * len(PLOT_MLDE_METRICS), 4))
+    fig, axes = plt.subplots(
+        1, len(PLOT_MLDE_METRICS), figsize=(5 * len(PLOT_MLDE_METRICS), 4)
+    )
     # plt.subplots(1, 2, figsize=(10, 4))
     if len(PLOT_MLDE_METRICS) == 1:
         axes = [axes]
 
     de_colors = sns.color_palette("Greys", 4)
     de_ls = ["dotted", "dashed", "dashdot"]
-    
+
     line_styles = [
         "dashed",
         "solid",
@@ -443,8 +455,10 @@ def vis_demlal_n_elo(
 
     demlal_colros = MLDE_ALDE_COLORS + de_colors
 
-    for ax, metric, y_label in zip(axes, PLOT_MLDE_METRICS, PLOT_LINE_PERFORMANCE_YAXIS):
-        elo_df = process_n_elo_df(elo_df_dict, metric)
+    for ax, metric, y_label in zip(
+        axes, PLOT_MLDE_METRICS, PLOT_LINE_PERFORMANCE_YAXIS
+    ):
+        elo_df, elo_std_df = process_n_elo_df(elo_df_dict, metric)
 
         # replace " x 2" with ""
         elo_df.columns = elo_df.columns.str.replace(" x 2", "")
@@ -453,9 +467,20 @@ def vis_demlal_n_elo(
         elo_df.columns = elo_df.columns.str.replace("Single step", "DE: Single step")
         elo_df.columns = elo_df.columns.str.replace("Top96 recomb", "DE: Top96 recomb")
 
+        # do the same for std_df
+        elo_std_df.columns = elo_std_df.columns.str.replace(" x 2", "")
+        elo_std_df.columns = elo_std_df.columns.str.replace("Recomb", "DE: Recomb")
+        elo_std_df.columns = elo_std_df.columns.str.replace(
+            "Single step", "DE: Single step"
+        )
+        elo_std_df.columns = elo_std_df.columns.str.replace(
+            "Top96 recomb", "DE: Top96 recomb"
+        )
+
         # sort column
         elo_df = elo_df[DE_MLAL_ORDER]
-      
+        elo_std_df = elo_std_df[DE_MLAL_ORDER]
+
         # Plot Elo rating for each strategy
         for i, strategy in enumerate(elo_df.columns):
 
@@ -475,19 +500,29 @@ def vis_demlal_n_elo(
                 color=demlal_colros[i],
             )
 
+            if "DE: " in strategy:
+                shade_color = de_colors[1]
+            else:
+                shade_color = demlal_colros[i]
+
+            if strategy == "ALDE":
+                alpha = 0.1
+            else:
+                alpha = 0.05
+
             # Add shaded standard deviation
             ax.fill_between(
                 elo_df.index,
-                elo_df[strategy] - elo_df[strategy].std(),
-                elo_df[strategy] + elo_df[strategy].std(),
-                color=demlal_colros[i],
-                alpha=0.05,
+                elo_df[strategy] - elo_std_df[strategy],
+                elo_df[strategy] + elo_std_df[strategy],
+                color=shade_color,
+                alpha=alpha,
             )
 
         # Add vertical lines at 192 and 480
-        ax.axvline(n_corr+n_top, color="gray", linestyle="dotted", linewidth=1.2)
+        ax.axvline(n_corr + n_top, color="gray", linestyle="dotted", linewidth=1.2)
 
-        # Add triangle and diamond markers for 3-site and 4-site full-coverage and unique variants
+        # Add triangle and diamond markers for 3-site and 4-site unique variants
         for d, de in enumerate(DE_TYPES):
 
             de_xs = elo_df.index.tolist()
@@ -512,12 +547,19 @@ def vis_demlal_n_elo(
             )
 
             # annotate
+            # if de == "recomb_SSM":
+            #     new_x_3site = 19 * 3 + 1
+            #     new_x_4site = 19 * 4 + 1
+            # elif de == "single_step_DE":
+            #     new_x_3site = 19 * 3
+            #     new_x_4site = 19 * 4
             if de == "top96_SSM":
-                # add "^" at x = 19*3 + 96 and the correpsonding y
-                # no line just one dot
+                new_x_3site = 19 * 3 + n_top
+                new_x_4site = 19 * 4 + n_top
+
                 ax.scatter(
-                    19 * 3 + n_top,
-                    estimate_y(x_vals=de_xs, y_vals=de_ys, new_x=19 * 3 + n_top),
+                    new_x_3site,
+                    estimate_y(x_vals=de_xs, y_vals=de_ys, new_x=new_x_3site),
                     marker="^",
                     facecolors="none",
                     edgecolors=de_colors[d + 1],
@@ -528,8 +570,8 @@ def vis_demlal_n_elo(
                 )
                 # add "D" at x = 19*4 + 96 and the correpsonding y
                 ax.scatter(
-                    19 * 4 + n_top,
-                    estimate_y(x_vals=de_xs, y_vals=de_ys, new_x=19 * 4 + n_top),
+                    new_x_4site,
+                    estimate_y(x_vals=de_xs, y_vals=de_ys, new_x=new_x_4site),
                     marker="d",
                     facecolors="none",
                     edgecolors=de_colors[d + 1],
@@ -551,7 +593,9 @@ def vis_demlal_n_elo(
         ax.xaxis.set_major_formatter(FuncFormatter(lambda x, _: f"{int(x)}"))
         ax.xaxis.set_minor_locator(plt.NullLocator())
 
-        if ax == axes[-1]:  # Ensure the legend is correctly ordered and placed in the last subplot
+        if (
+            ax == axes[-1]
+        ):  # Ensure the legend is correctly ordered and placed in the last subplot
             handles, labels = ax.get_legend_handles_labels()
 
             # Manually create legend handles with assigned colors
@@ -654,28 +698,34 @@ def vis_dsmlal_n_elo(
 
     if len(PLOT_MLDE_METRICS) == 1:
         axes = [axes]
-    
-    for ax, metric, y_label in zip(axes, PLOT_MLDE_METRICS, PLOT_LINE_PERFORMANCE_YAXIS):
-        elo_df = process_n_elo_df(elo_df_dict, metric)
+
+    for ax, metric, y_label in zip(
+        axes, PLOT_MLDE_METRICS, PLOT_LINE_PERFORMANCE_YAXIS
+    ):
+        elo_df, elo_std_df = process_n_elo_df(elo_df_dict, metric)
 
         # replace "\n" with ""
         elo_df.columns = elo_df.columns.str.replace("\n", " ")
+        elo_std_df.columns = elo_std_df.columns.str.replace("\n", " ")
 
         # Sort column
         elo_df = elo_df[ds_cols]
+        elo_std_df = elo_std_df[ds_cols]
 
         # Plot Elo rating for each strategy
         for i, strategy in enumerate(ds_cols):
 
-            # doulbes 
-            
+            # doulbes
+
             if i <= 6:
                 color = FZL_PALETTE[FTMLDE_COLOR_LIST[i % len(FTMLDE_COLOR_LIST)]]
                 linestyle = "solid"
             else:
-                color = GRAY_COLORS["gray-" + FTMLDE_COLOR_LIST[i % len(FTMLDE_COLOR_LIST)+2]]
+                color = GRAY_COLORS[
+                    "gray-" + FTMLDE_COLOR_LIST[i % len(FTMLDE_COLOR_LIST) + 2]
+                ]
                 linestyle = "dashed"
-                
+
             ax.plot(
                 elo_df.index,
                 elo_df[strategy],
@@ -689,12 +739,11 @@ def vis_dsmlal_n_elo(
             # Add shaded standard deviation
             ax.fill_between(
                 elo_df.index,
-                elo_df[strategy] - elo_df[strategy].std(),
-                elo_df[strategy] + elo_df[strategy].std(),
+                elo_df[strategy] - elo_std_df[strategy],
+                elo_df[strategy] + elo_std_df[strategy],
                 color=color,
                 alpha=0.05,
             )
-
 
         # Add vertical lines
         ax.axvline(n_corr + n_top, color="gray", linestyle="dotted", linewidth=1.2)
@@ -711,7 +760,7 @@ def vis_dsmlal_n_elo(
         ax.yaxis.set_label_coords(-0.175, 0.495)
 
         if ax == axes[-1]:  # Ensure the legend is correctly placed in the last subplot
-            
+
             # fix dash
             handles, labels = ax.get_legend_handles_labels()
             # fix the dash handle
@@ -751,33 +800,37 @@ def vis_ensemblemlal_n_elo(
 
     mlde_color_list = ["gray", "green", "purple", "yellow", "brown", "orange", "blue"]
 
-    ft_cols = ALL_FT_ORDER[:7] + ALL_FT_ORDER[-6:]
+    ft_cols = [ALL_FT_ORDER[0]] + ALL_FT_ORDER[2:7] + ALL_FT_ORDER[-6:]
     fig, axes = plt.subplots(1, len(PLOT_MLDE_METRICS), figsize=(10.5, 4))
 
     if len(PLOT_MLDE_METRICS) == 1:
         axes = [axes]
-    
-    for ax, metric, y_label in zip(axes, PLOT_MLDE_METRICS, PLOT_LINE_PERFORMANCE_YAXIS):
-        elo_df = process_n_elo_df(elo_df_dict, metric)
+
+    for ax, metric, y_label in zip(
+        axes, PLOT_MLDE_METRICS, PLOT_LINE_PERFORMANCE_YAXIS
+    ):
+        elo_df, elo_std_df = process_n_elo_df(elo_df_dict, metric)
 
         # replace "\n" with ""
         elo_df.columns = elo_df.columns.str.replace("\n", " ")
+        elo_std_df.columns = elo_std_df.columns.str.replace("\n", " ")
 
         # Sort column
         elo_df = elo_df[ft_cols]
+        elo_std_df = elo_std_df[ft_cols]
 
         # Plot Elo rating for each strategy
         for i, strategy in enumerate(ft_cols):
 
-            # doulbes 
-            
+            # doulbes
+
             if i <= 6:
                 linestyle = "solid"
                 color = FZL_PALETTE[mlde_color_list[i]]
             else:
                 linestyle = "dashed"
-                color = GRAY_COLORS["gray-" + mlde_color_list[i-6]]
-                
+                color = GRAY_COLORS["gray-" + mlde_color_list[i - 5]]
+
             ax.plot(
                 elo_df.index,
                 elo_df[strategy],
@@ -791,12 +844,11 @@ def vis_ensemblemlal_n_elo(
             # Add shaded standard deviation
             ax.fill_between(
                 elo_df.index,
-                elo_df[strategy] - elo_df[strategy].std(),
-                elo_df[strategy] + elo_df[strategy].std(),
+                elo_df[strategy] - elo_std_df[strategy],
+                elo_df[strategy] + elo_std_df[strategy],
                 color=color,
                 alpha=0.05,
             )
-
 
         # Add vertical lines
         ax.axvline(n_corr + n_top, color="gray", linestyle="dotted", linewidth=1.2)
@@ -813,7 +865,7 @@ def vis_ensemblemlal_n_elo(
         ax.yaxis.set_label_coords(-0.175, 0.495)
 
         if ax == axes[-1]:  # Ensure the legend is correctly placed in the last subplot
-            
+
             # fix dash
             handles, labels = ax.get_legend_handles_labels()
             # fix the dash handle
@@ -856,7 +908,7 @@ def vis_n_elo_heatmap(
 
     for i, metric in enumerate(PLOT_MLDE_METRICS):
 
-        df = process_n_elo_df(elo_df_dict, metric)
+        df, _ = process_n_elo_df(elo_df_dict, metric)
 
         # make sure the index is sorted
         df = df.sort_index(axis=1)
@@ -1112,32 +1164,32 @@ def plot_demlal_n_elo(
     fig_name: str,
     lib_list: list | None = None,
     n_top: int = 96,
-    n_corr = 384,
+    n_corr=384,
     n_sample_list: list = N_SAMPLE_LIST,
-    mlde_models = ["boosting"],
-    bootstrap_round = 1000,
+    mlde_models=["boosting"],
+    bootstrap_round=1000,
     if_save: bool = True,
     fig_dir: str = "figs",
 ):
 
     elo_df_dict = get_demlal_n_elo(
-        mlde_csv = mlde_csv,
-        alde_csv = alde_csv,
-        de_csv = de_csv,
-        lib_list = lib_list,
-        n_top = n_top,
-        n_sample_list = n_sample_list,
-        mlde_models = mlde_models,
-        bootstrap_round = bootstrap_round,
+        mlde_csv=mlde_csv,
+        alde_csv=alde_csv,
+        de_csv=de_csv,
+        lib_list=lib_list,
+        n_top=n_top,
+        n_sample_list=n_sample_list,
+        mlde_models=mlde_models,
+        bootstrap_round=bootstrap_round,
     )
 
     vis_demlal_n_elo(
-        elo_df_dict = elo_df_dict,
-        fig_name = fig_name,
-        n_top = n_top,
-        n_corr = n_corr,
-        ifsave = if_save,
-        fig_dir = fig_dir,
+        elo_df_dict=elo_df_dict,
+        fig_name=fig_name,
+        n_top=n_top,
+        n_corr=n_corr,
+        ifsave=if_save,
+        fig_dir=fig_dir,
     )
 
 
@@ -1338,7 +1390,6 @@ def plot_ftmlde_n_elo(
     )
 
 
-
 def plot_ftmlal_n_elo_heatmap(
     mlde_csv: str,
     alde_csv: str,
@@ -1346,7 +1397,7 @@ def plot_ftmlal_n_elo_heatmap(
     lib_list: list | None = None,
     n_top: int = 96,
     n_sample_list: list = N_SAMPLE_LIST,
-    y_order: list| None = ALL_FT_ORDER,
+    y_order: list | None = ALL_FT_ORDER,
     mlde_models: list = ["boosting"],
     alde_models: list = ["Boosting Ensemble"],
     alde_acquisition: list = ["GREEDY"],

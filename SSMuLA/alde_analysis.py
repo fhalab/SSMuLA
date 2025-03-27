@@ -9,7 +9,7 @@ import pandas as pd
 import numpy as np
 
 
-from SSMuLA.landscape_global import N_SAMPLE_LIST
+from SSMuLA.landscape_global import N_SAMPLE_LIST, LOWN_DICT
 from SSMuLA.zs_analysis import ZS_OPTS, map_zs_labels
 
 
@@ -90,7 +90,7 @@ def avg_alde_df(
                 },
                 ignore_index=True,
             )
-        elif"ds-ed" in csv_path:
+        elif "ds-ed" in csv_path:
             continue
         else:
             print(f"File not found: {csv_path}")
@@ -111,8 +111,10 @@ def avg_alde_df(
 
 def aggregate_alde_df(
     eq_ns: list[int] = [1, 2, 3, 4],
+    n_list: list[int] = N_SAMPLE_LIST,
     zs_opts: list[str] = ["esmif", "ev", "coves", "ed", "esm", "Triad", ""],
     alde_dir: str = "/disk2/fli/alde4ssmula",
+    alde_res_folder: str = "results",
     alde_df_path: str = "results/alde/alde_all.csv",
 ) -> pd.DataFrame:
 
@@ -156,7 +158,14 @@ def aggregate_alde_df(
             else:
                 n_mut = "all"
 
-            for n in N_SAMPLE_LIST:
+            for n in n_list:
+
+                if isinstance(n, int):
+                    dir_det = str(int((n + 96) / eq_n))
+                    n_sample = n + 96
+                else:
+                    dir_det = n
+                    n_sample = LOWN_DICT[n]
 
                 if zs != "":
                     zs_append = f"{zs}_"
@@ -164,10 +173,10 @@ def aggregate_alde_df(
                     zs_append = ""
 
                 if eq_n == 1:
-                    csv_path = f"{alde_dir}/results/{zs_append}all_{str(n)}+96/all_results.csv"
+                    csv_path = f"{alde_dir}/{alde_res_folder}/{zs_append}all_{str(n)}+96/all_results.csv"
 
                 else:
-                    csv_path = f"{alde_dir}/results/{zs_append}{str(eq_n)}eq_{str(int((n+96)/eq_n))}/all_results.csv"
+                    csv_path = f"{alde_dir}/{alde_res_folder}/{zs_append}{str(eq_n)}eq_{dir_det}/all_results.csv"
 
                 if os.path.exists(csv_path):
                     print(f"Reading {csv_path}...")
@@ -179,7 +188,7 @@ def aggregate_alde_df(
                     slice_df["n_mut_cutoff"] = n_mut
                     slice_df["zs"] = zs
                     slice_df["rounds"] = eq_n
-                    slice_df["n_samples"] = n + 96
+                    slice_df["n_samples"] = n_sample
 
                     # replace T7_2 with T7
                     # slice_df = slice_df.replace("T7_2", "T7")
@@ -194,7 +203,7 @@ def aggregate_alde_df(
                             "n_mut_cutoff": n_mut,
                             "zs": zs,
                             "rounds": eq_n,
-                            "n_samples": n + 96,
+                            "n_samples": n_sample,
                             "Protein": np.nan,
                             "Encoding": np.nan,
                             "Model": np.nan,
@@ -207,7 +216,6 @@ def aggregate_alde_df(
                         ignore_index=True,
                     )
 
-    
     alde_all = alde_all.dropna(subset=["Protein"])
 
     alde_all.to_csv(alde_df_path, index=False)
@@ -313,4 +321,8 @@ def clean_alde_df(
             "zs",
             "rounds",
         ]
-    ].reset_index(drop=True).to_csv(clean_alde_df_path, index=False)
+    ].reset_index(
+        drop=True
+    ).to_csv(
+        clean_alde_df_path, index=False
+    )
