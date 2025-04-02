@@ -13,7 +13,7 @@ import warnings
 import numpy as np
 import pandas as pd
 
-from scipy.stats import stats, spearmanr, ttest_ind
+from scipy.stats import stats, spearmanr, ttest_ind, t
 from itertools import combinations
 
 import matplotlib.pyplot as plt
@@ -74,14 +74,14 @@ DEFAULT_MLDE_METRICS = [
 ENCODING_STYLE = {
     "one-hot": "solid",
     "esm2_t33_650M_UR50D-flatten_site": "dashed",
-    "esm2_t33_650M_UR50D-mean_all": "dashdot",
-    "esm2_t33_650M_UR50D-mean_site": "dotted",
+    "esm2_t33_650M_UR50D-mean_site": "dashdot",
+    "esm2_t33_650M_UR50D-mean_all": "dotted",
 }
 
 
 ENCODING_DETS = {
     "one-hot": "One-hot",
-    "esm2_t33_650M_UR50D-flatten_site": "ESM-2 flatten over mutation sites",
+    "esm2_t33_650M_UR50D-flatten_site": "ESM-2 flatten over targeted sites",
     "esm2_t33_650M_UR50D-mean_site": "ESM-2 mean pooling over sites",
     "esm2_t33_650M_UR50D-mean_all": "ESM-2 mean pooling over full sequence",
 }
@@ -1376,37 +1376,30 @@ def plot_single_mlde_vs_de(
             alpha=0.05,
         )
 
+        # if four-site lib
+        if "GB1" in lib_list or "TEV" in lib_list or "TrpB4" in lib_list:
+            factor = 4
+            marker = "d"
+        else:
+            factor = 3
+            marker = "^"
+
         # Annotate points
         ax.scatter(
-            19 * 3 + DE_N_TEST[de],
+            19 * factor + DE_N_TEST[de],
             de_avg.loc[de, f"{de_metric}_mean"],
-            marker="^",
+            marker=marker,
             facecolors="none",
             edgecolors=de_colors[d + 1],
             linewidth=1.2,
             s=36,
         )
-        ax.scatter(
-            19 * 4 + DE_N_TEST[de],
-            de_avg.loc[de, f"{de_metric}_mean"],
-            marker="d",
-            facecolors="none",
-            edgecolors=de_colors[d + 1],
-            linewidth=1.2,
-            s=36,
-        )
+        
 
         ax.scatter(
-            3 * 96 + DE_N_TEST[de],
+            factor * -22*math.log(1-0.95) + DE_N_TEST[de],
             de_avg.loc[de, f"{de_metric}_mean"],
-            marker="^",
-            color=de_colors[d + 1],
-            s=40,
-        )
-        ax.scatter(
-            4 * 96 + DE_N_TEST[de],
-            de_avg.loc[de, f"{de_metric}_mean"],
-            marker="d",
+            marker=marker,
             color=de_colors[d + 1],
             s=40,
         )
@@ -1466,7 +1459,7 @@ def plot_single_mlde_vs_de(
                     color="none",
                     markerfacecolor="black",
                     markersize=6,
-                    label="3-site full-coverage",
+                    label=r"3-site 95% coverage",
                 ),
                 Line2D(
                     [0],
@@ -1475,7 +1468,7 @@ def plot_single_mlde_vs_de(
                     color="none",
                     markerfacecolor="black",
                     markersize=6,
-                    label="4-site full-coverage",
+                    label=r"4-site 95% coverage",
                 ),
             ]
         )
@@ -1485,8 +1478,8 @@ def plot_single_mlde_vs_de(
             [
                 "3-site unique",
                 "4-site unique",
-                "3-site full-coverage",
-                "4-site full-coverage",
+                r"3-site 95% coverage",
+                r"4-site 95% coverage",
             ]
         )
 
@@ -2740,6 +2733,7 @@ def plot_agg_ftalde(
     loc_csv: str,
     fig_names: list[str],
     lib_list: list | None = None,
+    rd: int = 4,
     n_top: int = 96,
     n_corr: int = 384,
     fig_dir: str = "figs",
@@ -2769,6 +2763,7 @@ def plot_agg_ftalde(
                 alde_dir=alde_dir,
                 lib_list=[lib_name],
                 metric_idx=metric_idx,
+                rd=rd,
                 fig_name=lib_name,
                 iflegend=iflegend,
                 ifzoomy=False,
@@ -5269,6 +5264,74 @@ def get_ft_improvement_tables(
 
     return output_df_dict
 
+
+
+def welch_ttest(mean1, std1, n1, mean2, std2, n2):
+    se1 = std1 / np.sqrt(n1)
+    se2 = std2 / np.sqrt(n2)
+    t_stat = (mean1 - mean2) / np.sqrt(se1**2 + se2**2)
+    df = (se1**2 + se2**2)**2 / ((se1**4 / (n1 - 1)) + (se2**4 / (n2 - 1)))
+    p_value = 2 * t.sf(np.abs(t_stat), df)
+    return p_value
+
+
+def format_with_significance(val, p):
+    # if p < 0.001:
+    #     return f"{val:.2f}⁽***⁾"
+    # elif p < 0.01:
+    #     return f"{val:.2f}⁽**⁾"
+    if p < 0.05:
+        return f"{val:.2f}*"
+    else:
+        return f"{val:.2f}"
+
+
+# def compute_relative_improvements_table(
+#     df_dict,
+#     ft_keys,
+#     baseline_keys,
+#     labels,
+#     columns_map={
+#         "top_maxes_mean": "Average max fitness achieved",
+#         "if_truemaxs_mean": "Fraction reaching the global optimum",
+#     },
+#     std_map={
+#         "top_maxes_mean": "top_maxes_std",
+#         "if_truemaxs_mean": "if_truemaxs_std",
+#     },
+#     n_landscape=12
+# ):
+#     assert len(ft_keys) == len(baseline_keys) == len(labels), "Keys and labels must be same length"
+
+#     merged_data = {}
+
+#     for ft_key, base_key, label in zip(ft_keys, baseline_keys, labels):
+#         data = {}
+#         for metric_key, pretty_name in columns_map.items():
+#             ft_mean = df_dict[ft_key][metric_key]
+#             base_mean = df_dict[base_key][metric_key]
+
+#             ft_std = df_dict[ft_key][std_map[metric_key]]
+#             base_std = df_dict[base_key][std_map[metric_key]]
+
+#             vals = []
+#             for idx in ft_mean.index:
+#                 imp = ((ft_mean[idx] - base_mean[idx]) / base_mean[idx]) * 100
+#                 p = welch_ttest(
+#                     ft_mean[idx], ft_std[idx], n_landscape,
+#                     base_mean[idx], base_std[idx], n_landscape
+#                 )
+#                 vals.append(format_with_significance(imp, p))
+
+#             data[pretty_name] = vals
+
+#         improvement_df = pd.DataFrame(data, index=ft_mean.index)
+#         merged_data[label] = improvement_df
+
+#     final_df = pd.concat(merged_data.values(), axis=1, keys=merged_data.keys())
+#     final_df.index.name = "Number of training samples"
+#     return final_df
+
     
 def compute_relative_improvements_table(
     df_dict,
@@ -5312,3 +5375,82 @@ def compute_relative_improvements_table(
     final_df = pd.concat(merged_data.values(), axis=1, keys=merged_data.keys())
     final_df.index.name = "Number of training samples"
     return final_df
+
+
+def get_per_landscape_metric_table(
+    mlde_csv: str,
+    n_mut_cutoff: str,
+    zs: str,
+    lib_list: list,
+    n_top: int = 96,
+    model_list: list = ["boosting"],
+    encoding_list: list = ["one-hot"],
+    ft_frac: float = 0.125,
+    metrics: list = ["top_maxes", "if_truemaxs"]
+):
+    """
+    Extracts per-landscape average metrics for t-testing across landscapes.
+
+    Returns one row per (library, n_sample), averaged over replicates.
+
+    Args:
+        mlde_all (pd.DataFrame): Full MLDE results dataframe.
+        n_top (int): Number of top variants.
+        n_mut_cutoff (str): Mutation cutoff level.
+        zs (str): ZS strategy.
+        lib_list (list): Libraries to include.
+        model_list (list): ML models to filter.
+        encoding_list (list): Encodings to filter.
+        ft_frac (float): Focused training fraction.
+        metrics (list): Metrics to extract.
+
+    Returns:
+        pd.DataFrame: Rows = (lib, n_sample), Columns = metrics.
+    """
+
+    mlde_all = pd.read_csv(mlde_csv)
+
+    slice_mlde = mlde_all[
+        (mlde_all["lib"].isin(lib_list)) &
+        (mlde_all["zs"] == zs) &
+        (mlde_all["n_top"] == n_top) &
+        (mlde_all["n_mut_cutoff"] == n_mut_cutoff) &
+        (mlde_all["rep"].isin(np.arange(50))) &
+        (mlde_all["model"].isin(model_list)) &
+        (mlde_all["encoding"].isin(encoding_list))
+    ].copy()
+
+    # Filter to specific ft_frac (if ZS is used)
+    if zs != "none":
+        lib_dfs = []
+        for lib in lib_list:
+            lib_df = slice_mlde[slice_mlde["lib"] == lib].copy()
+            n_site = len(LIB_INFO_DICT[lib]["positions"])
+
+            if n_mut_cutoff == "all":
+                sample_space = 20 ** n_site
+            elif n_mut_cutoff == "double":
+                sample_space = math.comb(n_site, 2) * 20 ** 2
+            elif n_mut_cutoff == "single":
+                sample_space = n_site * 20
+
+            ft_lib_unique = np.array(sorted(lib_df["ft_lib"].unique()))
+            ft_lib_frac = ft_lib_unique / sample_space
+
+            lib_df["ft_lib_size"] = lib_df["ft_lib"].map(
+                {numb: frac for numb, frac in zip(ft_lib_unique, ft_lib_frac)}
+            )
+
+            lib_df = lib_df[lib_df["ft_lib_size"] == ft_frac]
+            lib_dfs.append(lib_df)
+
+        slice_mlde = pd.concat(lib_dfs)
+
+    # Group by lib and n_sample, average over replicates
+    per_landscape_df = (
+        slice_mlde.groupby(["lib", "n_sample"])[metrics]
+        .mean()
+        .reset_index()
+    )
+
+    return per_landscape_df
