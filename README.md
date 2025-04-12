@@ -3,7 +3,7 @@
 ## About
 * Code base termed "Site Saturation Mutagenesis Landscape Analysis (SSMuLA)" for our [paper](https://doi.org/10.1101/2024.10.24.619774) titled "Evaluation of Machine Learning-Assisted Directed Evolution Across Diverse Combinatorial Landscapes"
 * Data and results can be found at [Zenodo](https://doi.org/10.5281/zenodo.13910506)
-![fig1](figs/1.png)
+![fig1](fig1.png)
 
 ### Environment
 * For the overall environment `SSMuLA`
@@ -29,24 +29,21 @@ conda env create -f esmif.yml
 ```
 conda env create -f coves.yml
 ```
-* For running MLDE simulations, use the `MLDE_lite` environment
+* For installing Triad command line, see instructions [here](https://triad.protabit.com/api/static/doc/user/userGettingStarted.html)
+* For running ESM-2 fintuning simulations, use the `finetune.yml` environment
 ```
-conda env create -f MLDE_lite.yml
+conda env create -f finetune.yml
 ```
+* Frozen environment can be found in `envs/frozen`
 
 ### Datasets
-* The `data` folder is structured based on the landscape name, for each:
-    - `.fasta`: the fasta file for the parent
-    - `.pdb`: the pdb file for the parent
-    - `.model`: the EVmutation model file
-    - `fitness_landscape`: the folder containing csv files for the mutants and fitness values from the original sources
-    - `scale2max`: the folder containing processed fitness csv files returned from the `process_all` function in the `SSMuLA.fitness_process_vis` module
-* Landscapes summarized in the table below and described in detail in the paper:
+* The `data/` folder is organized by protein type. Each protein directory contains:
+    - `.fasta`: FASTA file for the parent sequence
+    - `.pdb`: PDB file for the parent structure
+    - `.model`: EVmutation model file
+    - `fitness_landscape/`: Folder containing CSV files for all fitness landscapes for this protein type, each listing amino acid substitutions and their corresponding fitness values from the original sources
+    - `scale2max/`: the folder containing processed fitness csv files returned from the `process_all` function in the `SSMuLA.fitness_process_vis` module where the maximum fitness value is normalized to 1 for each landscape
 
-It looks like the markdown table formatting might be broken due to extra spaces or lack of alignment. Here’s a fixed version of your table:
-
-markdown
-Copy code
 * Landscapes summarized in the table below and described in detail in the paper:
 
 | Landscape | PDB ID | Sites                  |

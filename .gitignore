@@ -1,4 +1,7 @@
 # Custom ignore
+
+*.zip
+
 data
 data/
 data/*

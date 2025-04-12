@@ -35,7 +35,13 @@ from SSMuLA.de_simulations import (
     get_de_lib,
     get_de_avg,
 )
-from SSMuLA.zs_analysis import ZS_OPTS, ZS_OPTS_LEGEND, SIMPLE_ZS_OPT_LEGNED, map_zs_labels
+from SSMuLA.zs_analysis import (
+    ZS_OPTS,
+    ZS_OPTS_LEGEND,
+    SIMPLE_ZS_OPT_LEGNED,
+    SIX_ZS_COLORS,
+    map_zs_labels,
+)
 from SSMuLA.alde_analysis import avg_alde_df, get_ftalde_libavg
 from SSMuLA.finetune_analysis import parse_finetune_df, avg_finetune_df
 from SSMuLA.vis import (
@@ -1394,10 +1400,9 @@ def plot_single_mlde_vs_de(
             linewidth=1.2,
             s=36,
         )
-        
 
         ax.scatter(
-            factor * -22*math.log(1-0.95) + DE_N_TEST[de],
+            factor * -22 * math.log(1 - 0.95) + DE_N_TEST[de],
             de_avg.loc[de, f"{de_metric}_mean"],
             marker=marker,
             color=de_colors[d + 1],
@@ -5176,11 +5181,15 @@ def get_demlft_improvement_tables(
     """
 
     if de_avg is None:
-        assert de_csv is not None and lib_list is not None, "de_csv and lib_list must be provided."
+        assert (
+            de_csv is not None and lib_list is not None
+        ), "de_csv and lib_list must be provided."
         de_avg = get_de_avg(de_csv, lib_list)
 
     if avg_mlde_df_dict is None:
-        assert mlde_csv is not None and alde_dir is not None and lib_list is not None, "mlde_csv, alde_dir, and lib_list must be provided."
+        assert (
+            mlde_csv is not None and alde_dir is not None and lib_list is not None
+        ), "mlde_csv, alde_dir, and lib_list must be provided."
         avg_mlde_df_dict = get_mlde_avg_dict(
             mlde_csv=mlde_csv, alde_dir=alde_dir, lib_list=lib_list, n_top=n_top
         )
@@ -5224,7 +5233,7 @@ def get_ft_improvement_tables(
     lib_list: list | None = None,
     avg_mlde_df_dict: dict | None = None,
     n_top: int = 96,
-    list_of_tables: list = ["MLDE", "ALDE x 4"]
+    list_of_tables: list = ["MLDE", "ALDE x 4"],
 ) -> pd.DataFrame:
 
     """
@@ -5243,34 +5252,47 @@ def get_ft_improvement_tables(
     """
 
     avg_mlde_df_dict = get_mlde_avg_dict(
-            mlde_csv=mlde_csv, alde_dir=alde_dir, lib_list=lib_list, n_top=n_top
-        )
+        mlde_csv=mlde_csv, alde_dir=alde_dir, lib_list=lib_list, n_top=n_top
+    )
 
     output_df_dict = {}
-    
+
     ft_keys = [k for k in avg_mlde_df_dict.keys() if "Average" in k]
     baseline_keys = [k.replace("Average ft", "") for k in ft_keys]
     labels = [f"{k} from {k.replace('Average ft', '')}" for k in ft_keys]
 
-    output_df_dict["Average focused training improvement"] = compute_relative_improvements_table(avg_mlde_df_dict, ft_keys, baseline_keys, labels)
+    output_df_dict[
+        "Average focused training improvement"
+    ] = compute_relative_improvements_table(
+        avg_mlde_df_dict, ft_keys, baseline_keys, labels
+    )
 
     for t in list_of_tables:
 
-        zs_keys = [f"ft{t}: {SIMPLE_ZS_OPT_LEGNED[v]}" for v in ZS_OPTS if SIMPLE_ZS_OPT_LEGNED[v] != "Random"]
+        zs_keys = [
+            f"ft{t}: {SIMPLE_ZS_OPT_LEGNED[v]}"
+            for v in ZS_OPTS
+            if SIMPLE_ZS_OPT_LEGNED[v] != "Random"
+        ]
         baseline_zs_keys = [t] * len(zs_keys)
-        zs_labels = [SIMPLE_ZS_OPT_LEGNED[v] for v in ZS_OPTS if SIMPLE_ZS_OPT_LEGNED[v] != "Random"]
+        zs_labels = [
+            SIMPLE_ZS_OPT_LEGNED[v]
+            for v in ZS_OPTS
+            if SIMPLE_ZS_OPT_LEGNED[v] != "Random"
+        ]
 
-        output_df_dict[f"ft{t} improvement"] = compute_relative_improvements_table(avg_mlde_df_dict, zs_keys, baseline_zs_keys, zs_labels)
+        output_df_dict[f"ft{t} improvement"] = compute_relative_improvements_table(
+            avg_mlde_df_dict, zs_keys, baseline_zs_keys, zs_labels
+        )
 
     return output_df_dict
-
 
 
 def welch_ttest(mean1, std1, n1, mean2, std2, n2):
     se1 = std1 / np.sqrt(n1)
     se2 = std2 / np.sqrt(n2)
-    t_stat = (mean1 - mean2) / np.sqrt(se1**2 + se2**2)
-    df = (se1**2 + se2**2)**2 / ((se1**4 / (n1 - 1)) + (se2**4 / (n2 - 1)))
+    t_stat = (mean1 - mean2) / np.sqrt(se1 ** 2 + se2 ** 2)
+    df = (se1 ** 2 + se2 ** 2) ** 2 / ((se1 ** 4 / (n1 - 1)) + (se2 ** 4 / (n2 - 1)))
     p_value = 2 * t.sf(np.abs(t_stat), df)
     return p_value
 
@@ -5332,7 +5354,7 @@ def format_with_significance(val, p):
 #     final_df.index.name = "Number of training samples"
 #     return final_df
 
-    
+
 def compute_relative_improvements_table(
     df_dict,
     ft_keys,
@@ -5341,7 +5363,7 @@ def compute_relative_improvements_table(
     columns_map={
         "top_maxes_mean": "Average max fitness achieved",
         "if_truemaxs_mean": "Fraction reaching the global optimum",
-    }
+    },
 ):
     """
     Computes relative improvements between ft_keys and baseline_keys and returns a formatted table.
@@ -5356,17 +5378,17 @@ def compute_relative_improvements_table(
     Returns:
         pd.DataFrame: Combined improvement table with labeled MultiIndex columns.
     """
-    assert len(ft_keys) == len(baseline_keys) == len(labels), "Keys and labels must be same length"
+    assert (
+        len(ft_keys) == len(baseline_keys) == len(labels)
+    ), "Keys and labels must be same length"
 
     merged_data = {}
 
     for ft_key, base_key, label in zip(ft_keys, baseline_keys, labels):
         improvement_df = (
-            (
-                (df_dict[ft_key] - df_dict[base_key])
-                / df_dict[base_key]
-                * 100
-            )[list(columns_map.keys())]
+            ((df_dict[ft_key] - df_dict[base_key]) / df_dict[base_key] * 100)[
+                list(columns_map.keys())
+            ]
             .rename(columns=columns_map)
             .applymap(lambda x: round(x, 2))
         )
@@ -5386,7 +5408,7 @@ def get_per_landscape_metric_table(
     model_list: list = ["boosting"],
     encoding_list: list = ["one-hot"],
     ft_frac: float = 0.125,
-    metrics: list = ["top_maxes", "if_truemaxs"]
+    metrics: list = ["top_maxes", "if_truemaxs"],
 ):
     """
     Extracts per-landscape average metrics for t-testing across landscapes.
@@ -5411,13 +5433,13 @@ def get_per_landscape_metric_table(
     mlde_all = pd.read_csv(mlde_csv)
 
     slice_mlde = mlde_all[
-        (mlde_all["lib"].isin(lib_list)) &
-        (mlde_all["zs"] == zs) &
-        (mlde_all["n_top"] == n_top) &
-        (mlde_all["n_mut_cutoff"] == n_mut_cutoff) &
-        (mlde_all["rep"].isin(np.arange(50))) &
-        (mlde_all["model"].isin(model_list)) &
-        (mlde_all["encoding"].isin(encoding_list))
+        (mlde_all["lib"].isin(lib_list))
+        & (mlde_all["zs"] == zs)
+        & (mlde_all["n_top"] == n_top)
+        & (mlde_all["n_mut_cutoff"] == n_mut_cutoff)
+        & (mlde_all["rep"].isin(np.arange(50)))
+        & (mlde_all["model"].isin(model_list))
+        & (mlde_all["encoding"].isin(encoding_list))
     ].copy()
 
     # Filter to specific ft_frac (if ZS is used)
@@ -5448,9 +5470,135 @@ def get_per_landscape_metric_table(
 
     # Group by lib and n_sample, average over replicates
     per_landscape_df = (
-        slice_mlde.groupby(["lib", "n_sample"])[metrics]
-        .mean()
-        .reset_index()
+        slice_mlde.groupby(["lib", "n_sample"])[metrics].mean().reset_index()
     )
 
     return per_landscape_df
+
+
+def plot_ft_fact(
+    lib_list: list,
+    fig_name: str,
+    mlde_csv: str = "results/mlde/all_results.csv",
+    n_sample: int = 384,
+    n_top: int = 96,
+    if_save: bool = True,
+    fig_dir: str = "figs",
+):
+
+    mlde_df = pd.read_csv(mlde_csv)
+    slice_mlde = (
+        mlde_df[
+            (mlde_df["lib"].isin(lib_list))
+            & (mlde_df["zs"].isin(ZS_OPTS[1:]))
+            & (mlde_df["n_mut_cutoff"] == "all")
+            & (mlde_df["encoding"] == "one-hot")
+            & (mlde_df["n_sample"] == n_sample)
+            & (mlde_df["model"] == "boosting")
+        ]
+        .sort_values(["lib", "zs"])
+        .copy()
+    )
+    # map lib to number of sites use len(LIB_INFO_DICT[lib]["positions"])
+    slice_mlde["n_sites"] = slice_mlde["lib"].map(
+        lambda x: len(LIB_INFO_DICT[x]["positions"])
+    )
+
+    # for avg cross number of samples
+    frac_ft_dfs = []
+    for frac in FTLIB_FRAC_LIST[:-1]:
+        for zs in ZS_OPTS[1:]:
+            for n_site in [3, 4]:
+                lib_list = slice_mlde[slice_mlde["n_sites"] == n_site]["lib"].unique()
+                slice_ft_df = get_mlde_avg_sdf(
+                    slice_mlde, n_top, "all", zs, lib_list, ft_frac=frac
+                ).reset_index(drop=True)
+                slice_ft_df["ft_lib_size"] = frac
+                slice_ft_df["zs"] = zs
+                slice_ft_df["n_site"] = n_site
+                frac_ft_dfs.append(slice_ft_df)
+
+    frac_ft_df = pd.concat(frac_ft_dfs).reset_index(drop=True)
+
+    ms = ["top_maxes_mean", "if_truemaxs_mean"]
+    titles = ["Average max fitness achieved", "Fraction reaching the global optimum"]
+
+    fig, axes = plt.subplots(2, 2, figsize=(8, 4), sharex=True)
+
+    for j, site in enumerate([3, 4]):
+
+        sliced_df = frac_ft_df[frac_ft_df["n_site"] == site].copy()
+
+        sliced_df["ft_lib_size"] = sliced_df["ft_lib_size"] * 100
+
+        # Convert 'Category' column to categorical with defined order
+        sliced_df["zs"] = pd.Categorical(
+            sliced_df["zs"], categories=list(SIX_ZS_COLORS.keys()), ordered=True
+        )
+
+        # Sort DataFrame by 'Category'
+        sliced_df = sliced_df.sort_values(by="zs")
+
+        for i in range(2):
+            ax = axes[j, i]
+            # set x log
+
+            sns.stripplot(
+                data=sliced_df,
+                x="ft_lib_size",
+                y=ms[i],
+                hue="zs",
+                size=7.5,
+                alpha=0.8,
+                jitter=True,
+                marker="o",
+                ax=ax,
+                palette=list(SIX_ZS_COLORS.values()),
+            )
+
+            sns.boxplot(
+                x="ft_lib_size",
+                y=ms[i],
+                data=sliced_df,
+                width=0.45,
+                boxprops={"facecolor": "None", "edgecolor": FZL_PALETTE["gray"]},
+                ax=ax,
+            )
+
+            ax.set_ylabel("")
+            ax.set_yticklabels([f"{y:.2f}" for y in ax.get_yticks()])
+            ax.spines["top"].set_visible(False)
+            ax.spines["right"].set_visible(False)
+            ax.legend().set_visible(False)
+            ax.set_title(f"{str(site)}-site landscapes", fontsize=10)
+
+            if j == 1:
+                ax.set_ylabel(titles[i])
+                if i == 0:
+                    ax.set_xlabel(
+                        "Percentage of full landscape covered by focused training library"
+                    )
+                    # shift to the right
+                    ax.yaxis.set_label_coords(-0.2, 1)
+                    ax.xaxis.set_label_coords(1.2, -0.2)
+                else:
+                    ax.set_xlabel("")
+                    ax.yaxis.set_label_coords(-0.2, 1)
+
+    legend_list = []
+    for zs, c in SIX_ZS_COLORS.items():
+        legend_list.append(
+            plt.Line2D(
+                [0],
+                [0],
+                marker="o",
+                color="w",
+                markerfacecolor=c,
+                label=ZS_OPTS_LEGEND[zs],
+            )
+        )
+    axes[0, 1].legend(handles=legend_list, loc="upper left", bbox_to_anchor=(1, 1))
+
+    plt.tight_layout(w_pad=-2)
+    if if_save:
+        save_svg(fig=fig, plot_title=fig_name, path2folder=fig_dir)
