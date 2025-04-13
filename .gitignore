@@ -1,4 +1,8 @@
 # Custom ignore
+
+*.zip
+*.tar.gz
+
 data
 data/
 data/*
@@ -28,13 +32,25 @@ results/
 results/*
 results.tar.gz
 
-results_old
-results_old/
-results_old/*
+results_rev
+results_rev/
+results_rev/*
+
+results_raw
+results_raw/
+results_raw/*
 
 results4upload
 results4upload/
 results4upload/*
+
+figs
+figs/
+figs/*
+
+runs
+runs/
+runs/*
 
 logs
 logs/

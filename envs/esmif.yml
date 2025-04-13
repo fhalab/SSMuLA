@@ -1,0 +1,22 @@
+# For the general environment:
+# Install or update using
+# conda env update --file esmif.yml --prune
+
+name: esmif
+channels:
+  - pytorch
+  - pyg
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.9
+  - biopandas
+  - biopython
+  - biotite
+  - cudatoolkit=11.3
+  - pandas
+  - pyg
+  - pytorch
+  - pip
+  - pip:
+      - git+https://github.com/facebookresearch/esm.git

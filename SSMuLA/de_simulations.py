@@ -52,6 +52,14 @@ warnings.filterwarnings("ignore", category=FutureWarning)
 # order of de simluation from simple to complex
 DE_TYPES = deepcopy(["recomb_SSM", "single_step_DE", "top96_SSM"])
 
+DE_N_TEST = deepcopy(
+    {
+        "recomb_SSM": 1,
+        "single_step_DE": 0,
+        "top96_SSM": 96,
+    }
+)
+
 DE_COLORS = deepcopy(
     {
         "recomb_SSM": FZL_PALETTE["light_brown"],
@@ -1128,6 +1136,27 @@ def run_plot_de(
                         n_mut_cutoff=n_mut,
                         vis_folder=vis_folder,
                     )
+
+
+def get_de_lib(de_csv: str, lib: str) -> pd.DataFrame:
+    """
+    Get the DE simulation results for a specific library
+
+    Args:
+    - de_csv: str, the path to the DE simulation results
+    - lib_list: list, the list of libraries to include in the results
+
+    Returns:
+    - pd.DataFrame, the DE simulation results for the specified libraries
+    """
+
+    de_all = pd.read_csv(de_csv)
+
+    return (
+        de_all[de_all["lib"] == lib][["de_type", "mean_all", "fraction_max"]]
+        .reset_index(drop=True)
+        .copy()
+    )
 
 
 def get_de_avg(de_csv: str, lib_list: list) -> pd.DataFrame:

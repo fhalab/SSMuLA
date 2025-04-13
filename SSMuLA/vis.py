@@ -33,7 +33,6 @@ colormap = cc.cm["glasbey_category10"]
 glasbey_category10 = [mcolors.to_hex(colormap(i)) for i in range(colormap.N)]
 
 
-
 JSON_THEME = Theme(
     json={
         "attrs": {
@@ -86,7 +85,7 @@ FZL_PALETTE = {
     "dark_brown": "#6e4a2eff",
     "gray": "#666666",
     "light_gray": "#D3D3D3",
-    "light_blue":"#849895",
+    "light_blue": "#849895",
     "light_green": "#9DAE88",
     "light_yellow": "#F1D384",
     "light_brown": "#C7B784",
@@ -262,7 +261,7 @@ def save_svg(fig, plot_title: str, path2folder: str, ifshow: bool = True):
         dpi=300,
         format="svg",
     )
-    
+
     if ifshow:
         plt.show()
 
@@ -353,3 +352,83 @@ def plot_fit_dist(
             line_color=color, line_width=1.6, spike_length=spike_length
         )
     )
+
+
+def plot_zs_violin(
+    all_df: pd.DataFrame,
+    zs: str,
+    encoding_list: list[str],
+    model: str,
+    n_sample: int,
+    n_top: int,
+    metric: str,
+    plot_name: str,
+) -> hv.Violin:
+
+    return hv.Violin(
+        all_df[
+            (all_df["zs"] == zs)
+            & (all_df["encoding"].isin(encoding_list))
+            & (all_df["model"] == model)
+            & (all_df["n_sample"] == n_sample)
+            & (all_df["n_top"] == n_top)
+        ]
+        .sort_values(["lib", "n_mut_cutoff"], ascending=[True, False])
+        .copy(),
+        kdims=["lib", "n_mut_cutoff"],
+        vdims=[metric],
+    ).opts(
+        width=1200,
+        height=400,
+        violin_color="n_mut_cutoff",
+        show_legend=True,
+        legend_position="top",
+        legend_offset=(0, 5),
+        title=plot_name,
+        ylim=(0, 1),
+        hooks=[one_decimal_x, one_decimal_y, fixmargins, lib_ncut_hook],
+    )
+
+
+def lib_ncut_hook(plot, element):
+
+    plot.handles["plot"].x_range.factors = [
+        (lib, n_mut) for lib in LIB_NAMES for n_mut in ["single", "double", "all"]
+    ]
+    plot.handles["xaxis"].major_label_text_font_size = "0pt"
+    # plot.handles['xaxis'].group_text_font_size = '0pt'
+    # plot.handles['yaxis'].axis_label_text_font_size = '10pt'
+    # plot.handles['yaxis'].axis_label_text_font_style = 'normal'
+    # plot.handles['xaxis'].axis_label_text_font_style = 'normal'
+
+
+def generate_related_color(reference_idx, base_idx, target_idx, palette="colorblind"):
+    """
+    Generate a color that has the same relationship to palette[target_idx]
+    as palette[base_idx] has to palette[reference_idx].
+    
+    Parameters:
+    - reference_idx: Index of the reference color in the palette.
+    - base_idx: Index of the color that is related to reference_idx.
+    - target_idx: Index of the color to which the transformation is applied.
+    - palette: Name of the Seaborn palette (default: "colorblind").
+    
+    Returns:
+    - A tuple representing the new RGB color.
+    """
+    import seaborn as sns
+    import numpy as np
+
+    # Get the palette
+    colors = sns.color_palette(palette)
+
+    # Compute transformation
+    color_shift = np.array(colors[base_idx]) - np.array(colors[reference_idx])
+
+    # Apply the transformation
+    new_color = np.array(colors[target_idx]) + color_shift
+
+    # Clip to valid RGB range [0,1]
+    new_color = np.clip(new_color, 0, 1)
+
+    return tuple(new_color)

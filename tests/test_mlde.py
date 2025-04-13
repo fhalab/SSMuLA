@@ -22,9 +22,123 @@ if __name__ == "__main__":
     sys.stdout = f
 
 
-    # zs_folder = "results/zs_comb"
-    # mlde_folder = "results/mlde"
+    zs_folder = "results_old/zs_comb_7"
+    mlde_folder = "results_rev/mlde_lown"
 
+    # "Triad-ev_score",
+    # "Triad-esm_score",
+    # "Triad-esmif_score",
+    # "coves-ev_score",
+    # "coves-esm_score",
+    # "two-best_score",
+
+    # for 3-site  19 * 3 + 1 = 58 total or 19 * 3 + 97 = 154 '["DHFR", "ParD2", "ParD3", "T7", "TrpB3A", "TrpB3B", "TrpB3C", "TrpB3D", "TrpB3E", "TrpB3F", "TrpB3G", "TrpB3H", "TrpB3I"]'
+    run_all_mlde_parallelized(
+        encodings=["one-hot"], # modify to `DEFAULT_LEARNED_EMB_COMBO`` for all pregenerated encodings
+        n_mut_cutoffs=[0],
+        zs_predictors=["none", "ev", "coves", "esm", "esmif", "Triad", "two-best", "Triad-esmif", "Triad-ev", "Triad-esm", "coves-ev", "coves-esm"],
+        n_samples=[58], # 154
+        n_tops=[96],
+        n_replicate=50,
+        n_job=50,
+        ft_lib_fracs=[0.125],
+        model_classes = ["boosting"],
+        ft_first=True,
+        mlde_folder=mlde_folder,
+        zs_folder=zs_folder,
+        all_libs=False,
+        lib_list=["DHFR", "ParD2", "ParD3", "T7", "TrpB3A", "TrpB3B", "TrpB3C", "TrpB3D", "TrpB3E", "TrpB3F", "TrpB3G", "TrpB3H", "TrpB3I"],
+    )
+    
+    # for 3-site  19 * 3 + 1 = 58 total or 19 * 3 + 97 = 154 '["DHFR", "ParD2", "ParD3", "T7", "TrpB3A", "TrpB3B", "TrpB3C", "TrpB3D", "TrpB3E", "TrpB3F", "TrpB3G", "TrpB3H", "TrpB3I"]'
+    run_all_mlde_parallelized(
+        encodings=["one-hot"], # modify to `DEFAULT_LEARNED_EMB_COMBO`` for all pregenerated encodings
+        n_mut_cutoffs=[0],
+        zs_predictors=["none", "ev", "coves", "esm", "esmif", "Triad", "two-best", "Triad-esmif", "Triad-ev", "Triad-esm", "coves-ev", "coves-esm"],
+        n_samples=[10, 106], # 58 # 154
+        n_tops=[48],
+        n_replicate=50,
+        n_job=50,
+        ft_lib_fracs=[0.125],
+        model_classes = ["boosting"],
+        ft_first=True,
+        mlde_folder=mlde_folder,
+        zs_folder=zs_folder,
+        all_libs=False,
+        lib_list=["DHFR", "ParD2", "ParD3", "T7", "TrpB3A", "TrpB3B", "TrpB3C", "TrpB3D", "TrpB3E", "TrpB3F", "TrpB3G", "TrpB3H", "TrpB3I"],
+    )
+    # for 3-site  19 * 3 + 1 = 58 total or 19 * 3 + 97 = 154 '["DHFR", "ParD2", "ParD3", "T7", "TrpB3A", "TrpB3B", "TrpB3C", "TrpB3D", "TrpB3E", "TrpB3F", "TrpB3G", "TrpB3H", "TrpB3I"]'
+    run_all_mlde_parallelized(
+        encodings=["one-hot"], # modify to `DEFAULT_LEARNED_EMB_COMBO`` for all pregenerated encodings
+        n_mut_cutoffs=[0],
+        zs_predictors=["none", "ev", "coves", "esm", "esmif", "Triad", "two-best", "Triad-esmif", "Triad-ev", "Triad-esm", "coves-ev", "coves-esm"],
+        n_samples=[34, 130], # 154 and 58
+        n_tops=[24],
+        n_replicate=50,
+        n_job=50,
+        ft_lib_fracs=[0.125],
+        model_classes = ["boosting"],
+        ft_first=True,
+        mlde_folder=mlde_folder,
+        zs_folder=zs_folder,
+        all_libs=False,
+        lib_list=["DHFR", "ParD2", "ParD3", "T7", "TrpB3A", "TrpB3B", "TrpB3C", "TrpB3D", "TrpB3E", "TrpB3F", "TrpB3G", "TrpB3H", "TrpB3I"],
+    )
+
+    # for 4-site  19 * 4 + 1 = 77 total or 19 * 4 + 97 = 173 '["GB1", "TEV", "TrpB4"]'
+    run_all_mlde_parallelized(
+        encodings=["one-hot"], # modify to `DEFAULT_LEARNED_EMB_COMBO`` for all pregenerated encodings
+        n_mut_cutoffs=[0],
+        zs_predictors=["none", "ev", "coves", "esm", "esmif", "Triad", "two-best", "Triad-esmif", "Triad-ev", "Triad-esm", "coves-ev", "coves-esm"],
+        n_samples=[77], # 173
+        n_tops=[96],
+        n_replicate=50,
+        n_job=50,
+        ft_lib_fracs=[0.125],
+        model_classes = ["boosting"],
+        ft_first=True,
+        mlde_folder=mlde_folder,
+        zs_folder=zs_folder,
+        all_libs=False,
+        lib_list=["GB1", "TEV", "TrpB4"],
+    )
+
+    # for 4-site  19 * 4 + 1 = 77 total or 19 * 4 + 97 = 173 '["GB1", "TEV", "TrpB4"]'
+    run_all_mlde_parallelized(
+        encodings=["one-hot"], # modify to `DEFAULT_LEARNED_EMB_COMBO`` for all pregenerated encodings
+        n_mut_cutoffs=[0],
+        zs_predictors=["none", "ev", "coves", "esm", "esmif", "Triad", "two-best", "Triad-esmif", "Triad-ev", "Triad-esm", "coves-ev", "coves-esm"],
+        n_samples=[29, 125], # 77, 173
+        n_tops=[48],
+        n_replicate=50,
+        n_job=50,
+        ft_lib_fracs=[0.125],
+        model_classes = ["boosting"],
+        ft_first=True,
+        mlde_folder=mlde_folder,
+        zs_folder=zs_folder,
+        all_libs=False,
+        lib_list=["GB1", "TEV", "TrpB4"],
+    )
+
+    # for 4-site  19 * 4 + 1 = 77 total or 19 * 4 + 97 = 173 '["GB1", "TEV", "TrpB4"]'
+    run_all_mlde_parallelized(
+        encodings=["one-hot"], # modify to `DEFAULT_LEARNED_EMB_COMBO`` for all pregenerated encodings
+        n_mut_cutoffs=[0],
+        zs_predictors=["none", "ev", "coves", "esm", "esmif", "Triad", "two-best", "Triad-esmif", "Triad-ev", "Triad-esm", "coves-ev", "coves-esm"],
+        n_samples=[53, 149], # 77, 173
+        n_tops=[24],
+        n_replicate=50,
+        n_job=50,
+        ft_lib_fracs=[0.125],
+        model_classes = ["boosting"],
+        ft_first=True,
+        mlde_folder=mlde_folder,
+        zs_folder=zs_folder,
+        all_libs=False,
+        lib_list=["GB1", "TEV", "TrpB4"],
+    )
+    
     # example for running all zs predictors with one-hot encoding
     # no hamming distance pre filtering
     # run_all_mlde_parallelized(
@@ -295,6 +409,51 @@ if __name__ == "__main__":
     #     mlde_folder=mlde_folder,
     # )
 
+
+    # run_all_mlde_parallelized(
+    #     encodings=["one-hot"],
+    #     n_mut_cutoffs=[0],
+    #     zs_predictors=["coves-ev", "coves-esm"],
+    #     n_samples=[96, 384, 24, 48],
+    #     n_replicate=50,
+    #     n_job=96,
+    #     ft_lib_fracs=[0.125],
+    #     model_classes = ["boosting"],
+    #     all_libs=True,
+    #     ft_first=True,
+    #     zs_folder="results_old/zs_comb_7",
+    #     mlde_folder="results_rev/mlde_coves_ens",
+    # )
+
+    # run_all_mlde_parallelized(
+    #     encodings=["one-hot"],
+    #     n_mut_cutoffs=[0],
+    #     zs_predictors=["coves-ev", "coves-esm"],
+    #     n_samples=[192, 288, 480, 576],
+    #     n_replicate=50,
+    #     n_job=96,
+    #     ft_lib_fracs=[0.125],
+    #     model_classes = ["boosting"],
+    #     all_libs=True,
+    #     ft_first=True,
+    #     zs_folder="results_old/zs_comb_7",
+    #     mlde_folder="results_rev/mlde_coves_ens",
+    # )
+
+    # run_all_mlde_parallelized(
+    #     encodings=["one-hot"],
+    #     n_mut_cutoffs=[0],
+    #     zs_predictors=["coves-ev", "coves-esm"],
+    #     n_samples=[960, 1920],
+    #     n_replicate=50,
+    #     n_job=96,
+    #     ft_lib_fracs=[0.125],
+    #     model_classes = ["boosting"],
+    #     all_libs=True,
+    #     ft_first=True,
+    #     zs_folder="results_old/zs_comb_7",
+    #     mlde_folder="results_rev/mlde_coves_ens",
+    # )
 
     # run_all_mlde_parallelized(
     #     encodings=["one-hot"],

@@ -1,5 +1,7 @@
 """
 A script to run the COVES algorithm on a given dataset.
+
+Modified from https://github.com/ddingding/CoVES
 """
 
 from __future__ import annotations
@@ -1334,7 +1336,7 @@ def append_coves_scores(
         format_coves_mutations, positions=sliced_df_gvp["wt_pos"].unique()
     )
 
-    # calculating the antitoxi 3 position library combinatorial variant effect score from the individual per site amino acid scores
+    # calculating the combinatorial variant effect score from the individual per site amino acid scores
     df["coves_score"] = df["verbose_muts"].apply(
         lambda m: get_joint_log_prob_mutants(df_gvp_pred, m, p_col=f"log_p_t{str(t)}")
     )

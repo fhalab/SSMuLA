@@ -179,6 +179,10 @@ LIB_POS_0_IDX = deepcopy(
 )
 
 N_SAMPLE_LIST = [24, 48, 96, 192, 288, 384, 480, 576, 960, 1920]
+LOWN_DICT = {
+    "3site_ss": 3 * 19 + 1,
+    "4site_ss": 4 * 19 + 1,
+}
 
 def map_lib_pos() -> dict:
     """
