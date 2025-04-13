@@ -1,6 +1,7 @@
 # Custom ignore
 
 *.zip
+*.tar.gz
 
 data
 data/

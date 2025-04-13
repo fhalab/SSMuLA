@@ -224,6 +224,9 @@ python -m tests.test_mlde_vis
 python -m tests.test_alde
 ```
 
+#### Fine-tuning
+* Run `train_predict_per_protein` from `SSMuLA.plm_finetune` for ESM-2 LoRA fine-tuning simulations
+
 ### Analysis and paper figures
 * All notebooks in `fig_notebooks` are used to reproduce figures in the paper with files downloaded from [Zenodo]((https://doi.org/10.5281/zenodo.13910506))
 
